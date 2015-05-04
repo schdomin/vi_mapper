@@ -5,11 +5,9 @@
 
 //ds ROS
 #include <ros/ros.h>
-
-//ds custom
+#include <utility/CNaiveStereoDetector.h>
 #include "txt_io/message_reader.h"
 #include "utility/CMessageSynchronizer.h"
-#include "utility/CSimpleFeatureDetector.h"
 
 int main( int argc, char **argv )
 {
@@ -67,11 +65,11 @@ int main( int argc, char **argv )
     std::fflush( stdout );
 
     //ds feature detector
-    CSimpleFeatureDetector cDetector( uImageRows, uImageCols, true );
+    CNaiveStereoDetector cDetector( uImageRows, uImageCols, true, uFrequencyPlaybackHz );
 
     //ds allocate a message synchronizer
     CMessageSynchronizer cSynchronizer;
-    cSynchronizer.setSynchronizedMessageCallback( std::bind( &CSimpleFeatureDetector::receivevDataVI, &cDetector, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) );
+    cSynchronizer.setSynchronizedMessageCallback( std::bind( &CNaiveStereoDetector::receivevDataVI, &cDetector, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3 ) );
 
     //ds start synchronization
     std::thread tSynchronization( cSynchronizer.startSynchronization( ) );

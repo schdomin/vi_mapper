@@ -84,6 +84,26 @@ public:
         return tData;
     }
 
+    //ds reset function (empties the stack)
+    void reset( )
+    {
+        //ds free all remaining nodes - get current head situation
+        SNode* pCurrentNodeHead = m_pNodeHead.load( std::memory_order_relaxed );
+
+        //ds while the current head is set
+        while( 0 != pCurrentNodeHead )
+        {
+            //ds remember the next node
+            SNode* pNodeNext = pCurrentNodeHead->m_pNodeNext;
+
+            //ds free the current node
+            delete pCurrentNodeHead;
+
+            //ds update the head
+            pCurrentNodeHead = pNodeNext;
+        }
+    }
+
     //ds empty query - if head is not set
     const bool isEmpty( ) const { return ( 0 == m_pNodeHead.load( std::memory_order_relaxed ) ); };
 
