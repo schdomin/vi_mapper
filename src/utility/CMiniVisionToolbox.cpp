@@ -302,11 +302,11 @@ const Eigen::Matrix3d CMiniVisionToolbox::getSkew( const Eigen::Vector3d& p_vecV
 const Eigen::Matrix3d CMiniVisionToolbox::getEssential( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationTo )
 {
     //ds compute essential matrix: http://en.wikipedia.org/wiki/Essential_matrix
-    const Eigen::Isometry3d matTransformation10( p_matTransformationTo*p_matTransformationFrom.inverse( ) );
-    const Eigen::Matrix3d matSkewTranslation01( CMiniVisionToolbox::getSkew( matTransformation10.translation( ) ) );
+    const Eigen::Isometry3d matTransformation( p_matTransformationTo.inverse( )*p_matTransformationFrom );
+    const Eigen::Matrix3d matSkewTranslation( CMiniVisionToolbox::getSkew( matTransformation.translation( ) ) );
 
     //ds compute essential matrix
-    return matTransformation10.linear( )*matSkewTranslation01;
+    return matTransformation.linear( )*matSkewTranslation;
 }
 
 const Eigen::Matrix3d CMiniVisionToolbox::getFundamental( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationTo, const Eigen::Matrix3d& p_matIntrinsic )
@@ -402,11 +402,12 @@ const double CMiniVisionToolbox::getTransformationDelta( const Eigen::Isometry3d
     const Eigen::Isometry3d matTransformChange( p_matTransformationTo*p_matTransformationFrom.inverse( ) );
 
     //ds check point
-    const Eigen::Vector4d vecSamplePoint( 4.2, -1.25, 2.5, 1.0 );
+    const Eigen::Vector4d vecSamplePoint( 40.2, -1.25, 2.5, 1.0 );
+    const double dNorm( vecSamplePoint.norm( ) );
     const Eigen::Vector4d vecDifference( vecSamplePoint-matTransformChange*vecSamplePoint );
 
     //ds return norm
-    return vecDifference.norm( )/vecSamplePoint.norm( );
+    return ( std::fabs( vecDifference(0) ) + std::fabs( vecDifference(1) ) + std::fabs( vecDifference(2) ) )/dNorm;
 }
 
 const Eigen::Vector3d CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight )

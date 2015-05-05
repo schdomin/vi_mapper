@@ -27,7 +27,7 @@ public:
         return matEigen;
     }
 
-    template< typename tType, uint32_t uRows > static const Eigen::Matrix< tType, uRows, 1 > fromCVVector( const cv::Vec< tType, uRows > p_vecCV )
+    template< typename tType, uint32_t uRows > static const Eigen::Matrix< tType, uRows, 1 > fromCVVector( const cv::Vec< tType, uRows >& p_vecCV )
     {
         //ds allocate eigen matrix
         Eigen::Matrix< tType, uRows, 1 > vecEigen;
@@ -41,7 +41,7 @@ public:
         return vecEigen;
     }
 
-    template< typename tType, uint32_t uRows > static const cv::Vec< tType, uRows > toCVVector( const Eigen::Matrix< tType, uRows, 1 > p_vecEigen )
+    template< typename tType, uint32_t uRows > static const cv::Vec< tType, uRows > toCVVector( const Eigen::Matrix< tType, uRows, 1 >& p_vecEigen )
     {
         //ds allocate cv vector
         cv::Vec< tType, uRows > vecCV;
@@ -53,6 +53,53 @@ public:
         }
 
         return vecCV;
+    }
+
+    //ds overloads
+    static const cv::Vec4d toCVVector( const Eigen::Vector4d& p_vecEigen )
+    {
+        //ds allocate cv vector
+        cv::Vec4d vecCV;
+
+        //ds fill the vector (column major)
+        for( uint32_t u = 0; u < 4; ++u )
+        {
+            vecCV( u ) = p_vecEigen( u );
+        }
+
+        return vecCV;
+    }
+    static const cv::Mat_< double > toCVMatrix( const Eigen::Matrix< double, 3, 3 >& p_matEigen )
+    {
+        //ds allocate cv vector
+        cv::Mat_< double > matCV( 3, 3 );
+
+        //ds fill the vector (column major)
+        for( uint32_t u = 0; u < 3; ++u )
+        {
+            for( uint32_t v = 0; v < 3; ++v )
+            {
+                matCV.at< double >( u, v ) = p_matEigen( u, v );
+            }
+        }
+
+        return matCV;
+    }
+    static const cv::Mat_< double > toCVMatrix( const Eigen::Matrix< double, 3, 4 >& p_matEigen )
+    {
+        //ds allocate cv vector
+        cv::Mat_< double > matCV( 3, 4 );
+
+        //ds fill the vector (column major)
+        for( uint32_t u = 0; u < 3; ++u )
+        {
+            for( uint32_t v = 0; v < 4; ++v )
+            {
+                matCV.at< double >( u, v ) = p_matEigen( u, v );
+            }
+        }
+
+        return matCV;
     }
 
 };

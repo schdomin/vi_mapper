@@ -347,13 +347,13 @@ void CNaiveStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::M
 void CNaiveStereoDetector::_drawProjectedEpipolarLineFundamental( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DOnCameraPlane, CPoint3DInWorldFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get fundamental matrixp_isoCurrentTransformation
         const Eigen::Matrix3d matFundamental( CMiniVisionToolbox::getFundamental( std::get< 4 >( vecReferencePoint ), p_matCurrentTransformation, m_matIntrinsicLEFT ) );
 
         //ds get 2d point
-        const CPoint2DOnCameraPlane vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
+        const CPoint2DInCameraFrame vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
 
         //ds compute the projection of the point (line) in the current frame
         const Eigen::Vector3d vecCoefficients( matFundamental*Eigen::Vector3d( vec2DReferencePoint(0), vec2DReferencePoint(1), 1.0 ) );
@@ -468,13 +468,13 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineFundamental( const Eigen::I
 void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential1( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DOnCameraPlane, CPoint3DInWorldFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get essential matrix
         const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( vecReferencePoint ), p_matCurrentTransformation ) );
 
         //ds get 2d point
-        const CPoint2DOnCameraPlane vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
+        const CPoint2DInCameraFrame vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
 
         //ds compute the projection of the point (line) in the current frame
         const Eigen::Vector3d vecCoefficients( matEssential*CMiniVisionToolbox::getNormalized( vec2DReferencePoint,
@@ -593,13 +593,13 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential1( const Eigen::Is
 void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential2( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DOnCameraPlane, CPoint3DInWorldFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get essential matrix
         const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( vecReferencePoint ), p_matCurrentTransformation ) );
 
         //ds get 2d point
-        const CPoint2DOnCameraPlane vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
+        const CPoint2DInCameraFrame vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
 
         //ds compute the projection of the point (line) in the current frame
         const Eigen::Vector3d vecCoefficients( matEssential*Eigen::Vector3d( vec2DReferencePoint(0)/752.0, vec2DReferencePoint(1)/480.0, 1.0 ) );
@@ -714,13 +714,13 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential2( const Eigen::Is
 void CNaiveStereoDetector::_drawProjectedEpipolarLineDepthSampling( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DOnCameraPlane, CPoint3DInWorldFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get transformation
         const Eigen::Isometry3d matTransformation( p_matCurrentTransformation*( std::get< 4 >( vecReferencePoint ) ).inverse( ) );
 
         //ds get 2d point
-        const CPoint2DOnCameraPlane vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
+        const CPoint2DInCameraFrame vec2DReferencePoint( std::get< 0 >( vecReferencePoint ) );
 
         //ds sample depth
         for( int iExponent = m_iSamplingLowerLimit; iExponent < m_iSamplingUpperLimit; ++iExponent )
@@ -828,7 +828,7 @@ void CNaiveStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft,
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) absolute deviation: %f %%\n", dAbsoluteDeviation );
 
     //ds add the coordinates to the reference structure
-    m_vecReferencePoints.push_back( std::tuple< CPoint2DOnCameraPlane, CPoint3DInWorldFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode >( CPoint2DOnCameraPlane( ptReference.x, ptReference.y ),
+    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
                                                                                                                                                              vec3DReferencePointSVDLS,
                                                                                                                                                              vecReferenceKeyPoints[0],
                                                                                                                                                              matReferenceDescriptor,

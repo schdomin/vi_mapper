@@ -7,14 +7,13 @@
 
 //ds ROS
 #include <ros/ros.h>
-#include <utility/CNaiveStereoDetector.h>
+#include <core/CStereoDetector.h>
 
 //ds custom
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
 #include "txt_io/pose_message.h"
 #include "utility/CStack.h"
-#include "utility/CMiniVisionToolbox.h"
 
 //ds data vectors
 CStack< txt_io::CIMUMessage > g_vecMessagesIMU;
@@ -33,6 +32,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
 int main( int argc, char **argv )
 {
     //ds pwd info
+    std::printf( "--------------------------------------------------------------------------------------------------------------------------------------\n" );
     std::printf( "(main) launched: %s\n", argv[0] );
 
     //ds image resolution
@@ -82,7 +82,7 @@ int main( int argc, char **argv )
     std::fflush( stdout );
 
     //ds feature detector
-    CNaiveStereoDetector cDetector( uImageRows, uImageCols, bDisplayImages, uFrequencyPlaybackHz );
+    CStereoDetector cDetector( uImageRows, uImageCols, bDisplayImages, uFrequencyPlaybackHz );
 
     //ds get start time
     const std::chrono::time_point< std::chrono::system_clock > tmStart( std::chrono::system_clock::now( ) );

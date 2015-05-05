@@ -33,7 +33,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
-add_executable(stereo_detector_alberto_node src/analysis/stereo_detector_alberto_node.cpp src/utility/CNaiveStereoDetector.cpp src/utility/CMiniVisionToolbox.cpp)
+add_executable(stereo_detector_alberto_node src/main/stereo_detector_alberto_node.cpp src/core/CStereoDetector.cpp src/utility/CMiniVisionToolbox.cpp)
 
 #ds link the binaries against catkin
 target_link_libraries(message_dumper_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
