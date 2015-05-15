@@ -17,7 +17,7 @@
 typedef Eigen::Vector2d CPoint2DInCameraFrame;
 typedef Eigen::Vector3d CPoint3DInCameraFrame;
 typedef cv::Scalar      CColorCode;
-typedef cv::Mat         CDescriptorSURF;
+typedef cv::Mat         CDescriptor;
 
 class CNaiveStereoDetector
 {
@@ -57,7 +57,7 @@ private:
     Eigen::Isometry3d m_matTransformationLeft;
 
     //ds slam points
-    std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > > m_vecReferencePoints;
+    std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode > > m_vecReferencePoints;
 
     //ds feature related
     cv::SurfFeatureDetector m_cDetectorSURF;

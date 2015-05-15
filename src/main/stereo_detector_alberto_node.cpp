@@ -7,7 +7,7 @@
 
 //ds ROS
 #include <ros/ros.h>
-#include <core/CStereoDetector.h>
+#include <core/CEpipolarDetectorBRIEF.h>
 
 //ds custom
 #include "txt_io/imu_message.h"
@@ -55,6 +55,7 @@ int main( int argc, char **argv )
     //ds default files
     std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
     std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
+    std::string strG20Dump           = "/home/dominik/libs/g2o/bin/testdump_brief.g2o";
 
     //ds overwrite the string if present
     if( 0 != argv[1] )
@@ -66,7 +67,7 @@ int main( int argc, char **argv )
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
 
     //ds set message frequency
-    const uint32_t uFrequencyPlaybackHz = 12; //100;
+    const uint32_t uFrequencyPlaybackHz = 100; //100;
     const uint32_t uSleepMicroseconds   = ( 1.0/uFrequencyPlaybackHz )*1e6;
     const bool bDisplayImages( true );
 
@@ -82,7 +83,7 @@ int main( int argc, char **argv )
     std::fflush( stdout );
 
     //ds feature detector
-    CStereoDetector cDetector( uImageRows, uImageCols, bDisplayImages, uFrequencyPlaybackHz );
+    CEpipolarDetectorBRIEF cDetector( uImageRows, uImageCols, bDisplayImages, uFrequencyPlaybackHz );
 
     //ds get start time
     const std::chrono::time_point< std::chrono::system_clock > tmStart( std::chrono::system_clock::now( ) );
@@ -198,6 +199,11 @@ int main( int argc, char **argv )
     std::printf( "(main)     total frames: %lu\n", uFrameCount );
     std::printf( "(main) frame rate (avg): %f\n", uFrameCount/dDuration );
     std::printf( "(main) -----------------------------------------------------------------------------------------------------------\n" );
+
+    //ds dump file
+    cDetector.solveAndOptimizeG2O( strG20Dump );
+
+    std::printf( "(main) successfully written g2o dump to: %s\n", strG20Dump.c_str( ) );
 
     //ds if detector was not manually shut down
     if( !cDetector.isShutdownRequested( ) )

@@ -24,6 +24,7 @@ CStereoDetector::CStereoDetector( const uint32_t& p_uImageRows,
                                                                            m_vecTLEFT( m_matProjectionLEFT.block< 3, 1 >( 0, 3 ) ),
                                                                            m_uFrameCount( 0 ),
                                                                            m_cDetectorSURF( cv::SurfFeatureDetector( 400 ) ),
+                                                                           m_cExtractorSURF( cv::SurfDescriptorExtractor( 400 ) ),
                                                                            m_dMatchingDistanceCutoff( 0.5 ),
                                                                            m_uFeaturesCap( 100 ),
                                                                            m_uDescriptorRadius( 40 ),
@@ -94,14 +95,15 @@ void CStereoDetector::receivevDataVIWithPose( std::shared_ptr< txt_io::PinholeIm
     //ds detect features
     if( m_bDisplayImages )
     {
-        _localize( matImageLeft, matImageRight, m_matTransformation );
+        _localizeManual( matImageLeft, matImageRight, m_matTransformation );
+        //_localizeAuto( matImageLeft, matImageRight, m_matTransformation );
     }
 }
 
-void CStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation )
+void CStereoDetector::_localizeManual( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation )
 {
     //ds get delta to evaluate precision
-    const double dTransformationDelta( CMiniVisionToolbox::getTransformationDelta( m_matTransformationLeft, p_matCurrentTransformation ) );
+    const double dTransformationDelta( CMiniVisionToolbox::getTransformationDelta( m_matPreviousTransformationLeft, p_matCurrentTransformation ) );
 
     //ds log info
     std::printf( "[%lu] transformation delta: %f\n", m_uFrameCount, dTransformationDelta );
@@ -139,7 +141,7 @@ void CStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::Mat& p
 
 
     //ds draw current lines
-    _drawProjectedEpipolarLineEssential( p_matCurrentTransformation, matDisplayLeft, matLeft );
+    _drawProjectedEpipolarLineEssential( p_matCurrentTransformation, matDisplayLeft, matLeft, dTransformationDelta*3 );
     cv::hconcat( matDisplayLeft, matDisplayRight, matDisplayUpperTemporary );
 
 
@@ -180,7 +182,7 @@ void CStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::Mat& p
             default:
             {
                 std::printf( "<CEpilinearStereoDetector>(_drawEpisubsequentLine) unknown keystroke: %i\n", iLastKeyStroke );
-                break;
+                return;
             }
         }
 
@@ -308,22 +310,222 @@ void CStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::Mat& p
     //ds update references
     m_matReferenceFrameLeft  = p_matImageLeft;
     m_matReferenceFrameRight = p_matImageRight;
-    m_matTransformationLeft  = p_matCurrentTransformation;
+    m_matPreviousTransformationLeft  = p_matCurrentTransformation;
 
     //ds increment count
     ++m_uFrameCount;
 }
 
-void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage )
+void CStereoDetector::_localizeAuto( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation )
+{
+    //ds get delta to evaluate precision
+    const double dTransformationDelta( CMiniVisionToolbox::getTransformationDelta( m_matPreviousTransformationLeft, p_matCurrentTransformation ) );
+
+    //ds log info
+    std::printf( "[%lu] transformation delta: %f\n", m_uFrameCount, dTransformationDelta );
+
+    //ds input mats
+    cv::Mat matLeft;
+    cv::Mat matRight;
+
+    //ds preprocess images
+    cv::equalizeHist( p_matImageLeft, matLeft );
+    cv::equalizeHist( p_matImageRight, matRight );
+    m_cStereoCamera.undistortAndrectify( matLeft, matRight );
+
+    //ds draw position on trajectory mat
+    cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 1, cv::Scalar( 255, 0, 0 ), -1 );
+    cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 1, cv::Scalar( 255, 0, 0 ), -1 );
+    cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-dTransformationDelta*1000 ), 1, cv::Scalar( 0, 0, 255 ), -1 );
+
+    //ds get images into triple channel mats (display only)
+    cv::Mat matDisplayLeft;
+    cv::Mat matDisplayRight;
+
+    //ds get images to triple channel for colored display
+    cv::cvtColor( matLeft, matDisplayLeft, cv::COLOR_GRAY2BGR );
+    cv::cvtColor( matRight, matDisplayRight, cv::COLOR_GRAY2BGR );
+
+    const cv::Mat matDisplayLeftClean( matDisplayLeft.clone( ) );
+    const cv::Mat matDisplayRightClean( matDisplayRight.clone( ) );
+
+    //ds build display mat
+    cv::Mat matDisplayUpper          = cv::Mat( m_uImageRows, 2*m_uImageCols, CV_8UC3 );
+    cv::Mat matDisplayUpperTemporary = cv::Mat( m_uImageRows, 2*m_uImageCols, CV_8UC3 );
+    cv::hconcat( matDisplayLeft, matDisplayRight, matDisplayUpper );
+
+
+
+    //ds draw current lines
+    _drawProjectedEpipolarLineEssential( p_matCurrentTransformation, matDisplayLeft, matLeft, dTransformationDelta*3 );
+    cv::hconcat( matDisplayLeft, matDisplayRight, matDisplayUpperTemporary );
+
+
+
+    //ds show the image
+    cv::Mat matDisplayComplete = cv::Mat( 2*m_uImageRows, 2*m_uImageCols, CV_8UC3 );
+    cv::vconcat( matDisplayUpperTemporary, m_matDisplayLowerReference, matDisplayComplete );
+    cv::imshow( "stereo matching", matDisplayComplete );
+    cv::imshow( "trajectory (x,y)", m_matTrajectoryXY );
+    cv::imshow( "some stuff", m_matTrajectoryZ );
+    int iLastKeyStroke( cv::waitKey( 1 ) );
+
+    //ds if there was a keystroke
+    if( -1 != iLastKeyStroke )
+    {
+        //ds evaluate keystroke
+        switch( iLastKeyStroke )
+        {
+            case CConfigurationOpenCV::KeyStroke::iEscape:
+            {
+                _shutDown( );
+                return;
+            }
+            case CConfigurationOpenCV::KeyStroke::iNumpadMinus:
+            {
+                _slowDown( );
+                return;
+            }
+            case CConfigurationOpenCV::KeyStroke::iNumpadPlus:
+            {
+                _speedUp( );
+                return;
+            }
+            case CConfigurationOpenCV::KeyStroke::iSpace:
+            {
+                break;
+            }
+            default:
+            {
+                std::printf( "<CEpilinearStereoDetector>(_drawEpisubsequentLine) unknown keystroke: %i\n", iLastKeyStroke );
+                return;
+            }
+        }
+
+        //ds reset keystroke
+        iLastKeyStroke = -1;
+
+        //ds we have to clean up everything
+        m_vecReferencePoints.clear( );
+
+        //ds update image
+        cv::hconcat( matDisplayLeftClean, matDisplayRightClean, matDisplayUpper );
+        cv::hconcat( matDisplayLeftClean, matDisplayRightClean, matDisplayUpperTemporary );
+
+        //ds redraw
+        cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
+        cv::imshow( "stereo matching", matDisplayComplete );
+
+        //ds check current displacement
+        const double dRelativeDistanceMeters( p_matCurrentTransformation.translation( ).squaredNorm( ) );
+
+        std::printf( "<CEpilinearStereoDetector>(_drawEpisubsequentLine) +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\n" );
+        std::printf( "<CEpilinearStereoDetector>(_drawEpisubsequentLine) moved distance: %f requesting feature detection at frame: %lu\n", dRelativeDistanceMeters, m_uFrameCount );
+
+        //ds detect features
+        std::vector< cv::KeyPoint> vecKeyPoints;
+        m_cDetectorSURF.detect( p_matImageLeft, vecKeyPoints );
+
+        //ds compute descriptors
+        CDescriptor matReferenceDescriptors;
+        m_cExtractorSURF.compute( p_matImageLeft, vecKeyPoints, matReferenceDescriptors );
+
+        std::printf( "dim: %i %i %i", matReferenceDescriptors.rows, matReferenceDescriptors.cols, matReferenceDescriptors.dims );
+
+        std::printf( "<CEpilinearStereoDetector>(_drawEpisubsequentLine) detected features: %lu\n", vecKeyPoints.size( ) );
+
+        //ds register all features
+        for( uint32_t u = 0; u < vecKeyPoints.size( ); ++u )
+        {
+            //ds get a random color code
+            const CColorCode vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
+
+            //ds get the keypoint
+            const cv::KeyPoint cKeyPoint( vecKeyPoints[u] );
+
+            //ds add the point to structure
+            m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame >( CWrapperOpenCV::fromCVVector( cKeyPoint.pt ),
+                                                                                                                                                                     Eigen::Vector3d( 0, 0, 0 ),
+                                                                                                                                                                     cKeyPoint,
+                                                                                                                                                                     matReferenceDescriptors.row( u ),
+                                                                                                                                                                     p_matCurrentTransformation,
+                                                                                                                                                                     vecColorCode,
+                                                                                                                                                                     CWrapperOpenCV::fromCVVector( cKeyPoint.pt ) ) );
+
+            //ds draw detected point
+            cv::circle( matDisplayUpper, cKeyPoint.pt, 2, vecColorCode, -1 );
+        }
+
+        cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
+        cv::imshow( "stereo matching", matDisplayComplete );
+
+        //ds escape with space
+        while( CConfigurationOpenCV::KeyStroke::iSpace != iLastKeyStroke )
+        {
+            //ds check key
+            iLastKeyStroke = cv::waitKey( 1 );
+
+            //ds evaluate keystroke
+            switch( iLastKeyStroke )
+            {
+                case CConfigurationOpenCV::KeyStroke::iEscape:
+                {
+                    _shutDown( );
+                    return;
+                }
+                case CConfigurationOpenCV::KeyStroke::iNumpadMinus:
+                {
+                    _slowDown( );
+                    break;
+                }
+                case CConfigurationOpenCV::KeyStroke::iNumpadPlus:
+                {
+                    _speedUp( );
+                    break;
+                }
+                default:
+                {
+                    //ds nothing to do
+                    break;
+                }
+            }
+        }
+
+        //ds reset keystroke
+        iLastKeyStroke = -1;
+
+        //ds get a copy of the upper to the lower display
+        m_matDisplayLowerReference = matDisplayUpper.clone( );
+        cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
+
+        //ds mark position of user input (persistently)
+        cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCode( 0, 255, 0 ), 1 );
+        cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCode( 0, 255, 0 ), 1 );
+    }
+
+    //ds update references
+    m_matReferenceFrameLeft  = p_matImageLeft;
+    m_matReferenceFrameRight = p_matImageRight;
+    m_matPreviousTransformationLeft  = p_matCurrentTransformation;
+
+    //ds increment count
+    ++m_uFrameCount;
+}
+
+void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const double& p_dLineLength )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame > >::iterator vecReferencePoint = m_vecReferencePoints.begin( ); vecReferencePoint != m_vecReferencePoints.end( ); ++vecReferencePoint )
     {
+
+    //for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame >& vecReferencePoint: m_vecReferencePoints )
+    //{
+
         //ds get essential matrix
-        const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( vecReferencePoint ), p_matCurrentTransformation ) );
+        const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( *vecReferencePoint ), p_matCurrentTransformation ) );
 
         //ds get normalized reference point
-        const Eigen::Vector3d vecReference( m_cCameraLEFT.getNormalized( std::get< 0 >( vecReferencePoint ) ) );
+        const Eigen::Vector3d vecReference( m_cCameraLEFT.getNormalized( std::get< 0 >( *vecReferencePoint ) ) );
 
         //ds compute the projection of the point (line) in the current frame (working in normalized coordinates)
         const Eigen::Vector3d vecCoefficients( matEssential*vecReference );
@@ -331,38 +533,40 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
         //std::printf( "<CSimpleFeatureDetector>(_drawEpisubsequentLine) curve equation: f(x) = %fx + %f\n", -vecCoefficients(0)/vecCoefficients(1), -vecCoefficients(2)/vecCoefficients(1) );
 
         //ds compute maximum and minimum points (from top to bottom line)
-        double dYMinimum( m_cCameraLEFT.m_prRangeHeightNormalized.first );
-        double dYMaximum( m_cCameraLEFT.m_prRangeHeightNormalized.second );
-        double dXforYMinimum( -( vecCoefficients(2)+vecCoefficients(1)*dYMinimum )/vecCoefficients(0) );
-        double dXforYMaximum( -( vecCoefficients(2)+vecCoefficients(1)*dYMaximum )/vecCoefficients(0) );
+        const Eigen::Vector3d vecReferenceLastDetection( m_cCameraLEFT.getNormalized( std::get< 6 >( *vecReferencePoint ) ) );
+        const double dLimitXMinimum( vecReferenceLastDetection(0)-p_dLineLength );
+        const double dLimitXMaximum( vecReferenceLastDetection(0)+p_dLineLength );
+        double dYMinimum( vecReferenceLastDetection(1)-p_dLineLength );//m_cCameraLEFT.m_prRangeHeightNormalized.first );
+        double dYMaximum( vecReferenceLastDetection(1)+p_dLineLength );//m_cCameraLEFT.m_prRangeHeightNormalized.second );
+        double dXMinimum( -( vecCoefficients(2)+vecCoefficients(1)*dYMinimum )/vecCoefficients(0) );
+        double dXMaximum( -( vecCoefficients(2)+vecCoefficients(1)*dYMaximum )/vecCoefficients(0) );
 
-        //ds shift the points to the visible range
-        if( m_cCameraLEFT.m_prRangeWidthNormalized.first > dXforYMinimum )
+        //ds shift the points to the visible range and recompute y
+        if( dLimitXMinimum > dXMinimum )
         {
-            //ds we have to recompute Y
-            dXforYMinimum = m_cCameraLEFT.m_prRangeWidthNormalized.first;
-            dYMinimum     = -( vecCoefficients(2)+vecCoefficients(0)*dXforYMinimum )/vecCoefficients(1);
+            dXMinimum = dLimitXMinimum;
+            dYMinimum = -( vecCoefficients(2)+vecCoefficients(0)*dXMinimum )/vecCoefficients(1);
         }
-        else if( m_cCameraLEFT.m_prRangeWidthNormalized.second < dXforYMinimum )
+        else if( dLimitXMaximum < dXMinimum )
         {
-            dXforYMinimum = m_cCameraLEFT.m_prRangeWidthNormalized.second;
-            dYMinimum     = -( vecCoefficients(2)+vecCoefficients(0)*dXforYMinimum )/vecCoefficients(1);
+            dXMinimum = dLimitXMaximum;
+            dYMinimum = -( vecCoefficients(2)+vecCoefficients(0)*dXMinimum )/vecCoefficients(1);
         }
-        if( m_cCameraLEFT.m_prRangeWidthNormalized.first > dXforYMaximum )
+        if( dLimitXMinimum > dXMaximum )
         {
-            dXforYMaximum = m_cCameraLEFT.m_prRangeWidthNormalized.first;
-            dYMinimum     = -( vecCoefficients(2)+vecCoefficients(0)*dXforYMaximum )/vecCoefficients(1);
+            dXMaximum = dLimitXMinimum;
+            dYMinimum = -( vecCoefficients(2)+vecCoefficients(0)*dXMaximum )/vecCoefficients(1);
         }
-        else if( m_cCameraLEFT.m_prRangeWidthNormalized.second < dXforYMaximum )
+        else if( dLimitXMaximum < dXMaximum )
         {
-            dXforYMaximum = m_cCameraLEFT.m_prRangeWidthNormalized.second;
-            dYMinimum     = -( vecCoefficients(2)+vecCoefficients(0)*dXforYMaximum )/vecCoefficients(1);
+            dXMaximum = dLimitXMaximum;
+            dYMinimum = -( vecCoefficients(2)+vecCoefficients(0)*dXMaximum )/vecCoefficients(1);
         }
 
         //ds swap for consistency as we are looping from x=0 to x=max
-        if( dXforYMinimum > dXforYMaximum )
+        if( dXMinimum > dXMaximum )
         {
-            std::swap( dXforYMinimum, dXforYMaximum );
+            std::swap( dXMinimum, dXMaximum );
             std::swap( dYMinimum, dYMaximum );
         }
 
@@ -370,32 +574,34 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
         //cv::line( p_matDisplay, cv::Point2i( dXforYMinimum, dYforYMinimum ), cv::Point2i( dXforYMaximum, dYforYMaximum ), std::get< 4 >( vecReferencePoint ) );
 
         //ds get back to pixel coordinates
-        const double dUMaximum( m_cCameraLEFT.getDenormalizedX( dXforYMaximum ) );
-        const double dUMinimum( m_cCameraLEFT.getDenormalizedX( dXforYMinimum ) );
+        const double dUMaximum( m_cCameraLEFT.getDenormalizedX( dXMaximum ) );
+        const double dUMinimum( m_cCameraLEFT.getDenormalizedX( dXMinimum ) );
+        const double dVMaximum( m_cCameraLEFT.getDenormalizedY( dYMaximum ) );
+        const double dVMinimum( m_cCameraLEFT.getDenormalizedY( dYMinimum ) );
 
         //ds compute pixel ranges to sample
         const double dDeltaX( dUMaximum-dUMinimum );
-        const double dDeltaY( m_cCameraLEFT.getDenormalizedY( dYMaximum )-m_cCameraLEFT.getDenormalizedY( dYMinimum ) );
+        const double dDeltaY( dVMaximum-dVMinimum );
 
         //ds sample line length
         const uint32_t uSamples( std::lround( std::sqrt( dDeltaX*dDeltaX + dDeltaY*dDeltaY ) ) );
 
-        //ds compute step size for pixel sampling
-        const double dStepSizeX( dDeltaX/uSamples );
-
         //ds keypoint vectors
         std::vector< cv::KeyPoint > vecReferenceKeyPoints( 1 );
-        vecReferenceKeyPoints[0] = std::get< 2 >( vecReferencePoint );
+        vecReferenceKeyPoints[0] = std::get< 2 >( *vecReferencePoint );
         std::vector< cv::KeyPoint > vecPoolKeyPoints( uSamples );
 
         //ds color code
-        const CColorCode cColorLine( std::get< 5 >( vecReferencePoint ) );
+        const CColorCode cColorLine( std::get< 5 >( *vecReferencePoint ) );
+
+        //ds compute step size for pixel sampling
+        const double dStepSizeU( dDeltaX/uSamples );
 
         //ds set the keypoints (by sampling over x)
         for( uint32_t u = 0; u < uSamples; ++u )
         {
             //ds compute current x and y
-            const double dU( dUMinimum+u*dStepSizeX );
+            const double dU( dUMinimum+u*dStepSizeU );
             const double dY( -( vecCoefficients(2)+vecCoefficients(0)*m_cCameraLEFT.getNormalizedX( dU ) )/vecCoefficients(1) );
             const double dV( m_cCameraLEFT.getDenormalizedY( dY ) );
 
@@ -407,37 +613,54 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
 
         std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) keypoints pool size: %lu\n", vecPoolKeyPoints.size( ) );
 
-        /*ds descriptor pool to match
-        cv::Mat matReferenceDescriptor( std::get< 3 >( vecReferencePoint ) );
+        //ds descriptor pool to match
+        cv::Mat matReferenceDescriptor( std::get< 3 >( *vecReferencePoint ) );
         cv::Mat matPoolDescriptors;
 
-        //ds compute descriptors
+        //ds compute descriptors of current image
         m_cDetectorSURF.compute( p_matImage, vecPoolKeyPoints, matPoolDescriptors );
 
-        //ds match the descriptors
-        std::vector< std::vector< cv::DMatch > > vecMatches;
-        m_cDescriptorMatcher.knnMatch( matReferenceDescriptor, matPoolDescriptors, vecMatches, 10 );
-
-        //ds buffer first match
-        const cv::DMatch cBestMatch( vecMatches[0][0] );
-
-        //ds get the matching keypoint
-        cv::Point2f ptMatch( vecPoolKeyPoints[ cBestMatch.trainIdx ].pt );
-
-        if( m_dMatchingDistanceCutoff < cBestMatch.distance )
+        //ds check if we could compute a descriptor
+        if( 0 != matPoolDescriptors.rows )
         {
-            //ds drop the match
-            std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) matching distance: %f - dropped match\n", cBestMatch.distance );
-        }
-        else
-        {
+            //ds match the descriptors
+            //std::vector< std::vector< cv::DMatch > > vecMatches;
+            //m_cDescriptorMatcher.knnMatch( matReferenceDescriptor, matPoolDescriptors, vecMatches, 10 );
+            std::vector< cv::DMatch > vecMatches;
+            m_cDescriptorMatcher.match( matReferenceDescriptor, matPoolDescriptors, vecMatches );
+
+            //ds buffer first match
+            //const cv::DMatch cBestMatch( vecMatches[0][0] );
+            const cv::DMatch cBestMatch( vecMatches[0] );
+
             //ds get the matching keypoint
             cv::Point2f ptMatch( vecPoolKeyPoints[ cBestMatch.trainIdx ].pt );
 
-            //ds draw the match
-            cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
-            cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCode( 0, 255, 0 ), 1 );
-        }*/
+            if( m_dMatchingDistanceCutoff < cBestMatch.distance )
+            {
+                //ds drop the match
+                std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) matching distance: %f - dropped match\n", cBestMatch.distance );
+                //m_vecReferencePoints.erase( vecReferencePoint );
+            }
+            else
+            {
+                //ds get the matching keypoint
+                cv::Point2f ptMatch( vecPoolKeyPoints[ cBestMatch.trainIdx ].pt );
+
+                //ds update reference
+                std::get< 6 >( *vecReferencePoint ) = CPoint2DInCameraFrame( ptMatch.x, ptMatch.y );
+                //std::get< 4 >( vecReferencePoint ) = p_matCurrentTransformation;
+
+                //ds draw the match
+                cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
+                cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCode( 0, 255, 0 ), 1 );
+            }
+        }
+        else
+        {
+            std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) landmark no longer present\n" );
+            m_vecReferencePoints.erase( vecReferencePoint );
+        }
     }
 }
 
@@ -483,12 +706,12 @@ void CStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft, cons
 
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) keypoints pool size: %lu\n", vecPoolKeyPoints.size( ) );
 
-    CDescriptorSURF matReferenceDescriptor;
+    CDescriptor matReferenceDescriptor;
     cv::Mat matPoolDescriptors;
 
     //ds compute descriptors
-    m_cDetectorSURF.compute( p_matImageLeft, vecReferenceKeyPoints, matReferenceDescriptor );
-    m_cDetectorSURF.compute( p_matImageRight, vecPoolKeyPoints, matPoolDescriptors );
+    m_cExtractorSURF.compute( p_matImageLeft, vecReferenceKeyPoints, matReferenceDescriptor );
+    m_cExtractorSURF.compute( p_matImageRight, vecPoolKeyPoints, matPoolDescriptors );
 
     //ds match the descriptors
     std::vector< cv::DMatch > vecMatches;
@@ -515,12 +738,13 @@ void CStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft, cons
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) absolute deviation: %f %%\n", dAbsoluteDeviation );
 
     //ds add the coordinates to the reference structure
-    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
+    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
                                                                                                                                                              vec3DReferencePointSVDLS,
                                                                                                                                                              vecReferenceKeyPoints[0],
                                                                                                                                                              matReferenceDescriptor,
                                                                                                                                                              p_matCurrentTransformation,
-                                                                                                                                                             vecColorCode ) );
+                                                                                                                                                             vecColorCode,
+                                                                                                                                                             CPoint2DInCameraFrame( ptReference.x, ptReference.y ) ) );
 }
 
 void CStereoDetector::_shutDown( )

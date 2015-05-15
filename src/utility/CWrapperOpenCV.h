@@ -101,6 +101,30 @@ public:
 
         return matCV;
     }
+    static const Eigen::Vector2d fromCVVector( const cv::Vec2d& p_vecCV )
+    {
+        //ds allocate eigen matrix
+        Eigen::Vector2d vecEigen;
+
+        //ds fill the vector (column major)
+        for( uint32_t u = 0; u < 2; ++u )
+        {
+            vecEigen( u ) = p_vecCV( u );
+        }
+
+        return vecEigen;
+    }
+    static const Eigen::Vector2d fromCVVector( const cv::Point2d& p_vecCV )
+    {
+        //ds allocate eigen matrix
+        Eigen::Vector2d vecEigen;
+
+        //ds fill the vector (column major)
+        vecEigen( 0 ) = p_vecCV.x;
+        vecEigen( 1 ) = p_vecCV.y;
+
+        return vecEigen;
+    }
 
 };
 

@@ -25,7 +25,7 @@ public:
                                      CWrapperOpenCV::toCVVector( p_cCameraLEFT.m_vecDistortionCoefficients ),
                                      CWrapperOpenCV::toCVMatrix( p_cCameraLEFT.m_matRectification ),
                                      CWrapperOpenCV::toCVMatrix( p_cCameraLEFT.m_matProjection ),
-                                     cv::Size( m_cCameraLEFT.m_uWidthPixel, m_cCameraLEFT.m_uHeightPixel ),
+                                     cv::Size( m_cCameraLEFT.m_iWidthPixel, m_cCameraLEFT.m_iHeightPixel ),
                                      CV_16SC2,
                                      m_arrUndistortRectifyMapsLEFT[0],
                                      m_arrUndistortRectifyMapsLEFT[1] );
@@ -33,7 +33,7 @@ public:
                                      CWrapperOpenCV::toCVVector( p_cCameraRIGHT.m_vecDistortionCoefficients ),
                                      CWrapperOpenCV::toCVMatrix( p_cCameraRIGHT.m_matRectification ),
                                      CWrapperOpenCV::toCVMatrix( p_cCameraRIGHT.m_matProjection ),
-                                     cv::Size( m_cCameraRIGHT.m_uWidthPixel, m_cCameraRIGHT.m_uHeightPixel ),
+                                     cv::Size( m_cCameraRIGHT.m_iWidthPixel, m_cCameraRIGHT.m_iHeightPixel ),
                                      CV_16SC2,
                                      m_arrUndistortRectifyMapsRIGHT[0],
                                      m_arrUndistortRectifyMapsRIGHT[1] );
