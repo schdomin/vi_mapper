@@ -17,6 +17,11 @@ public:
         constexpr static int iNumpadMinus = 1114029; //1074855853; //537984941;
         constexpr static int iSpace       = 1048608; //1074790432; //537919520;
         constexpr static int iBackspace   = 1113864;
+
+        constexpr static int iNum1 = 1048625;
+        constexpr static int iNum2 = 1048626;
+        constexpr static int iNum3 = 1048627;
+
     } KeyStroke;
 
 };

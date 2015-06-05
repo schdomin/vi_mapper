@@ -1,10 +1,10 @@
-#ifndef CSTEREODETECTOR_H_
-#define CSTEREODETECTOR_H_
+#ifndef CDETECTORTESTSTEREODEPTH_H
+#define CDETECTORTESTSTEREODEPTH_H
 
-#include <opencv/cv.h>
+#include <configuration/Types.h>
+#include <core/CDetectorMonoTilewise.h>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp>
-#include <memory>
 
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
@@ -13,24 +13,19 @@
 #include "utility/CWrapperOpenCV.h"
 #include "utility/CMiniVisionToolbox.h"
 #include "utility/CStereoCamera.h"
+#include "CTriangulator.h"
 
-//ds readability
-typedef Eigen::Vector2d CPoint2DInCameraFrame;
-typedef Eigen::Vector3d CPoint3DInCameraFrame;
-typedef cv::Scalar      CColorCode;
-typedef cv::Mat         CDescriptor;
-
-class CStereoDetector
+class CDetectorTestStereoDepth
 {
 
 //ds ctor/dtor
 public:
 
-    CStereoDetector( const uint32_t& p_uImageRows,
+    CDetectorTestStereoDepth( const uint32_t& p_uImageRows,
                      const uint32_t& p_uImageCols,
                      const bool& p_bDisplayImages,
                      const uint32_t p_uFrequencyPlaybackHz );
-    ~CStereoDetector( );
+    ~CDetectorTestStereoDepth( );
 
 //ds members
 private:
@@ -38,15 +33,6 @@ private:
     //ds vision setup
     const uint32_t m_uImageRows;
     const uint32_t m_uImageCols;
-    const cv::Size m_prSize;
-    cv::Mat m_arrMapsLEFT[2];
-    cv::Mat m_arrMapsRIGHT[2];
-    const Eigen::Matrix3d m_matIntrinsicLEFT;
-    const Eigen::Matrix3d m_matIntrinsicRIGHT;
-    const Eigen::Matrix< double, 3, 4 > m_matProjectionLEFT;
-    const Eigen::Matrix< double, 3, 4 > m_matProjectionRIGHT;
-    const Eigen::Matrix3d m_matMLEFT;
-    const Eigen::Vector3d m_vecTLEFT;
 
     //ds reference information
     cv::Mat m_matReferenceFrameLeft;
@@ -54,18 +40,16 @@ private:
     uint64_t m_uFrameCount;
     Eigen::Isometry3d m_matPreviousTransformationLeft;
 
-    //ds slam points
-    std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame > > m_vecReferencePoints;
-
     //ds feature related
+    std::shared_ptr< cv::BriefDescriptorExtractor > m_pExtractorBRIEF;
     cv::SurfFeatureDetector m_cDetectorSURF;
     cv::SurfDescriptorExtractor m_cExtractorSURF;
-    cv::FlannBasedMatcher m_cDescriptorMatcher;
-    const double m_dMatchingDistanceCutoff;
+    std::shared_ptr< cv::FlannBasedMatcher > m_pMatcherBRIEF;
+    cv::FlannBasedMatcher m_cMatcherSURF;
+    const float m_fMatchingDistanceCutoffBRIEF;
+    const float m_fMatchingDistanceCutoffSURF;
     const uint32_t m_uFeaturesCap;
-    cv::Mat m_matTrajectoryXY;
-    cv::Mat m_matTrajectoryZ;
-    const uint32_t m_uDescriptorRadius;
+    const uint32_t m_uKeyPointSizeLimit;
     const uint32_t m_uDescriptorCenterPixelOffset;
     const cv::Rect m_rectROI;
     cv::Mat m_matDisplayLowerReference;
@@ -79,9 +63,15 @@ private:
     cv::RNG_MT19937 m_cRandomGenerator;
 
     //ds cameras
-    const CPinholeCamera m_cCameraLEFT;
-    const CPinholeCamera m_cCameraRIGHT;
-    const CStereoCamera m_cStereoCamera;
+    const std::shared_ptr< CPinholeCamera > m_pCameraLEFT;
+    const std::shared_ptr< CPinholeCamera > m_pCameraRIGHT;
+    const std::shared_ptr< CStereoCamera > m_pStereoCamera;
+
+    //ds detection
+    const CDetectorMonoTilewise m_cDetectorMonoGFTT;
+
+    //ds triangulation
+    const CTriangulator m_cTriangulator;
 
     //ds user input
     static cv::Point2i m_ptMouseClick;
@@ -90,8 +80,8 @@ private:
 //ds accessors
 public:
 
-    void receivevDataVIWithPose( std::shared_ptr< txt_io::PinholeImageMessage >& p_cImageLeft,
-                                 std::shared_ptr< txt_io::PinholeImageMessage >& p_cImageRight,
+    void receivevDataVIWithPose( const std::shared_ptr< txt_io::PinholeImageMessage >& p_cImageLeft,
+                                 const std::shared_ptr< txt_io::PinholeImageMessage >& p_cImageRight,
                                  const txt_io::CIMUMessage& p_cIMU,
                                  const std::shared_ptr< txt_io::CPoseMessage >& p_cPose );
 
@@ -103,13 +93,6 @@ public:
 private:
 
     void _localizeManual( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation );
-    void _localizeAuto( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation );
-
-    //ds epipolar lines
-    void _drawProjectedEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const double& p_dLineLength );
-
-    //ds triangulation methods
-    void _triangulatePointSURF( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, cv::Mat& p_matDisplayUpper, cv::Mat& p_matDisplayUpperTemporary, const Eigen::Isometry3d p_matCurrentTransformation );
 
     //ds control
     void _shutDown( );
@@ -118,4 +101,4 @@ private:
     static void _catchMouseClick( int p_iEventType, int p_iX, int p_iY, int p_iFlags, void* p_hUserdata );
 };
 
-#endif //#define CSTEREODETECTOR_H_
+#endif //#define CDETECTORTESTSTEREODEPTH_H

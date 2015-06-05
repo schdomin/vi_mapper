@@ -46,22 +46,22 @@ CStereoDetector::CStereoDetector( const uint32_t& p_uImageRows,
     m_matDisplayLowerReference = cv::Mat::zeros( m_uImageRows, 2*m_uImageCols, CV_8UC3 );
 
     //ds trajectory maps
-    m_matTrajectoryXY = cv::Mat( 350, 350, CV_8UC3, CColorCode( 255, 255, 255 ) );
-    m_matTrajectoryZ = cv::Mat( 350, 1500, CV_8UC3, CColorCode( 255, 255, 255 ) );
+    m_matTrajectoryXY = cv::Mat( 350, 350, CV_8UC3, CColorCodeBGR( 255, 255, 255 ) );
+    m_matTrajectoryZ = cv::Mat( 350, 1500, CV_8UC3, CColorCodeBGR( 255, 255, 255 ) );
 
     //ds draw meters grid
     for( uint32_t x = 0; x < 350; x += 10 )
     {
-        cv::line( m_matTrajectoryXY, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryXY, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCodeBGR( 175, 175, 175 ) );
     }
     for( uint32_t x = 0; x < 1500; x += 10 )
     {
-        cv::line( m_matTrajectoryZ, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryZ, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCodeBGR( 175, 175, 175 ) );
     }
     for( uint32_t y = 0; y < 350; y += 10 )
     {
-        cv::line( m_matTrajectoryXY, cv::Point( 0, y ),cv::Point( 350, y ), CColorCode( 175, 175, 175 ) );
-        cv::line( m_matTrajectoryZ, cv::Point( 0, y ),cv::Point( 1500, y ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryXY, cv::Point( 0, y ),cv::Point( 350, y ), CColorCodeBGR( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryZ, cv::Point( 0, y ),cv::Point( 1500, y ), CColorCodeBGR( 175, 175, 175 ) );
     }
 
     //ds initialize reference point holder
@@ -199,7 +199,7 @@ void CStereoDetector::_localizeManual( const cv::Mat& p_matImageLeft, const cv::
         CStereoDetector::m_ptMouseClick.x = -1;
         CStereoDetector::m_ptMouseClick.y = -1;
         CStereoDetector::m_bRightClicked = false;
-        cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCode( 255, 255, 255 ) );
+        cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCodeBGR( 255, 255, 255 ) );
         cv::vconcat( matDisplayUpperTemporary, m_matDisplayLowerReference, matDisplayComplete );
         cv::imshow( "stereo matching", matDisplayComplete );
 
@@ -253,8 +253,8 @@ void CStereoDetector::_localizeManual( const cv::Mat& p_matImageLeft, const cv::
                 cv::hconcat( matDisplayLeftClean, matDisplayRightClean, matDisplayUpperTemporary );
 
                 //ds redraw selectable rectangle
-                cv::rectangle( matDisplayUpper, m_rectROI, CColorCode( 255, 255, 255 ) );
-                cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCode( 255, 255, 255 ) );
+                cv::rectangle( matDisplayUpper, m_rectROI, CColorCodeBGR( 255, 255, 255 ) );
+                cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCodeBGR( 255, 255, 255 ) );
                 cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
                 cv::imshow( "stereo matching", matDisplayComplete );
 
@@ -298,8 +298,8 @@ void CStereoDetector::_localizeManual( const cv::Mat& p_matImageLeft, const cv::
             cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
 
             //ds mark position of user input (persistently)
-            cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCode( 0, 255, 0 ), 1 );
-            cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCode( 0, 255, 0 ), 1 );
+            cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
+            cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
         }
         else
         {
@@ -438,13 +438,13 @@ void CStereoDetector::_localizeAuto( const cv::Mat& p_matImageLeft, const cv::Ma
         for( uint32_t u = 0; u < vecKeyPoints.size( ); ++u )
         {
             //ds get a random color code
-            const CColorCode vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
+            const CColorCodeBGR vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
 
             //ds get the keypoint
             const cv::KeyPoint cKeyPoint( vecKeyPoints[u] );
 
             //ds add the point to structure
-            m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame >( CWrapperOpenCV::fromCVVector( cKeyPoint.pt ),
+            m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame >( CWrapperOpenCV::fromCVVector( cKeyPoint.pt ),
                                                                                                                                                                      Eigen::Vector3d( 0, 0, 0 ),
                                                                                                                                                                      cKeyPoint,
                                                                                                                                                                      matReferenceDescriptors.row( u ),
@@ -499,8 +499,8 @@ void CStereoDetector::_localizeAuto( const cv::Mat& p_matImageLeft, const cv::Ma
         cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
 
         //ds mark position of user input (persistently)
-        cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCode( 0, 255, 0 ), 1 );
-        cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCode( 0, 255, 0 ), 1 );
+        cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
+        cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
     }
 
     //ds update references
@@ -515,7 +515,7 @@ void CStereoDetector::_localizeAuto( const cv::Mat& p_matImageLeft, const cv::Ma
 void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const double& p_dLineLength )
 {
     //ds for all the registered points
-    for( std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame > >::iterator vecReferencePoint = m_vecReferencePoints.begin( ); vecReferencePoint != m_vecReferencePoints.end( ); ++vecReferencePoint )
+    for( std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame > >::iterator vecReferencePoint = m_vecReferencePoints.begin( ); vecReferencePoint != m_vecReferencePoints.end( ); ++vecReferencePoint )
     {
 
     //for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame >& vecReferencePoint: m_vecReferencePoints )
@@ -525,7 +525,7 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
         const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( *vecReferencePoint ), p_matCurrentTransformation ) );
 
         //ds get normalized reference point
-        const Eigen::Vector3d vecReference( m_cCameraLEFT.getNormalized( std::get< 0 >( *vecReferencePoint ) ) );
+        const Eigen::Vector3d vecReference( m_cCameraLEFT.getHomogenized( std::get< 0 >( *vecReferencePoint ) ) );
 
         //ds compute the projection of the point (line) in the current frame (working in normalized coordinates)
         const Eigen::Vector3d vecCoefficients( matEssential*vecReference );
@@ -533,7 +533,7 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
         //std::printf( "<CSimpleFeatureDetector>(_drawEpisubsequentLine) curve equation: f(x) = %fx + %f\n", -vecCoefficients(0)/vecCoefficients(1), -vecCoefficients(2)/vecCoefficients(1) );
 
         //ds compute maximum and minimum points (from top to bottom line)
-        const Eigen::Vector3d vecReferenceLastDetection( m_cCameraLEFT.getNormalized( std::get< 6 >( *vecReferencePoint ) ) );
+        const Eigen::Vector3d vecReferenceLastDetection( m_cCameraLEFT.getHomogenized( std::get< 6 >( *vecReferencePoint ) ) );
         const double dLimitXMinimum( vecReferenceLastDetection(0)-p_dLineLength );
         const double dLimitXMaximum( vecReferenceLastDetection(0)+p_dLineLength );
         double dYMinimum( vecReferenceLastDetection(1)-p_dLineLength );//m_cCameraLEFT.m_prRangeHeightNormalized.first );
@@ -592,7 +592,7 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
         std::vector< cv::KeyPoint > vecPoolKeyPoints( uSamples );
 
         //ds color code
-        const CColorCode cColorLine( std::get< 5 >( *vecReferencePoint ) );
+        const CColorCodeBGR cColorLine( std::get< 5 >( *vecReferencePoint ) );
 
         //ds compute step size for pixel sampling
         const double dStepSizeU( dDeltaX/uSamples );
@@ -652,8 +652,8 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
                 //std::get< 4 >( vecReferencePoint ) = p_matCurrentTransformation;
 
                 //ds draw the match
-                cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
-                cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCode( 0, 255, 0 ), 1 );
+                cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+                cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCodeBGR( 0, 255, 0 ), 1 );
             }
         }
         else
@@ -667,16 +667,16 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
 void CStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, cv::Mat& p_matDisplayUpper, cv::Mat& p_matDisplayUpperTemporary, const Eigen::Isometry3d p_matCurrentTransformation )
 {
     //ds get a random color code
-    const CColorCode vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
+    const CColorCodeBGR vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
 
     //ds get the reference point locally
     const cv::Point2d ptReference( CStereoDetector::m_ptMouseClick.x, CStereoDetector::m_ptMouseClick.y );
 
     //ds draw current user point and descriptor radius
-    cv::circle( p_matDisplayUpper, ptReference, 2, CColorCode( 0, 0, 255 ), -1 );
-    cv::circle( p_matDisplayUpper, ptReference, m_uDescriptorRadius, CColorCode( 0, 0, 255 ), 2 );
-    cv::circle( p_matDisplayUpperTemporary, ptReference, 2, CColorCode( 0, 0, 255 ), -1 );
-    cv::circle( p_matDisplayUpperTemporary, ptReference, m_uDescriptorRadius, CColorCode( 0, 0, 255 ), 2 );
+    cv::circle( p_matDisplayUpper, ptReference, 2, CColorCodeBGR( 0, 0, 255 ), -1 );
+    cv::circle( p_matDisplayUpper, ptReference, m_uDescriptorRadius, CColorCodeBGR( 0, 0, 255 ), 2 );
+    cv::circle( p_matDisplayUpperTemporary, ptReference, 2, CColorCodeBGR( 0, 0, 255 ), -1 );
+    cv::circle( p_matDisplayUpperTemporary, ptReference, m_uDescriptorRadius, CColorCodeBGR( 0, 0, 255 ), 2 );
 
     //ds draw epipolar line
     cv::line( p_matDisplayUpper, ptReference, cv::Point( m_uImageCols+ptReference.x, ptReference.y ), vecColorCode );
@@ -724,8 +724,8 @@ void CStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft, cons
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) stereo offset x: %f y: %f\n", ptMatch.x-vecReferenceKeyPoints[0].pt.x, ptMatch.y-vecReferenceKeyPoints[0].pt.y );
 
     //ds draw the matching keypoint
-    cv::circle( p_matDisplayUpper, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCode( 0, 255, 0 ), -1 );
-    cv::circle( p_matDisplayUpperTemporary, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCode( 0, 255, 0 ), -1 );
+    cv::circle( p_matDisplayUpper, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+    cv::circle( p_matDisplayUpperTemporary, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCodeBGR( 0, 255, 0 ), -1 );
 
     //ds triangulate 3d point
     const Eigen::Vector3d vec3DReferencePointSVDLS( CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( ptReference, ptMatch, CConfigurationStereoCamera::LEFT::matProjection, CConfigurationStereoCamera::RIGHT::matProjection ) );
@@ -738,7 +738,7 @@ void CStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft, cons
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) absolute deviation: %f %%\n", dAbsoluteDeviation );
 
     //ds add the coordinates to the reference structure
-    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
+    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
                                                                                                                                                              vec3DReferencePointSVDLS,
                                                                                                                                                              vecReferenceKeyPoints[0],
                                                                                                                                                              matReferenceDescriptor,

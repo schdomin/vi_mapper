@@ -2,9 +2,9 @@
 #define CPINHOLECAMERA_H
 
 #include <iostream>
-#include <Eigen/Core>
 
-#include "CStereoCamera.h"
+#include "configuration/Types.h"
+#include "utility/CLogger.h"
 
 class CPinholeCamera
 {
@@ -19,16 +19,23 @@ public:
                     const uint32_t p_uWidthPixel,
                     const uint32_t p_uHeightPixel ): m_strCameraLabel( p_strCameraLabel ),
                                                      m_matIntrinsic( p_matIntrinsic ),
-                                                     m_dFx( p_matIntrinsic(0,0) ),
-                                                     m_dFy( p_matIntrinsic(1,1) ),
-                                                     m_dCx( p_matIntrinsic(0,2) ),
-                                                     m_dCy( p_matIntrinsic(1,2) ),
+                                                     m_dFx( m_matIntrinsic(0,0) ),
+                                                     m_dFy( m_matIntrinsic(1,1) ),
+                                                     m_dFxNormalized( m_dFx/p_uWidthPixel ),
+                                                     m_dFyNormalized( m_dFy/p_uHeightPixel ),
+                                                     m_dCx( m_matIntrinsic(0,2) ),
+                                                     m_dCy( m_matIntrinsic(1,2) ),
+                                                     m_dCxNormalized( m_dCx/p_uWidthPixel ),
+                                                     m_dCyNormalized( m_dCy/p_uHeightPixel ),
                                                      m_vecDistortionCoefficients( p_vecDistortionCoefficients ),
                                                      m_matRectification( p_matRectification ),
                                                      m_matProjection( p_matProjection ),
-                                                     m_vecPrincipalPoint( Eigen::Vector2d( p_matIntrinsic(0,2), p_matIntrinsic(1,2) ) ),
-                                                     m_iWidthPixel( p_uWidthPixel ),
-                                                     m_iHeightPixel( p_uHeightPixel ),
+                                                     m_vecPrincipalPoint( Eigen::Vector2d( m_dCx, m_dCy ) ),
+                                                     m_vecPrincipalPointNormalized( Eigen::Vector3d( m_dCxNormalized, m_dCyNormalized, 1.0 ) ),
+                                                     m_uWidthPixel( p_uWidthPixel ),
+                                                     m_uHeightPixel( p_uHeightPixel ),
+                                                     m_iWidthPixel( m_uWidthPixel ),
+                                                     m_iHeightPixel( m_uHeightPixel ),
                                                      m_prRangeWidthNormalized( std::pair< double, double >( getNormalizedX( 0 ), getNormalizedX( p_uWidthPixel ) ) ),
                                                      m_prRangeHeightNormalized( std::pair< double, double >( getNormalizedY( 0 ), getNormalizedY( p_uHeightPixel ) ) )
     {
@@ -48,19 +55,29 @@ public:
                                                       m_matIntrinsic( Eigen::Matrix3d( p_matIntrinsic ).transpose( ) ),
                                                       m_dFx( m_matIntrinsic(0,0) ),
                                                       m_dFy( m_matIntrinsic(1,1) ),
+                                                      m_dFxNormalized( m_dFx/p_uWidthPixel ),
+                                                      m_dFyNormalized( m_dFy/p_uHeightPixel ),
                                                       m_dCx( m_matIntrinsic(0,2) ),
                                                       m_dCy( m_matIntrinsic(1,2) ),
+                                                      m_dCxNormalized( m_dCx/p_uWidthPixel ),
+                                                      m_dCyNormalized( m_dCy/p_uHeightPixel ),
                                                       m_vecDistortionCoefficients( p_vecDistortionCoefficients ),
                                                       m_matRectification( Eigen::Matrix3d( p_matRectification ).transpose( ) ),
                                                       m_matProjection( Eigen::Matrix< double, 4, 3 >( p_matProjection ).transpose( ) ),
                                                       m_vecPrincipalPoint( Eigen::Vector2d( m_dCx, m_dCy ) ),
+                                                      m_vecPrincipalPointNormalized( Eigen::Vector3d( m_dCxNormalized, m_dCyNormalized, 1.0 ) ),
                                                       m_vecRotationToIMU( p_matQuaternionToIMU ),
                                                       m_vecTranslationToIMU( p_vecTranslationToIMU ),
-                                                      m_iWidthPixel( p_uWidthPixel ),
-                                                      m_iHeightPixel( p_uHeightPixel ),
+                                                      m_uWidthPixel( p_uWidthPixel ),
+                                                      m_uHeightPixel( p_uHeightPixel ),
+                                                      m_iWidthPixel( m_uWidthPixel ),
+                                                      m_iHeightPixel( m_uHeightPixel ),
                                                       m_prRangeWidthNormalized( std::pair< double, double >( getNormalizedX( 0 ), getNormalizedX( p_uWidthPixel ) ) ),
                                                       m_prRangeHeightNormalized( std::pair< double, double >( getNormalizedY( 0 ), getNormalizedY( p_uHeightPixel ) ) )
     {
+        m_matTransformationToIMU.linear( )      = m_vecRotationToIMU.toRotationMatrix( );
+        m_matTransformationToIMU.translation( ) = m_vecTranslationToIMU;
+
         //ds log complete configuration
         _logConfiguration( );
     }
@@ -76,18 +93,26 @@ public:
     const Eigen::Matrix3d m_matIntrinsic;
     const double m_dFx;
     const double m_dFy;
+    const double m_dFxNormalized;
+    const double m_dFyNormalized;
     const double m_dCx;
     const double m_dCy;
+    const double m_dCxNormalized;
+    const double m_dCyNormalized;
     const Eigen::Vector4d m_vecDistortionCoefficients;
     const Eigen::Matrix3d m_matRectification;
     const Eigen::Matrix< double, 3, 4 > m_matProjection;
     const Eigen::Vector2d m_vecPrincipalPoint;
+    const Eigen::Vector3d m_vecPrincipalPointNormalized;
 
     //ds extrinsics
     const Eigen::Quaterniond m_vecRotationToIMU;
     const Eigen::Vector3d m_vecTranslationToIMU;
+    Eigen::Isometry3d m_matTransformationToIMU;
 
     //ds misc
+    const uint32_t m_uWidthPixel;
+    const uint32_t m_uHeightPixel;
     const int32_t m_iWidthPixel;
     const int32_t m_iHeightPixel;
     const std::pair< double, double > m_prRangeWidthNormalized;
@@ -96,21 +121,37 @@ public:
 //ds access
 public:
 
-    const Eigen::Vector3d getNormalized( const Eigen::Vector2d& p_vecPoint ) const
+    const Eigen::Vector3d getHomogenized( const Eigen::Vector2d& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint(0)-m_dCx )/m_dFx, ( p_vecPoint(1)-m_dCy )/m_dFy, 1.0 );
     }
-    const Eigen::Vector3d getNormalized( const cv::KeyPoint& p_vecPoint ) const
+    const Eigen::Vector3d getHomogenized( const cv::KeyPoint& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint.pt.x-m_dCx )/m_dFx, ( p_vecPoint.pt.y-m_dCy )/m_dFy, 1.0 );
     }
-    const Eigen::Vector3d getNormalized( const cv::Point2d& p_vecPoint ) const
+    const Eigen::Vector3d getHomogenized( const cv::Point2d& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy, 1.0 );
     }
-    const Eigen::Vector3d getNormalized( const cv::Point2f& p_vecPoint ) const
+    const Eigen::Vector3d getHomogenized( const cv::Point2f& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy, 1.0 );
+    }
+    const Eigen::Vector3d getHomogenized( const cv::Point2i& p_vecPoint ) const
+    {
+        return Eigen::Vector3d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy, 1.0 );
+    }
+    const Eigen::Vector2d getNormalized( const cv::Point2i& p_vecPoint ) const
+    {
+        return Eigen::Vector2d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy );
+    }
+    const Eigen::Vector2d getNormalized( const cv::Point2f& p_vecPoint ) const
+    {
+        return Eigen::Vector2d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy );
+    }
+    const Eigen::Vector2d getNormalized( const cv::Point2d& p_vecPoint ) const
+    {
+        return Eigen::Vector2d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy );
     }
     const double getNormalizedX( const double& p_dX ) const
     {
@@ -140,6 +181,30 @@ public:
     {
         return p_dY*m_dFy+m_dCy;
     }
+    const CPoint2DHomogenized getHomogeneousProjection( const CPoint3DHomogenized& p_vecPoint ) const
+    {
+        //ds compute inhomo projection
+        const Eigen::Vector3d vecProjectionInhomogeneous( m_matProjection*p_vecPoint );
+
+        //ds return homogeneous
+        return vecProjectionInhomogeneous/vecProjectionInhomogeneous(2);
+    }
+    const CPoint2DHomogenized getHomogeneousProjection( const CPoint3DInWorldFrame& p_vecPoint ) const
+    {
+        //ds compute inhomo projection
+        const Eigen::Vector3d vecProjectionInhomogeneous( m_matProjection*CPoint3DHomogenized( p_vecPoint(0), p_vecPoint(1), p_vecPoint(2), 1.0 ) );
+
+        //ds return homogeneous
+        return vecProjectionInhomogeneous/vecProjectionInhomogeneous(2);
+    }
+    const cv::Point2d getProjection( const CPoint3DInWorldFrame& p_vecPoint ) const
+    {
+        //ds compute inhomo projection
+        const Eigen::Vector3d vecProjectionInhomogeneous( m_matProjection*CPoint3DHomogenized( p_vecPoint(0), p_vecPoint(1), p_vecPoint(2), 1.0 ) );
+
+        //ds return uv point
+        return cv::Point2d( vecProjectionInhomogeneous(0)/vecProjectionInhomogeneous(2), vecProjectionInhomogeneous(1)/vecProjectionInhomogeneous(2) );
+    }
 
 //ds helpers
 private:
@@ -147,8 +212,8 @@ private:
     void _logConfiguration( ) const
     {
         //ds log complete configuration
-        std::cout << "--------------------------------------------------------------------------------------------------------------------------------------" << "\n"
-                  << "CONFIGURATION CAMERA: " << m_strCameraLabel << "\n"
+        CLogger::openBox( );
+        std::cout << "CONFIGURATION CAMERA: " << m_strCameraLabel << "\n"
                   << "Fx: " << m_dFx << "\n"
                   << "Fy: " << m_dFy << "\n"
                   << "Cx: " << m_dCx << "\n"
@@ -160,13 +225,12 @@ private:
                   << "Principal point: " << m_vecPrincipalPoint.transpose( ) << "\n"
                   << "Translation (CAMERA to IMU): " << m_vecTranslationToIMU.transpose( ) << "\n"
                   << "\nRotation matrix (CAMERA to IMU):\n\n" << m_vecRotationToIMU.matrix( ) << "\n\n"
-                  << "Resolution (w x h): " << m_iWidthPixel << " x " << m_iHeightPixel << "\n"
+                  << "\nTransformation matrix (CAMERA to IMU):\n\n" << m_matTransformationToIMU.matrix( ) << "\n\n"
+                  << "Resolution (w x h): " << m_uWidthPixel << " x " << m_uHeightPixel << "\n"
                   << "Normalized x range: [" << m_prRangeWidthNormalized.first << ", " << m_prRangeWidthNormalized.second << "]\n"
                   << "Normalized y range: [" << m_prRangeHeightNormalized.first << ", " << m_prRangeHeightNormalized.second << "]" << std::endl;
+        CLogger::closeBox( );
     }
-
-//ds friends
-friend class CStereoCamera;
 
 };
 

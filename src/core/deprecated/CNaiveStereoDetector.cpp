@@ -54,22 +54,22 @@ CNaiveStereoDetector::CNaiveStereoDetector( const uint32_t& p_uImageRows,
     m_matTransformLEFTtoRIGHT               = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
 
     //ds trajectory maps
-    m_matTrajectoryXY = cv::Mat( 350, 350, CV_8UC3, CColorCode( 255, 255, 255 ) );
-    m_matTrajectoryZ = cv::Mat( 350, 1500, CV_8UC3, CColorCode( 255, 255, 255 ) );
+    m_matTrajectoryXY = cv::Mat( 350, 350, CV_8UC3, CColorCodeBGR( 255, 255, 255 ) );
+    m_matTrajectoryZ = cv::Mat( 350, 1500, CV_8UC3, CColorCodeBGR( 255, 255, 255 ) );
 
     //ds draw meters grid
     for( uint32_t x = 0; x < 350; x += 10 )
     {
-        cv::line( m_matTrajectoryXY, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryXY, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCodeBGR( 175, 175, 175 ) );
     }
     for( uint32_t x = 0; x < 1500; x += 10 )
     {
-        cv::line( m_matTrajectoryZ, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryZ, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCodeBGR( 175, 175, 175 ) );
     }
     for( uint32_t y = 0; y < 350; y += 10 )
     {
-        cv::line( m_matTrajectoryXY, cv::Point( 0, y ),cv::Point( 350, y ), CColorCode( 175, 175, 175 ) );
-        cv::line( m_matTrajectoryZ, cv::Point( 0, y ),cv::Point( 1500, y ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryXY, cv::Point( 0, y ),cv::Point( 350, y ), CColorCodeBGR( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryZ, cv::Point( 0, y ),cv::Point( 1500, y ), CColorCodeBGR( 175, 175, 175 ) );
     }
 
     //ds initialize reference point holder
@@ -227,7 +227,7 @@ void CNaiveStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::M
         CNaiveStereoDetector::m_ptMouseClick.x = -1;
         CNaiveStereoDetector::m_ptMouseClick.y = -1;
         CNaiveStereoDetector::m_bRightClicked = false;
-        cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCode( 255, 255, 255 ) );
+        cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCodeBGR( 255, 255, 255 ) );
         cv::vconcat( matDisplayUpperTemporary, m_matDisplayLowerReference, matDisplayComplete );
         cv::imshow( "stereo matching", matDisplayComplete );
 
@@ -281,8 +281,8 @@ void CNaiveStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::M
                 cv::hconcat( matDisplayLeftClean, matDisplayRightClean, matDisplayUpperTemporary );
 
                 //ds redraw selectable rectangle
-                cv::rectangle( matDisplayUpper, m_rectROI, CColorCode( 255, 255, 255 ) );
-                cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCode( 255, 255, 255 ) );
+                cv::rectangle( matDisplayUpper, m_rectROI, CColorCodeBGR( 255, 255, 255 ) );
+                cv::rectangle( matDisplayUpperTemporary, m_rectROI, CColorCodeBGR( 255, 255, 255 ) );
                 cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
                 cv::imshow( "stereo matching", matDisplayComplete );
 
@@ -326,8 +326,8 @@ void CNaiveStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::M
             cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
 
             //ds mark position of user input (persistently)
-            cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCode( 0, 255, 0 ), 1 );
-            cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCode( 0, 255, 0 ), 1 );
+            cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
+            cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
         }
         else
         {
@@ -347,7 +347,7 @@ void CNaiveStereoDetector::_localize( const cv::Mat& p_matImageLeft, const cv::M
 void CNaiveStereoDetector::_drawProjectedEpipolarLineFundamental( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get fundamental matrixp_isoCurrentTransformation
         const Eigen::Matrix3d matFundamental( CMiniVisionToolbox::getFundamental( std::get< 4 >( vecReferencePoint ), p_matCurrentTransformation, m_matIntrinsicLEFT ) );
@@ -426,7 +426,7 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineFundamental( const Eigen::I
             //ds add keypoint
             vecPoolKeyPoints[u] = cv::KeyPoint( dX, dY, m_uDescriptorRadius );
 
-            cv::circle( p_matDisplay, cv::Point2i( dX, dY ), 1, CColorCode( 255, 0, 0 ), -1 );
+            cv::circle( p_matDisplay, cv::Point2i( dX, dY ), 1, CColorCodeBGR( 255, 0, 0 ), -1 );
         }
 
         std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) keypoints pool size: %lu\n", vecPoolKeyPoints.size( ) );
@@ -459,8 +459,8 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineFundamental( const Eigen::I
             cv::Point2f ptMatch( vecPoolKeyPoints[ cBestMatch.trainIdx ].pt );
 
             //ds draw the match
-            cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
-            cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCode( 0, 255, 0 ), 1 );
+            cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+            cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCodeBGR( 0, 255, 0 ), 1 );
         }
     }
 }
@@ -468,7 +468,7 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineFundamental( const Eigen::I
 void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential1( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get essential matrix
         const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( vecReferencePoint ), p_matCurrentTransformation ) );
@@ -551,7 +551,7 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential1( const Eigen::Is
             //ds add keypoint
             vecPoolKeyPoints[u] = cv::KeyPoint( dX, dY, m_uDescriptorRadius );
 
-            cv::circle( p_matDisplay, cv::Point2i( dX, dY ), 1, CColorCode( 0, 0, 255 ), -1 );
+            cv::circle( p_matDisplay, cv::Point2i( dX, dY ), 1, CColorCodeBGR( 0, 0, 255 ), -1 );
         }
 
         std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) keypoints pool size: %lu\n", vecPoolKeyPoints.size( ) );
@@ -584,8 +584,8 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential1( const Eigen::Is
             cv::Point2f ptMatch( vecPoolKeyPoints[ cBestMatch.trainIdx ].pt );
 
             //ds draw the match
-            cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
-            cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCode( 0, 255, 0 ), 1 );
+            cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+            cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCodeBGR( 0, 255, 0 ), 1 );
         }
     }
 }
@@ -593,7 +593,7 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential1( const Eigen::Is
 void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential2( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get essential matrix
         const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( vecReferencePoint ), p_matCurrentTransformation ) );
@@ -672,7 +672,7 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential2( const Eigen::Is
             //ds add keypoint
             vecPoolKeyPoints[u] = cv::KeyPoint( dX*752, dY*480, m_uDescriptorRadius );
 
-            cv::circle( p_matDisplay, cv::Point2i( dX*752, dY*480 ), 1, CColorCode( 0, 255, 0 ), -1 );
+            cv::circle( p_matDisplay, cv::Point2i( dX*752, dY*480 ), 1, CColorCodeBGR( 0, 255, 0 ), -1 );
         }
 
         std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) keypoints pool size: %lu\n", vecPoolKeyPoints.size( ) );
@@ -705,8 +705,8 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential2( const Eigen::Is
             cv::Point2f ptMatch( vecPoolKeyPoints[ cBestMatch.trainIdx ].pt );
 
             //ds draw the match
-            cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
-            cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCode( 0, 255, 0 ), 1 );
+            cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+            cv::circle( p_matDisplay, ptMatch, m_uDescriptorRadius, CColorCodeBGR( 0, 255, 0 ), 1 );
         }
     }
 }
@@ -714,7 +714,7 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineEssential2( const Eigen::Is
 void CNaiveStereoDetector::_drawProjectedEpipolarLineDepthSampling( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay )
 {
     //ds for all the registered points
-    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode > vecReferencePoint: m_vecReferencePoints )
+    for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR > vecReferencePoint: m_vecReferencePoints )
     {
         //ds get transformation
         const Eigen::Isometry3d matTransformation( p_matCurrentTransformation*( std::get< 4 >( vecReferencePoint ) ).inverse( ) );
@@ -748,7 +748,7 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineDepthSampling( const Eigen:
             //ds check if the point is in the valid range
             if( ptPointProjected.inside( m_rectROI ) )
             {
-                cv::circle( p_matDisplay, ptPointProjected, 1, CColorCode( 0, 0, 0 ), -1 );
+                cv::circle( p_matDisplay, ptPointProjected, 1, CColorCodeBGR( 0, 0, 0 ), -1 );
             }
         }
     }
@@ -757,16 +757,16 @@ void CNaiveStereoDetector::_drawProjectedEpipolarLineDepthSampling( const Eigen:
 void CNaiveStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, cv::Mat& p_matDisplayUpper, cv::Mat& p_matDisplayUpperTemporary, const Eigen::Isometry3d p_matCurrentTransformation )
 {
     //ds get a random color code
-    const CColorCode vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
+    const CColorCodeBGR vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
 
     //ds get the reference point locally
     const cv::Point2d ptReference( CNaiveStereoDetector::m_ptMouseClick.x, CNaiveStereoDetector::m_ptMouseClick.y );
 
     //ds draw current user point and descriptor radius
-    cv::circle( p_matDisplayUpper, ptReference, 2, CColorCode( 0, 0, 255 ), -1 );
-    cv::circle( p_matDisplayUpper, ptReference, m_uDescriptorRadius, CColorCode( 0, 0, 255 ), 2 );
-    cv::circle( p_matDisplayUpperTemporary, ptReference, 2, CColorCode( 0, 0, 255 ), -1 );
-    cv::circle( p_matDisplayUpperTemporary, ptReference, m_uDescriptorRadius, CColorCode( 0, 0, 255 ), 2 );
+    cv::circle( p_matDisplayUpper, ptReference, 2, CColorCodeBGR( 0, 0, 255 ), -1 );
+    cv::circle( p_matDisplayUpper, ptReference, m_uDescriptorRadius, CColorCodeBGR( 0, 0, 255 ), 2 );
+    cv::circle( p_matDisplayUpperTemporary, ptReference, 2, CColorCodeBGR( 0, 0, 255 ), -1 );
+    cv::circle( p_matDisplayUpperTemporary, ptReference, m_uDescriptorRadius, CColorCodeBGR( 0, 0, 255 ), 2 );
 
     //ds draw epipolar line
     cv::line( p_matDisplayUpper, ptReference, cv::Point( m_uImageCols+ptReference.x, ptReference.y ), vecColorCode );
@@ -814,8 +814,8 @@ void CNaiveStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft,
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) stereo offset x: %f y: %f\n", ptMatch.x-vecReferenceKeyPoints[0].pt.x, ptMatch.y-vecReferenceKeyPoints[0].pt.y );
 
     //ds draw the matching keypoint
-    cv::circle( p_matDisplayUpper, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCode( 0, 255, 0 ), -1 );
-    cv::circle( p_matDisplayUpperTemporary, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCode( 0, 255, 0 ), -1 );
+    cv::circle( p_matDisplayUpper, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+    cv::circle( p_matDisplayUpperTemporary, cv::Point( m_uImageCols+ptMatch.x, ptMatch.y ), 2, CColorCodeBGR( 0, 255, 0 ), -1 );
 
     //ds triangulate 3d point
     const Eigen::Vector3d vec3DReferencePointSVDLS( CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( ptReference, ptMatch, CConfigurationStereoCamera::LEFT::matProjection, CConfigurationStereoCamera::RIGHT::matProjection ) );
@@ -828,7 +828,7 @@ void CNaiveStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft,
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) absolute deviation: %f %%\n", dAbsoluteDeviation );
 
     //ds add the coordinates to the reference structure
-    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCode >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
+    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
                                                                                                                                                              vec3DReferencePointSVDLS,
                                                                                                                                                              vecReferenceKeyPoints[0],
                                                                                                                                                              matReferenceDescriptor,
@@ -840,10 +840,10 @@ void CNaiveStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft,
 void CNaiveStereoDetector::_triangulatePointDepthSampling( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, cv::Mat& p_matDisplayUpper, cv::Mat& p_matDisplayUpperTemporary, const Eigen::Isometry3d p_matCurrentTransformation )
 {
     //ds get a random color code
-    const CColorCode vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
+    const CColorCodeBGR vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
 
     //ds draw mouseclick
-    cv::circle( p_matDisplayUpperTemporary, CNaiveStereoDetector::m_ptMouseClick, 2, CColorCode( 0, 0, 255 ), -1 );
+    cv::circle( p_matDisplayUpperTemporary, CNaiveStereoDetector::m_ptMouseClick, 2, CColorCodeBGR( 0, 0, 255 ), -1 );
 
     //ds draw horizontal epipolar line (for comparison)
     cv::line( p_matDisplayUpperTemporary, CNaiveStereoDetector::m_ptMouseClick, cv::Point( m_uImageCols+CNaiveStereoDetector::m_ptMouseClick.x, CNaiveStereoDetector::m_ptMouseClick.y ), vecColorCode );
@@ -852,7 +852,7 @@ void CNaiveStereoDetector::_triangulatePointDepthSampling( const cv::Mat& p_matI
     cv::Rect cROILEFT( CNaiveStereoDetector::m_ptMouseClick.x-m_uDescriptorCenterPixelOffset, CNaiveStereoDetector::m_ptMouseClick.y-m_uDescriptorCenterPixelOffset, m_uDescriptorRadius, m_uDescriptorRadius );
 
     //ds draw the roi
-    cv::rectangle( p_matDisplayUpperTemporary, cROILEFT, CColorCode( 0, 0, 255 ) );
+    cv::rectangle( p_matDisplayUpperTemporary, cROILEFT, CColorCodeBGR( 0, 0, 255 ) );
 
     //ds gaussian weighting
     //const double dSigma( 0.5 );
@@ -944,16 +944,16 @@ void CNaiveStereoDetector::_triangulatePointDepthSampling( const cv::Mat& p_matI
     }
 
     cv::Rect cROIRIGHTDraw( m_uImageCols+ptMatch.x-m_uDescriptorCenterPixelOffset, ptMatch.y-m_uDescriptorCenterPixelOffset, m_uDescriptorRadius, m_uDescriptorRadius );
-    cv::rectangle( p_matDisplayUpperTemporary, cROIRIGHTDraw, CColorCode( 0, 255, 0 ) );
+    cv::rectangle( p_matDisplayUpperTemporary, cROIRIGHTDraw, CColorCodeBGR( 0, 255, 0 ) );
 }
 
 void CNaiveStereoDetector::_triangulatePointDepthSamplingLinear( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, cv::Mat& p_matDisplayUpper, cv::Mat& p_matDisplayUpperTemporary, const Eigen::Isometry3d p_matCurrentTransformation )
 {
     //ds get a random color code
-    const CColorCode vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
+    const CColorCodeBGR vecColorCode( m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ), m_cRandomGenerator.uniform( 0, 255 ) );
 
     //ds draw mouseclick
-    cv::circle( p_matDisplayUpperTemporary, CNaiveStereoDetector::m_ptMouseClick, 2, CColorCode( 0, 0, 255 ), -1 );
+    cv::circle( p_matDisplayUpperTemporary, CNaiveStereoDetector::m_ptMouseClick, 2, CColorCodeBGR( 0, 0, 255 ), -1 );
 
     //ds draw horizontal epipolar line (for comparison)
     cv::line( p_matDisplayUpperTemporary, CNaiveStereoDetector::m_ptMouseClick, cv::Point( m_uImageCols+CNaiveStereoDetector::m_ptMouseClick.x, CNaiveStereoDetector::m_ptMouseClick.y ), vecColorCode );
@@ -996,7 +996,7 @@ void CNaiveStereoDetector::_triangulatePointDepthSamplingLinear( const cv::Mat& 
         //ds draw it
         if( 0 <= iU )
         {
-            cv::circle( p_matDisplayUpperTemporary, cv::Point( m_uImageCols+iU, iV ), 1, CColorCode( 255, 0, 0 ), 1 );
+            cv::circle( p_matDisplayUpperTemporary, cv::Point( m_uImageCols+iU, iV ), 1, CColorCodeBGR( 255, 0, 0 ), 1 );
         }
 
 

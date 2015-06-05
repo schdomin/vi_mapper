@@ -1,12 +1,10 @@
-#ifndef CEPIPOLARDETECTOR_H_
-#define CEPIPOLARDETECTOR_H_
+#ifndef CSTEREODETECTOR_H_
+#define CSTEREODETECTOR_H_
 
 #include <opencv/cv.h>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp>
 #include <memory>
-#include <chrono>
-#include <ctime>
 
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
@@ -17,23 +15,22 @@
 #include "utility/CStereoCamera.h"
 
 //ds readability
-typedef Eigen::Vector3d CPoint2DNormalized;
 typedef Eigen::Vector2d CPoint2DInCameraFrame;
 typedef Eigen::Vector3d CPoint3DInCameraFrame;
-typedef cv::Scalar      CColorCode;
+typedef cv::Scalar      CColorCodeBGR;
 typedef cv::Mat         CDescriptor;
 
-class CEpipolarDetector
+class CStereoDetector
 {
 
 //ds ctor/dtor
 public:
 
-    CEpipolarDetector( const uint32_t& p_uImageRows,
+    CStereoDetector( const uint32_t& p_uImageRows,
                      const uint32_t& p_uImageCols,
                      const bool& p_bDisplayImages,
                      const uint32_t p_uFrequencyPlaybackHz );
-    ~CEpipolarDetector( );
+    ~CStereoDetector( );
 
 //ds members
 private:
@@ -41,6 +38,15 @@ private:
     //ds vision setup
     const uint32_t m_uImageRows;
     const uint32_t m_uImageCols;
+    const cv::Size m_prSize;
+    cv::Mat m_arrMapsLEFT[2];
+    cv::Mat m_arrMapsRIGHT[2];
+    const Eigen::Matrix3d m_matIntrinsicLEFT;
+    const Eigen::Matrix3d m_matIntrinsicRIGHT;
+    const Eigen::Matrix< double, 3, 4 > m_matProjectionLEFT;
+    const Eigen::Matrix< double, 3, 4 > m_matProjectionRIGHT;
+    const Eigen::Matrix3d m_matMLEFT;
+    const Eigen::Vector3d m_vecTLEFT;
 
     //ds reference information
     cv::Mat m_matReferenceFrameLeft;
@@ -49,18 +55,19 @@ private:
     Eigen::Isometry3d m_matPreviousTransformationLeft;
 
     //ds slam points
-    std::vector< std::pair< std::vector< std::tuple< cv::KeyPoint, CDescriptor, CPoint2DNormalized, CPoint2DNormalized > >, Eigen::Isometry3d > > m_vecScanPoints;
+    std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame > > m_vecReferencePoints;
 
     //ds feature related
-    cv::BriefDescriptorExtractor m_cExtractorBRIEF;
     cv::SurfFeatureDetector m_cDetectorSURF;
     cv::SurfDescriptorExtractor m_cExtractorSURF;
-    cv::FlannBasedMatcher m_cFLANNMatcher;
-    const uint32_t m_uKeyPointSizeLimit;
+    cv::FlannBasedMatcher m_cDescriptorMatcher;
     const double m_dMatchingDistanceCutoff;
     const uint32_t m_uFeaturesCap;
     cv::Mat m_matTrajectoryXY;
     cv::Mat m_matTrajectoryZ;
+    const uint32_t m_uDescriptorRadius;
+    const uint32_t m_uDescriptorCenterPixelOffset;
+    const cv::Rect m_rectROI;
     cv::Mat m_matDisplayLowerReference;
 
     //ds control
@@ -71,15 +78,14 @@ private:
     int32_t m_iPlaybackSpeedupCounter;
     cv::RNG_MT19937 m_cRandomGenerator;
 
-    //ds fps display
-    std::chrono::time_point< std::chrono::system_clock > m_tmStart;
-    uint32_t m_uFramesCurrentCycle;
-    double m_dPreviousFrameRate;
-
     //ds cameras
     const CPinholeCamera m_cCameraLEFT;
     const CPinholeCamera m_cCameraRIGHT;
     const CStereoCamera m_cStereoCamera;
+
+    //ds user input
+    static cv::Point2i m_ptMouseClick;
+    static bool m_bRightClicked;
 
 //ds accessors
 public:
@@ -96,12 +102,11 @@ public:
 //ds helpers
 private:
 
-    void _localizeAutoBRIEF( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation );
-    void _localizeAutoSURF( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation );
+    void _localizeManual( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation );
+    void _localizeAuto( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation );
 
     //ds epipolar lines
-    void _drawProjectedEpipolarLineEssentialBRIEF( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_uLineLength );
-    void _drawProjectedEpipolarLineEssentialSURF( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_uLineLength );
+    void _drawProjectedEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const double& p_dLineLength );
 
     //ds triangulation methods
     void _triangulatePointSURF( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, cv::Mat& p_matDisplayUpper, cv::Mat& p_matDisplayUpperTemporary, const Eigen::Isometry3d p_matCurrentTransformation );
@@ -110,7 +115,7 @@ private:
     void _shutDown( );
     void _speedUp( );
     void _slowDown( );
-    void _updateFrameRateDisplay( const uint32_t& p_uFrameProbeRange );
+    static void _catchMouseClick( int p_iEventType, int p_iX, int p_iY, int p_iFlags, void* p_hUserdata );
 };
 
-#endif //#define CEPIPOLARDETECTOR_H_
+#endif //#define CSTEREODETECTOR_H_

@@ -35,22 +35,22 @@ CEpipolarDetector::CEpipolarDetector( const uint32_t& p_uImageRows,
     m_matDisplayLowerReference = cv::Mat::zeros( m_uImageRows, 2*m_uImageCols, CV_8UC3 );
 
     //ds trajectory maps
-    m_matTrajectoryXY = cv::Mat( 350, 350, CV_8UC3, CColorCode( 255, 255, 255 ) );
-    m_matTrajectoryZ = cv::Mat( 350, 1500, CV_8UC3, CColorCode( 255, 255, 255 ) );
+    m_matTrajectoryXY = cv::Mat( 350, 350, CV_8UC3, CColorCodeBGR( 255, 255, 255 ) );
+    m_matTrajectoryZ = cv::Mat( 350, 1500, CV_8UC3, CColorCodeBGR( 255, 255, 255 ) );
 
     //ds draw meters grid
     for( uint32_t x = 0; x < 350; x += 10 )
     {
-        cv::line( m_matTrajectoryXY, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryXY, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCodeBGR( 175, 175, 175 ) );
     }
     for( uint32_t x = 0; x < 1500; x += 10 )
     {
-        cv::line( m_matTrajectoryZ, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryZ, cv::Point( x, 0 ),cv::Point( x, 350 ), CColorCodeBGR( 175, 175, 175 ) );
     }
     for( uint32_t y = 0; y < 350; y += 10 )
     {
-        cv::line( m_matTrajectoryXY, cv::Point( 0, y ),cv::Point( 350, y ), CColorCode( 175, 175, 175 ) );
-        cv::line( m_matTrajectoryZ, cv::Point( 0, y ),cv::Point( 1500, y ), CColorCode( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryXY, cv::Point( 0, y ),cv::Point( 350, y ), CColorCodeBGR( 175, 175, 175 ) );
+        cv::line( m_matTrajectoryZ, cv::Point( 0, y ),cv::Point( 1500, y ), CColorCodeBGR( 175, 175, 175 ) );
     }
 
     //ds initialize the window
@@ -137,7 +137,7 @@ void CEpipolarDetector::_localizeAutoBRIEF( const cv::Mat& p_matImageLeft, const
     //ds show the image
     cv::Mat matDisplayComplete = cv::Mat( 2*m_uImageRows, 2*m_uImageCols, CV_8UC3 );
     cv::vconcat( matDisplayUpperTemporary, m_matDisplayLowerReference, matDisplayComplete );
-    cv::putText( matDisplayComplete, "FPS " + std::to_string( m_dPreviousFrameRate ), cv::Point2i( 0, 10 ), cv::FONT_HERSHEY_PLAIN, 0.9, CColorCode( 0, 0, 255 ) );
+    cv::putText( matDisplayComplete, "FPS " + std::to_string( m_dPreviousFrameRate ), cv::Point2i( 0, 10 ), cv::FONT_HERSHEY_PLAIN, 0.9, CColorCodeBGR( 0, 0, 255 ) );
     cv::imshow( "stereo matching", matDisplayComplete );
     cv::imshow( "trajectory (x,y)", m_matTrajectoryXY );
     cv::imshow( "some stuff", m_matTrajectoryZ );
@@ -221,14 +221,14 @@ void CEpipolarDetector::_localizeAutoBRIEF( const cv::Mat& p_matImageLeft, const
             //ds get the keypoint
             const cv::KeyPoint& cKeyPoint( vecKeyPoints[u] );
 
-            const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getNormalized( cKeyPoint ) );
+            const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getHomogenized( cKeyPoint ) );
 
             //ds set current reference point
             vecReferencePoints.push_back( std::tuple< cv::KeyPoint, CDescriptor, CPoint2DNormalized, CPoint2DNormalized >( cKeyPoint, matReferenceDescriptors.row( u ), vecPointNormalized, vecPointNormalized ) );
 
             //ds draw detected point
-            cv::circle( matDisplayUpper, cKeyPoint.pt, 2, CColorCode( 0, 255, 0 ), -1 );
-            cv::circle( matDisplayUpper, cKeyPoint.pt, cKeyPoint.size, CColorCode( 255, 0, 0 ), 1 );
+            cv::circle( matDisplayUpper, cKeyPoint.pt, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+            cv::circle( matDisplayUpper, cKeyPoint.pt, cKeyPoint.size, CColorCodeBGR( 255, 0, 0 ), 1 );
         }
 
         std::printf( "<CEpilinearStereoDetector>(_drawEpisubsequentLine) useful keypoints: %lu\n", vecReferencePoints.size( ) );
@@ -287,8 +287,8 @@ void CEpipolarDetector::_localizeAutoBRIEF( const cv::Mat& p_matImageLeft, const
         cv::imshow( "stereo matching", matDisplayComplete );
 
         //ds mark position of user input (persistently)
-        cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCode( 0, 255, 0 ), 1 );
-        cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCode( 0, 255, 0 ), 1 );
+        cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
+        cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
     }
     else
     {
@@ -350,7 +350,7 @@ void CEpipolarDetector::_localizeAutoSURF( const cv::Mat& p_matImageLeft, const 
     //ds show the image
     cv::Mat matDisplayComplete = cv::Mat( 2*m_uImageRows, 2*m_uImageCols, CV_8UC3 );
     cv::vconcat( matDisplayUpperTemporary, m_matDisplayLowerReference, matDisplayComplete );
-    cv::putText( matDisplayComplete, "FPS " + std::to_string( m_dPreviousFrameRate ), cv::Point2i( 0, 10 ), cv::FONT_HERSHEY_PLAIN, 0.9, CColorCode( 0, 0, 255 ) );
+    cv::putText( matDisplayComplete, "FPS " + std::to_string( m_dPreviousFrameRate ), cv::Point2i( 0, 10 ), cv::FONT_HERSHEY_PLAIN, 0.9, CColorCodeBGR( 0, 0, 255 ) );
     cv::imshow( "stereo matching", matDisplayComplete );
     cv::imshow( "trajectory (x,y)", m_matTrajectoryXY );
     cv::imshow( "some stuff", m_matTrajectoryZ );
@@ -440,14 +440,14 @@ void CEpipolarDetector::_localizeAutoSURF( const cv::Mat& p_matImageLeft, const 
             //ds check size
             if( m_uKeyPointSizeLimit > cKeyPoint.size )
             {
-                const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getNormalized( cKeyPoint ) );
+                const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getHomogenized( cKeyPoint ) );
 
                 //ds set current reference point
                 vecReferencePoints.push_back( std::tuple< cv::KeyPoint, CDescriptor, CPoint2DNormalized, CPoint2DNormalized >( cKeyPoint, matReferenceDescriptors.row( u ), vecPointNormalized, vecPointNormalized ) );
 
                 //ds draw detected point
-                cv::circle( matDisplayUpper, cKeyPoint.pt, 2, CColorCode( 0, 255, 0 ), -1 );
-                cv::circle( matDisplayUpper, cKeyPoint.pt, cKeyPoint.size, CColorCode( 255, 0, 0 ), 1 );
+                cv::circle( matDisplayUpper, cKeyPoint.pt, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
+                cv::circle( matDisplayUpper, cKeyPoint.pt, cKeyPoint.size, CColorCodeBGR( 255, 0, 0 ), 1 );
             }
         }
 
@@ -507,8 +507,8 @@ void CEpipolarDetector::_localizeAutoSURF( const cv::Mat& p_matImageLeft, const 
         cv::imshow( "stereo matching", matDisplayComplete );
 
         //ds mark position of user input (persistently)
-        cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCode( 0, 255, 0 ), 1 );
-        cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCode( 0, 255, 0 ), 1 );
+        cv::circle( m_matTrajectoryXY, cv::Point2d( 50+p_matCurrentTransformation.translation( )( 0 )*10, 175-p_matCurrentTransformation.translation( )( 1 )*10 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
+        cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 175-p_matCurrentTransformation.translation( )( 2 )*100 ), 5, CColorCodeBGR( 0, 255, 0 ), 1 );
     }
     else
     {
@@ -534,11 +534,11 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialBRIEF( const Eigen::I
             const Eigen::Vector3d& vecReferenceLastDetection( std::get< 3 >( *pReferencePoint ) );
             const int32_t iULastDetection( m_cCameraLEFT.getDenormalizedX( vecReferenceLastDetection(0) ) );
             const int32_t iVLastDetection( m_cCameraLEFT.getDenormalizedY( vecReferenceLastDetection(1) ) );
-            const int32_t iVLimitMaximum( std::min( iVLastDetection+p_iLineLength, static_cast< int32_t >(  m_cCameraLEFT.m_iHeightPixel ) ) );
+            const int32_t iVLimitMaximum( std::min( iVLastDetection+p_iLineLength, static_cast< int32_t >(  m_cCameraLEFT.m_uHeightPixel ) ) );
             const int32_t iVLimitMinimum( std::max( iVLastDetection-p_iLineLength, 0 ) );
 
             //ds get back to pixel coordinates
-            int32_t iUMaximum( std::min( iULastDetection+p_iLineLength, static_cast< int32_t >( m_cCameraLEFT.m_iWidthPixel ) ) );
+            int32_t iUMaximum( std::min( iULastDetection+p_iLineLength, static_cast< int32_t >( m_cCameraLEFT.m_uWidthPixel ) ) );
             int32_t iUMinimum( std::max( iULastDetection-p_iLineLength, 0 ) );
             int32_t iVMaximum( m_cCameraLEFT.getDenormalizedY( -( vecCoefficients(2)+vecCoefficients(0)*m_cCameraLEFT.getNormalizedX( iUMaximum ) )/vecCoefficients(1) ) );
             int32_t iVMinimum( m_cCameraLEFT.getDenormalizedY( -( vecCoefficients(2)+vecCoefficients(0)*m_cCameraLEFT.getNormalizedX( iUMinimum ) )/vecCoefficients(1) ) );
@@ -583,7 +583,7 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialBRIEF( const Eigen::I
             const int32_t iDeltaY( iVMaximum-iVMinimum );
 
             //ds draw the ROI
-            cv::rectangle( p_matDisplay, cv::Point2i( iUMinimum, iVMinimum ), cv::Point2i( iUMaximum, iVMaximum ), CColorCode( 255, 0, 0 ) );
+            cv::rectangle( p_matDisplay, cv::Point2i( iUMinimum, iVMinimum ), cv::Point2i( iUMaximum, iVMaximum ), CColorCodeBGR( 255, 0, 0 ) );
 
             //ds sample line length
             const uint32_t uSamples( std::sqrt( iDeltaX*iDeltaX + iDeltaY*iDeltaY ) );
@@ -608,7 +608,7 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialBRIEF( const Eigen::I
                 //ds add keypoint
                 vecPoolKeyPoints[u] = cv::KeyPoint( dU, dV, dKeyPointSize );
 
-                cv::circle( p_matDisplay, cv::Point2i( dU, dV ), 1, CColorCode( 255, 0, 0 ), -1 );
+                cv::circle( p_matDisplay, cv::Point2i( dU, dV ), 1, CColorCodeBGR( 255, 0, 0 ), -1 );
             }
 
             //std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) keypoints pool size: %lu\n", vecPoolKeyPoints.size( ) );
@@ -647,10 +647,10 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialBRIEF( const Eigen::I
                 else
                 {
                     //ds update reference
-                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getNormalized( ptMatch ) );
+                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getHomogenized( ptMatch ) );
 
                     //ds draw the match
-                    cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
+                    cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
                 }
             }
             else
@@ -693,11 +693,11 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialSURF( const Eigen::Is
             const Eigen::Vector3d& vecReferenceLastDetection( std::get< 3 >( *pReferencePoint ) );
             const int32_t iULastDetection( m_cCameraLEFT.getDenormalizedX( vecReferenceLastDetection(0) ) );
             const int32_t iVLastDetection( m_cCameraLEFT.getDenormalizedY( vecReferenceLastDetection(1) ) );
-            const int32_t iVLimitMaximum( std::min( iVLastDetection+p_iLineLength, static_cast< int32_t >(  m_cCameraLEFT.m_iHeightPixel ) ) );
+            const int32_t iVLimitMaximum( std::min( iVLastDetection+p_iLineLength, static_cast< int32_t >(  m_cCameraLEFT.m_uHeightPixel ) ) );
             const int32_t iVLimitMinimum( std::max( iVLastDetection-p_iLineLength, 0 ) );
 
             //ds get back to pixel coordinates
-            int32_t iUMaximum( std::min( iULastDetection+p_iLineLength, static_cast< int32_t >( m_cCameraLEFT.m_iWidthPixel ) ) );
+            int32_t iUMaximum( std::min( iULastDetection+p_iLineLength, static_cast< int32_t >( m_cCameraLEFT.m_uWidthPixel ) ) );
             int32_t iUMinimum( std::max( iULastDetection-p_iLineLength, 0 ) );
             int32_t iVMaximum( m_cCameraLEFT.getDenormalizedY( -( vecCoefficients(2)+vecCoefficients(0)*m_cCameraLEFT.getNormalizedX( iUMaximum ) )/vecCoefficients(1) ) );
             int32_t iVMinimum( m_cCameraLEFT.getDenormalizedY( -( vecCoefficients(2)+vecCoefficients(0)*m_cCameraLEFT.getNormalizedX( iUMinimum ) )/vecCoefficients(1) ) );
@@ -749,7 +749,7 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialSURF( const Eigen::Is
             const cv::Rect cROI( iULU, iULV, iWidth, iHeight );
 
             //ds draw the ROI
-            cv::rectangle( p_matDisplay, cv::Point2i( iULU, iULV ), cv::Point2i( iULU+iWidth, iULV+iHeight ), CColorCode( 255, 0, 0 ) );
+            cv::rectangle( p_matDisplay, cv::Point2i( iULU, iULV ), cv::Point2i( iULU+iWidth, iULV+iHeight ), CColorCodeBGR( 255, 0, 0 ) );
 
             //ds sample line length
             const uint32_t uSamples( std::sqrt( iDeltaX*iDeltaX + iDeltaY*iDeltaY ) );
@@ -775,7 +775,7 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialSURF( const Eigen::Is
                 vecPoolKeyPoints[u] = cv::KeyPoint( dU-iUMinimum, dV-iVMinimum, fKeyPointSize );
                 //vecPoolKeyPoints[u] = cv::KeyPoint( dU, dV, fKeyPointSize );
 
-                cv::circle( p_matDisplay, cv::Point2i( dU, dV ), 1, CColorCode( 255, 0, 0 ), -1 );
+                cv::circle( p_matDisplay, cv::Point2i( dU, dV ), 1, CColorCodeBGR( 255, 0, 0 ), -1 );
             }
 
             //std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) keypoints pool size: %lu\n", vecPoolKeyPoints.size( ) );
@@ -818,10 +818,10 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialSURF( const Eigen::Is
                     ptMatch.y += iVMinimum;
 
                     //ds update reference
-                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getNormalized( ptMatch ) );
+                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getHomogenized( ptMatch ) );
 
                     //ds draw the match
-                    cv::circle( p_matDisplay, ptMatch, 2, CColorCode( 0, 255, 0 ), -1 );
+                    cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
 
                     ++uMatchCount;
                 }

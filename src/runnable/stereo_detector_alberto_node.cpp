@@ -1,19 +1,19 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <chrono>
-#include <ctime>
 #include <opencv/highgui.h>
 
 //ds ROS
 #include <ros/ros.h>
-#include <core/CEpipolarDetectorBRIEF.h>
 
 //ds custom
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
 #include "txt_io/pose_message.h"
 #include "utility/CStack.h"
+#include "core/CTrackerStereo.h"
+#include "core/CDetectorTestStereoDepth.h"
+#include "utility/CMiniTimer.h"
 
 //ds data vectors
 CStack< txt_io::CIMUMessage > g_vecMessagesIMU;
@@ -27,13 +27,39 @@ uint64_t g_uFrameIDCamera_0 = 0;
 uint64_t g_uFrameIDCamera_1 = 0;
 uint64_t g_uFrameIDPose     = 0;
 
+//ds initialize statics
+std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::vec_tmStart;
+
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
 
 int main( int argc, char **argv )
 {
+    //assert( false );
+
     //ds pwd info
-    std::printf( "--------------------------------------------------------------------------------------------------------------------------------------\n" );
+    CLogger::openBox( );
     std::printf( "(main) launched: %s\n", argv[0] );
+
+    //ds parameters TODO clean implementation
+    EPlaybackMode eMode( ePlaybackInteractive );
+
+    //ds check parameters
+    if( 2 == argc )
+    {
+        //ds stepping desired
+        if( 0 != argv[1] && 0 == std::strcmp( "-stepwise", argv[1] ) )
+        {
+            std::printf( "(main)[parameters] stepwise mode desired\n" );
+            eMode = ePlaybackStepwise;
+        }
+
+        //ds benchmark
+        else if( 0 != argv[1] && 0 == std::strcmp( "-benchmark", argv[1] ) )
+        {
+            std::printf( "(main)[parameters] benchmark mode desired\n" );
+            eMode = ePlaybackBenchmark;
+        }
+    }
 
     //ds image resolution
     const uint32_t uImageRows = 480;
@@ -55,43 +81,58 @@ int main( int argc, char **argv )
     //ds default files
     std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
     std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
-    std::string strG20Dump           = "/home/dominik/libs/g2o/bin/testdump_brief.g2o";
-
-    //ds overwrite the string if present
-    if( 0 != argv[1] )
-    {
-        strInfileMessageDump = argv[1];
-    }
+    std::string strG2ODump           = "/home/dominik/libs/g2o/bin/testdump.g2o";
 
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
 
-    //ds set message frequency
-    const uint32_t uFrequencyPlaybackHz = 100; //100;
-    const uint32_t uSleepMicroseconds   = ( 1.0/uFrequencyPlaybackHz )*1e6;
-    const bool bDisplayImages( true );
+    //ds internals
+    uint32_t uFrequencyPlaybackHz( 100 );
+    uint32_t uSleepMicroseconds( ( 1.0/uFrequencyPlaybackHz )*1e6 );
+    uint32_t uWaitKeyTimeout( 1 );
+
+    //ds adjust depending on mode
+    switch( eMode )
+    {
+        case ePlaybackStepwise:
+        {
+            uSleepMicroseconds = 0;
+            uWaitKeyTimeout    = 0;
+            break;
+        }
+        case ePlaybackBenchmark:
+        {
+            uSleepMicroseconds = 0;
+            uWaitKeyTimeout    = 1;
+            break;
+        }
+        default:
+        {
+            break;
+        }
+    }
 
     //ds log configuration
-    std::printf( "(main) ---------------------------------------------- CONFIGURATION ----------------------------------------------\n" );
     std::printf( "(main) ROS Node namespace   := '%s'\n", pNode->getNamespace( ).c_str( ) );
     std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
     std::printf( "(main) uImageCols (width)   := '%u'\n", uImageCols );
     std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
     std::printf( "(main) uFrequencyPlaybackHz := '%u'\n", uFrequencyPlaybackHz );
     std::printf( "(main) uSleepMicroseconds   := '%u'\n", uSleepMicroseconds );
-    std::printf( "(main) -----------------------------------------------------------------------------------------------------------\n" );
     std::fflush( stdout );
+    CLogger::closeBox( );
 
     //ds feature detector
-    CEpipolarDetectorBRIEF cDetector( uImageRows, uImageCols, bDisplayImages, uFrequencyPlaybackHz );
+    //CDetectorTestStereoDepth cDetector( uImageRows, uImageCols, true, uFrequencyPlaybackHz );
+    CTrackerStereo cDetector( uFrequencyPlaybackHz, eMode, uWaitKeyTimeout );
 
     //ds get start time
-    const std::chrono::time_point< std::chrono::system_clock > tmStart( std::chrono::system_clock::now( ) );
+    const uint64_t uToken( CMiniTimer::tic( ) );
 
     //ds playback the dump
     while( ifMessages.good( ) && ros::ok( ) && !cDetector.isShutdownRequested( ) )
     {
-        //ds check if we have to update the frequency
+        //ds update the frequency
         const uint32_t uSleepMicroseconds = ( 1.0/cDetector.getPlaybackFrequencyHz( ) )*1e6;
 
         //ds read a message
@@ -189,8 +230,7 @@ int main( int argc, char **argv )
     }
 
     //ds get end time
-    const std::chrono::time_point< std::chrono::system_clock > tmEnd( std::chrono::system_clock::now( ) );
-    const double dDuration( ( std::chrono::duration< double >( tmEnd-tmStart ) ).count( ) );
+    const double dDuration( CMiniTimer::toc( uToken ) );
     const uint64_t uFrameCount( cDetector.getFrameCount( ) );
 
     std::printf( "(main) dataset completed\n" );
@@ -201,9 +241,9 @@ int main( int argc, char **argv )
     std::printf( "(main) -----------------------------------------------------------------------------------------------------------\n" );
 
     //ds dump file
-    cDetector.solveAndOptimizeG2O( strG20Dump );
+    cDetector.savesolveAndOptimizeG2O( strG2ODump );
 
-    std::printf( "(main) successfully written g2o dump to: %s\n", strG20Dump.c_str( ) );
+    std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODump.c_str( ) );
 
     //ds if detector was not manually shut down
     if( !cDetector.isShutdownRequested( ) )
@@ -251,7 +291,10 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         Eigen::Vector3d vecLinearAcceleration;
 
         //ds parse the values
-        issLine >> strToken >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2] >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2];
+        issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
+
+        //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
+        vecLinearAcceleration[1] += 9.80665;
 
         //ds set message fields
         msgIMU.setAngularVelocity( vecAngularVelocity );
@@ -326,5 +369,5 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //std::cout << g_pActiveMessagesPose->getOrientationMatrix( ) << std::endl;
     }
 
-    usleep( p_uSleepMicroseconds );
+    //usleep( p_uSleepMicroseconds );
 }

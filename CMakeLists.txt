@@ -4,9 +4,11 @@ cmake_minimum_required(VERSION 2.8.3)
 project(vi_mapper)
 
 #ds modules
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules" ${CMAKE_MODULE_PATH})
+#set(CMAKE_BUILD_TYPE "Debug")
 
 message("module path: ${CMAKE_MODULE_PATH}")
+message("build type: ${CMAKE_BUILD_TYPE}")
 
 #ds find packages
 find_package(catkin REQUIRED COMPONENTS roscpp std_msgs genmsg sensor_msgs fps_mapper)
@@ -23,7 +25,7 @@ message("using OpenCV version: ${OpenCV_VERSION}")
 catkin_package(CATKIN_DEPENDS roscpp std_msgs genmsg sensor_msgs fps_mapper)
 
 #ds add c++11 support, no optimization, all warnings
-add_definitions(-O3 -Wall -pedantic -std=c++11 -pthread)
+add_definitions(-O3 -g -Wall -pedantic -std=c++11 -pthread)
 
 #ds include dirs
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -46,10 +48,20 @@ foreach(_variableName ${_variableNames})
 endforeach()
 
 #ds BINARIES
+set(SOURCEFILES
+src/types/CLandmark.cpp
+src/utility/CMiniVisionToolbox.cpp
+src/core/CTriangulator.cpp
+src/core/CDetectorMonoTilewise.cpp
+src/core/CMatcherEpipolar.cpp
+src/utility/CBridgeG2O.cpp)
+
 #add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
-add_executable(stereo_detector_alberto_node src/main/stereo_detector_alberto_node.cpp src/core/CEpipolarDetectorBRIEF.cpp src/utility/CMiniVisionToolbox.cpp)
+#add_executable(stereo_detector_alberto_node src/main/stereo_detector_alberto_node.cpp src/core/CEpipolarDetectorBRIEF.cpp src/utility/CMiniVisionToolbox.cpp)
+#add_executable(stereo_detector_alberto_node src/runnable/stereo_detector_alberto_node.cpp src/core/CDetectorTestStereoDepth.cpp ${CUSTOMVARIABLE_SOURCEFILES})
+add_executable(stereo_detector_alberto_node src/runnable/stereo_detector_alberto_node.cpp src/core/CTrackerStereo.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
 #target_link_libraries(message_dumper_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})

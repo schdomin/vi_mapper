@@ -1,31 +1,17 @@
-#ifndef CEPIPOLARDETECTORBRIEF_H_
-#define CEPIPOLARDETECTORBRIEF_H_
+#ifndef CEPIPOLARDETECTORBRIEF_H
+#define CEPIPOLARDETECTORBRIEF_H
 
-#include <opencv/cv.h>
 #include <opencv2/features2d/features2d.hpp>
 #include <opencv2/nonfree/features2d.hpp>
-#include <memory>
 #include <chrono>
 #include <ctime>
-#include <fstream>
+#include <memory>
 
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
 #include "txt_io/pose_message.h"
 
-#include "configuration/CConfigurationOpenCV.h"
-#include "utility/CWrapperOpenCV.h"
-#include "utility/CMiniVisionToolbox.h"
 #include "utility/CStereoCamera.h"
-#include "exceptions/CExceptionNoMatchFound.h"
-
-//ds readability
-typedef Eigen::Vector3d CPoint2DNormalized;
-typedef Eigen::Vector2d CPoint2DInCameraFrame;
-typedef Eigen::Vector3d CPoint3DInCameraFrame;
-typedef Eigen::Vector3d CPoint3DInWorldFrame;
-typedef cv::Scalar      CColorCode;
-typedef cv::Mat         CDescriptor;
 
 class CEpipolarDetectorBRIEF
 {
@@ -47,38 +33,38 @@ private:
     const uint32_t m_uImageCols;
 
     //ds reference information
-    cv::Mat m_matReferenceFrameLeft;
-    cv::Mat m_matReferenceFrameRight;
     uint64_t m_uFrameCount;
     Eigen::Isometry3d m_matPreviousTransformationLeft;
-
-    //ds tracking points
-    std::vector< std::pair< std::vector< std::tuple< uint64_t, cv::KeyPoint, CDescriptor, CPoint2DNormalized, CPoint2DNormalized, uint8_t > >, Eigen::Isometry3d > > m_vecScanPoints;
+    CPoint3DInWorldFrame m_vecTranslationLast;
+    double m_dTranslationDeltaForMAPMeters;
 
     //ds feature related
     cv::BriefDescriptorExtractor m_cExtractorBRIEF;
-    cv::FlannBasedMatcher m_cFLANNMatcher;
+    cv::FlannBasedMatcher m_cMatcherBRIEF;
     const uint32_t m_uKeyPointSizeLimit;
     const int32_t m_iSearchUMin;
     const int32_t m_iSearchUMax;
     const int32_t m_iSearchVMin;
     const int32_t m_iSearchVMax;
     const cv::Rect m_cSearchROI;
-    const float m_fMatchingDistanceCutoff;
-    const uint32_t m_uLimitFeaturesPerScan;
+    const uint32_t m_uNumberOfTilesBase;
+    const float m_fMatchingDistanceCutoffTracking;
+    const float m_fMatchingDistanceCutoffTriangulation;
+    const uint32_t m_uLimitLandmarksPerScan;
     const uint8_t m_uMaximumNonMatches;
-    const uint8_t m_uActiveLandmarksMinimum;
+    const uint8_t m_uVisibleLandmarksMinimum;
     cv::Mat m_matTrajectoryXY;
     cv::Mat m_matTrajectoryZ;
     cv::Mat m_matDisplayLowerReference;
+    const double m_dMaximumDepthMeters;
 
-    //ds recording
-    uint64_t m_uAvailableLandmarkID;
-    std::vector< std::pair< uint64_t, CPoint3DInWorldFrame > > m_vecLandmarks;
-    std::vector< std::pair< Eigen::Isometry3d, std::vector< std::pair< uint64_t, CPoint2DNormalized > > > > m_vecPosesWithLandmarks;
+    //ds tracking
+    UIDLandmark m_uAvailableLandmarkID;
+    std::vector< CLandmarkInWorldFrame > m_vecLandmarks;
+    std::vector< std::pair< Eigen::Isometry3d, std::vector< CLandmark > > > m_vecActiveMeasurementPoints;
+    std::vector< std::pair< Eigen::Isometry3d, std::vector< CLandmarkMeasurement > > > m_vecLogMeasurementPoints;
 
     //ds control
-    bool m_bDisplayImages;
     bool m_bIsShutdownRequested;
     double m_dFrequencyPlaybackHz;
     uint32_t m_uFrequencyPlaybackDeltaHz;
@@ -108,36 +94,52 @@ public:
     const uint32_t getPlaybackFrequencyHz( ) const { return std::lround( m_dFrequencyPlaybackHz ); }
 
     //ds postprocessing
-    void dumpVerticesWithLandmarks( const std::string& p_strOutfile ) const;
     void solveAndOptimizeG2O( const std::string& p_strOutfile ) const;
 
 //ds helpers
 private:
 
-    void _localize( const cv::Mat& p_matImageLeft, const cv::Mat& p_matImageRight, const Eigen::Isometry3d& p_matCurrentTransformation );
+    void _trackLandmarksAuto( cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT, const Eigen::Isometry3d& p_matCurrentTransformation );
+    void _trackLandmarksManual( cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT, const Eigen::Isometry3d& p_matCurrentTransformation );
 
     //ds epipolar lines
-    uint64_t _matchProjectedEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_uLineLength );
+    const std::vector< CLandmarkMeasurement > _getVisibleLandmarksOnEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_uLineLength );
 
-    std::vector< std::tuple< uint64_t, cv::KeyPoint, CDescriptor, CPoint2DNormalized, CPoint2DNormalized, uint8_t > > _getLandmarksGFTT( cv::Mat& p_matDisplay, const cv::Mat& p_matImage, const uint32_t& p_uTileNumberBase );
+    const std::vector< CLandmark > _getLandmarksGFTT( cv::Mat& p_matDisplay, const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT, const uint32_t& p_uTileNumberBase, const Eigen::Isometry3d& p_matTransformation );
 
-    CPoint2DNormalized _getMatchSampleUBRIEF( cv::Mat& p_matDisplay,
+    const CPoint3DInCameraFrame _getPointTriangulated( const cv::Mat& p_matImageRight,
+                                                       const cv::KeyPoint& p_cKeyPoint,
+                                                       const CDescriptor& p_matReferenceDescriptor,
+                                                       const cv::DescriptorExtractor& p_cExtractor,
+                                                       const cv::DescriptorMatcher& p_cMatcher,
+                                                       const double& p_dMatchingDistanceCutoff ) const;
+
+    CPoint2DInCameraFrameHomogenized _getMatchSampleUBRIEF( cv::Mat& p_matDisplay,
                                               const cv::Mat& p_matImage,
                                               const int32_t& p_iUMinimum,
                                               const int32_t& p_iDeltaU,
                                               const Eigen::Vector3d& p_vecCoefficients,
-                                              const cv::Mat& p_matReferenceDescriptor ) const;
-    CPoint2DNormalized _getMatchSampleVBRIEF( cv::Mat& p_matDisplay,
+                                              const cv::Mat& p_matReferenceDescriptor,
+                                              const cv::DescriptorExtractor& p_cExtractor,
+                                              const cv::DescriptorMatcher& p_cMatcher,
+                                              const float& p_fKeyPointSize ) const;
+
+    CPoint2DInCameraFrameHomogenized _getMatchSampleVBRIEF( cv::Mat& p_matDisplay,
                                               const cv::Mat& p_matImage,
                                               const int32_t& p_iVMinimum,
                                               const int32_t& p_iDeltaV,
                                               const Eigen::Vector3d& p_vecCoefficients,
-                                              const cv::Mat& p_matReferenceDescriptor ) const;
+                                              const cv::Mat& p_matReferenceDescriptor,
+                                              const cv::DescriptorExtractor& p_cExtractor,
+                                              const cv::DescriptorMatcher& p_cMatcher,
+                                              const float& p_fKeyPointSize ) const;
 
-    CPoint2DNormalized _getMatchBRIEF( cv::Mat& p_matDisplay,
+    CPoint2DInCameraFrameHomogenized _getMatchBRIEF( cv::Mat& p_matDisplay,
                                        const cv::Mat& p_matImage,
                                        std::vector< cv::KeyPoint >& p_vecPoolKeyPoints,
-                                       const cv::Mat& p_matReferenceDescriptor ) const;
+                                       const cv::Mat& p_matReferenceDescriptor,
+                                       const cv::DescriptorExtractor& p_cExtractor,
+                                       const cv::DescriptorMatcher& p_cMatcher ) const;
 
     //ds control
     void _shutDown( );
@@ -146,4 +148,4 @@ private:
     void _updateFrameRateDisplay( const uint32_t& p_uFrameProbeRange );
 };
 
-#endif //#define CEPIPOLARDETECTOR_H_
+#endif //#define CEPIPOLARDETECTOR_H

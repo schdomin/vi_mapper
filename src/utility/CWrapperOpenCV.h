@@ -69,6 +69,11 @@ public:
 
         return vecCV;
     }
+    static const cv::Point2d toCVVector( const Eigen::Vector2d& p_vecEigen )
+    {
+        //ds allocate cv vector
+        return cv::Vec2d( p_vecEigen(0), p_vecEigen(1) );
+    }
     static const cv::Mat_< double > toCVMatrix( const Eigen::Matrix< double, 3, 3 >& p_matEigen )
     {
         //ds allocate cv vector
@@ -103,27 +108,11 @@ public:
     }
     static const Eigen::Vector2d fromCVVector( const cv::Vec2d& p_vecCV )
     {
-        //ds allocate eigen matrix
-        Eigen::Vector2d vecEigen;
-
-        //ds fill the vector (column major)
-        for( uint32_t u = 0; u < 2; ++u )
-        {
-            vecEigen( u ) = p_vecCV( u );
-        }
-
-        return vecEigen;
+        return Eigen::Vector2d( p_vecCV(0), p_vecCV(1) );
     }
     static const Eigen::Vector2d fromCVVector( const cv::Point2d& p_vecCV )
     {
-        //ds allocate eigen matrix
-        Eigen::Vector2d vecEigen;
-
-        //ds fill the vector (column major)
-        vecEigen( 0 ) = p_vecCV.x;
-        vecEigen( 1 ) = p_vecCV.y;
-
-        return vecEigen;
+        return Eigen::Vector2d( p_vecCV.x, p_vecCV.y );
     }
 
 };
