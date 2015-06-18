@@ -5,7 +5,8 @@ project(vi_mapper)
 
 #ds modules
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules" ${CMAKE_MODULE_PATH})
-#set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_BUILD_TYPE Release)
 
 message("module path: ${CMAKE_MODULE_PATH}")
 message("build type: ${CMAKE_BUILD_TYPE}")
@@ -25,7 +26,7 @@ message("using OpenCV version: ${OpenCV_VERSION}")
 catkin_package(CATKIN_DEPENDS roscpp std_msgs genmsg sensor_msgs fps_mapper)
 
 #ds add c++11 support, no optimization, all warnings
-add_definitions(-O3 -g -Wall -pedantic -std=c++11 -pthread)
+add_definitions(-O3 -march=native -Wall -pedantic -std=c++11 -pthread -fopenmp)
 
 #ds include dirs
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -62,6 +63,7 @@ src/utility/CBridgeG2O.cpp)
 #add_executable(stereo_detector_alberto_node src/main/stereo_detector_alberto_node.cpp src/core/CEpipolarDetectorBRIEF.cpp src/utility/CMiniVisionToolbox.cpp)
 #add_executable(stereo_detector_alberto_node src/runnable/stereo_detector_alberto_node.cpp src/core/CDetectorTestStereoDepth.cpp ${CUSTOMVARIABLE_SOURCEFILES})
 add_executable(stereo_detector_alberto_node src/runnable/stereo_detector_alberto_node.cpp src/core/CTrackerStereo.cpp ${SOURCEFILES})
+add_executable(test_depth src/runnable/test_depth.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
 #target_link_libraries(message_dumper_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
@@ -76,5 +78,9 @@ target_link_libraries(stereo_detector_alberto_node
                       ${G2O_CORE_LIBRARY} 
                       ${G2O_STUFF_LIBRARY}
                       ${G2O_TYPES_SBA})
+target_link_libraries(test_depth 
+                      ${catkin_LIBRARIES} 
+                      ${OpenCV_LIBRARIES}
+                      -fopenmp)
 
 message("--------------------------------------------------------------------")

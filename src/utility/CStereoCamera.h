@@ -12,21 +12,29 @@ class CStereoCamera
 
 public:
 
-    CStereoCamera( const std::shared_ptr< CPinholeCamera >& p_pCameraLEFT, const std::shared_ptr< CPinholeCamera >& p_pCameraRIGHT ): m_pCameraLEFT( p_pCameraLEFT ),
-                                                                                                                                      m_pCameraRIGHT( p_pCameraRIGHT ),
-                                                                                                                                      m_uPixelWidth( p_pCameraLEFT->m_uWidthPixel ),
-                                                                                                                                      m_uPixelHeight( p_pCameraLEFT->m_uHeightPixel )
+    CStereoCamera( const std::shared_ptr< CPinholeCamera > p_pCameraLEFT, const std::shared_ptr< CPinholeCamera > p_pCameraRIGHT ): m_pCameraLEFT( p_pCameraLEFT ),
+                                                                                                                                    m_pCameraRIGHT( p_pCameraRIGHT ),
+                                                                                                                                    m_uPixelWidth( p_pCameraLEFT->m_uWidthPixel ),
+                                                                                                                                    m_uPixelHeight( p_pCameraLEFT->m_uHeightPixel ),
+                                                                                                                                    m_cVisibleRange( 0, 0, m_uPixelWidth, m_uPixelHeight )
     {
         //ds check stereo setup
         assert( p_pCameraLEFT->m_uWidthPixel == p_pCameraRIGHT->m_uWidthPixel );
         assert( p_pCameraLEFT->m_uHeightPixel == p_pCameraRIGHT->m_uHeightPixel );
 
         //ds setup extrinsic transformations
-        m_matTransformLEFTtoIMU.linear()        = p_pCameraLEFT->m_vecRotationToIMU.matrix( );
-        m_matTransformLEFTtoIMU.translation( )  = p_pCameraLEFT->m_vecTranslationToIMU;
-        m_matTransformRIGHTtoIMU.linear( )      = p_pCameraRIGHT->m_vecRotationToIMU.matrix( );
-        m_matTransformRIGHTtoIMU.translation( ) = p_pCameraRIGHT->m_vecTranslationToIMU;
-        m_matTransformLEFTtoRIGHT               = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
+        m_matTransformLEFTtoIMU   = p_pCameraLEFT->m_matTransformationToIMU;
+        m_matTransformRIGHTtoIMU  = p_pCameraRIGHT->m_matTransformationToIMU;
+        m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
+
+        m_dBaselineMeters = m_matTransformLEFTtoRIGHT.translation( ).norm( );
+
+        //ds log complete configuration
+        CLogger::openBox( );
+        std::cout << "Configuration stereo camera: " << m_pCameraLEFT->m_strCameraLabel << "-" << m_pCameraRIGHT->m_strCameraLabel << "\n"
+                  << "\nTransformation matrix (LEFT to RIGHT):\n\n" << m_matTransformLEFTtoRIGHT.matrix( ) << "\n"
+                  << "\nBaseline: " << m_dBaselineMeters << "m" << std::endl;
+        CLogger::closeBox( );
 
         //ds compute undistorted and rectified mappings
         cv::initUndistortRectifyMap( CWrapperOpenCV::toCVMatrix( p_pCameraLEFT->m_matIntrinsic ),
@@ -46,6 +54,49 @@ public:
                                      m_arrUndistortRectifyMapsRIGHT[0],
                                      m_arrUndistortRectifyMapsRIGHT[1] );
     }
+    CStereoCamera( const CPinholeCamera& p_cCameraLEFT, const CPinholeCamera& p_cCameraRIGHT ): m_pCameraLEFT( std::make_shared< CPinholeCamera >( p_cCameraLEFT ) ),
+                                                                                                                                        m_pCameraRIGHT( std::make_shared< CPinholeCamera >( p_cCameraRIGHT ) ),
+                                                                                                                                        m_uPixelWidth( p_cCameraLEFT.m_uWidthPixel ),
+                                                                                                                                        m_uPixelHeight( p_cCameraLEFT.m_uHeightPixel ),
+                                                                                                                                        m_cVisibleRange( 0, 0, m_uPixelWidth, m_uPixelHeight )
+    {
+        //ds check stereo setup
+        assert( p_cCameraLEFT.m_uWidthPixel == p_cCameraRIGHT.m_uWidthPixel );
+        assert( p_cCameraLEFT.m_uHeightPixel == p_cCameraRIGHT.m_uHeightPixel );
+
+        //ds setup extrinsic transformations
+        m_matTransformLEFTtoIMU   = p_cCameraLEFT.m_matTransformationToIMU;
+        m_matTransformRIGHTtoIMU  = p_cCameraRIGHT.m_matTransformationToIMU;
+        m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
+        m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
+
+        m_dBaselineMeters = m_matTransformLEFTtoRIGHT.translation( ).norm( );
+
+        //ds log complete configuration
+        CLogger::openBox( );
+        std::cout << "Configuration stereo camera: " << m_pCameraLEFT->m_strCameraLabel << "-" << m_pCameraRIGHT->m_strCameraLabel << "\n"
+                  << "\nTransformation matrix (LEFT to RIGHT):\n\n" << m_matTransformLEFTtoRIGHT.matrix( ) << "\n"
+                  << "\nBaseline: " << m_dBaselineMeters << "m" << std::endl;
+        CLogger::closeBox( );
+
+        //ds compute undistorted and rectified mappings
+        cv::initUndistortRectifyMap( CWrapperOpenCV::toCVMatrix( p_cCameraLEFT.m_matIntrinsic ),
+                                     CWrapperOpenCV::toCVVector( p_cCameraLEFT.m_vecDistortionCoefficients ),
+                                     CWrapperOpenCV::toCVMatrix( p_cCameraLEFT.m_matRectification ),
+                                     CWrapperOpenCV::toCVMatrix( p_cCameraLEFT.m_matProjection ),
+                                     cv::Size( m_pCameraLEFT->m_uWidthPixel, m_pCameraLEFT->m_uHeightPixel ),
+                                     CV_16SC2,
+                                     m_arrUndistortRectifyMapsLEFT[0],
+                                     m_arrUndistortRectifyMapsLEFT[1] );
+        cv::initUndistortRectifyMap( CWrapperOpenCV::toCVMatrix( p_cCameraRIGHT.m_matIntrinsic ),
+                                     CWrapperOpenCV::toCVVector( p_cCameraRIGHT.m_vecDistortionCoefficients ),
+                                     CWrapperOpenCV::toCVMatrix( p_cCameraRIGHT.m_matRectification ),
+                                     CWrapperOpenCV::toCVMatrix( p_cCameraRIGHT.m_matProjection ),
+                                     cv::Size( m_pCameraRIGHT->m_uWidthPixel, m_pCameraRIGHT->m_uHeightPixel ),
+                                     CV_16SC2,
+                                     m_arrUndistortRectifyMapsRIGHT[0],
+                                     m_arrUndistortRectifyMapsRIGHT[1] );
+    }
 
     //ds no manual dynamic allocation
     ~CStereoCamera( ){ }
@@ -57,6 +108,9 @@ public:
     //ds stereo cameras
     const std::shared_ptr< CPinholeCamera > m_pCameraLEFT;
     const std::shared_ptr< CPinholeCamera > m_pCameraRIGHT;
+
+    //ds intrinsics
+    double m_dBaselineMeters;
 
     //ds common dimensions
     const uint32_t m_uPixelWidth;
@@ -70,6 +124,9 @@ public:
     //ds undistortion/rectification
     cv::Mat m_arrUndistortRectifyMapsLEFT[2];
     cv::Mat m_arrUndistortRectifyMapsRIGHT[2];
+
+    //ds visible range
+    const cv::Rect m_cVisibleRange;
 
 //ds accessors
 public:

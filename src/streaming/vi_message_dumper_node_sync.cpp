@@ -31,8 +31,8 @@ boost::lockfree::spsc_queue< sensor_msgs::ImageConstPtr, boost::lockfree::capaci
 boost::lockfree::spsc_queue< sensor_msgs::ImuConstPtr, boost::lockfree::capacity< g_uMaxQueueSize > > g_queMessagesIMU;
 
 //ds sensor topic callbacks
-void callbackCamera0( const sensor_msgs::ImageConstPtr msg ){ g_queMessagesCamera0.push( msg ); }
-void callbackCamera1( const sensor_msgs::ImageConstPtr msg ){ g_queMessagesCamera1.push( msg ); }
+void callbackCameraRIGHT( const sensor_msgs::ImageConstPtr msg ){ g_queMessagesCamera0.push( msg ); }
+void callbackCameraLEFT( const sensor_msgs::ImageConstPtr msg ){ g_queMessagesCamera1.push( msg ); }
 void callbackIMU0( const  sensor_msgs::ImuConstPtr msg ){ g_queMessagesIMU.push( msg ); }
 
 //ds threads
@@ -109,8 +109,8 @@ int main( int argc, char **argv )
     std::fflush( stdout );
 
     //ds subscribe to visensor topics
-    ros::Subscriber cSubscriberCamera0 = hNode->subscribe( strTopicCamera0, g_uMaxQueueSize, callbackCamera0 );
-    ros::Subscriber cSubscriberCamera1 = hNode->subscribe( strTopicCamera1, g_uMaxQueueSize, callbackCamera1 );
+    ros::Subscriber cSubscriberCamera0 = hNode->subscribe( strTopicCamera0, g_uMaxQueueSize, callbackCameraRIGHT );
+    ros::Subscriber cSubscriberCamera1 = hNode->subscribe( strTopicCamera1, g_uMaxQueueSize, callbackCameraLEFT );
     ros::Subscriber cSubscribeIMU0     = hNode->subscribe( strTopicIMU, g_uMaxQueueSize, callbackIMU0 );
 
     //ds start threads

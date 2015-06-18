@@ -10,6 +10,24 @@
 class CMatcherEpipolar
 {
 
+//ds private structs
+private:
+
+    struct CMeasurementPoint
+    {
+        const Eigen::Isometry3d matTransformationLEFTtoWORLD;
+        const std::shared_ptr< std::vector< CLandmark* > > vecLandmarks;
+
+        CMeasurementPoint( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ), vecLandmarks( p_vecLandmarks )
+        {
+            //ds nothing to do
+        }
+        ~CMeasurementPoint( )
+        {
+            //ds nothing to do
+        }
+    };
+
 //ds ctor/dtor
 public:
 
@@ -27,15 +45,15 @@ private:
     //ds cameras (not necessarily used in stereo here)
     const std::shared_ptr< CPinholeCamera > m_pCameraLEFT;
     const std::shared_ptr< CPinholeCamera > m_pCameraRIGHT;
+    const std::shared_ptr< CStereoCamera > m_pCameraSTEREO;
 
     //ds matching
     const std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
     const std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
-    const float m_fMatchingDistanceCutoff;
-    const float m_fMatchingDistanceCutoffOriginal;
-    const uint32_t m_uKeyPointSize;
+    const double m_dMatchingDistanceCutoff;
+    const double m_dMatchingDistanceCutoffOriginal;
 
-    std::vector< std::pair< Eigen::Isometry3d, std::vector< CLandmark* > > > m_vecMeasurementPoints;
+    std::vector< CMeasurementPoint > m_vecMeasurementPointsActive;
 
     //ds internal
     const int32_t m_iSearchUMin;
@@ -51,7 +69,7 @@ public:
 
     void addMeasurementPoint( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks )
     {
-        m_vecMeasurementPoints.push_back( std::pair< Eigen::Isometry3d, std::vector< CLandmark* > >( p_matTransformationLEFTtoWORLD, *p_vecLandmarks ) );
+        m_vecMeasurementPointsActive.push_back( CMeasurementPoint( p_matTransformationLEFTtoWORLD, p_vecLandmarks ) );
     }
 
     /*const std::shared_ptr< std::vector< CLandmark* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplay,
@@ -73,12 +91,17 @@ public:
                                                                                      const Eigen::Matrix3d& p_matEssential,
                                                                                      const int32_t& p_iHalfLineLengthBase ) const;*/
 
-    const std::shared_ptr< std::vector< CLandmarkMeasurement* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplayLEFT,
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplayLEFT,
                                                                                      cv::Mat& p_matDisplayRIGHT,
                                                                                      const cv::Mat& p_matImageLEFT,
                                                                                      const cv::Mat& p_matImageRIGHT,
                                                                                      const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
                                                                                      const int32_t& p_iHalfLineLengthBase );
+
+    const std::vector< CMeasurementPoint >::size_type getNumberOfActiveMeasurementPoints( ) const
+    {
+        return m_vecMeasurementPointsActive.size( );
+    }
 
 private:
 
@@ -98,28 +121,30 @@ private:
                                                        const cv::Mat& p_matReferenceDescriptor,
                                                        const float& p_fKeyPointSize ) const;*/
 
-    const CMatchTracking _getMatchSampleRecursiveU( cv::Mat& p_matDisplay,
+    const CMatchTracking* _getMatchSampleRecursiveU( cv::Mat& p_matDisplay,
                                                        const cv::Mat& p_matImage,
                                                        const int32_t& p_iUMinimum,
                                                        const int32_t& p_iDeltaU,
                                                        const Eigen::Vector3d& p_vecCoefficients,
-                                                       const cv::Mat& p_matReferenceDescriptor,
-                                                       const cv::Mat& p_matOriginalDescriptor,
+                                                       const CDescriptor& p_matReferenceDescriptor,
+                                                       const CDescriptor& p_matOriginalDescriptor,
+                                                       const double& p_dKeyPointSize,
                                                        const uint8_t& p_uRecursionDepth ) const;
 
-    const CMatchTracking _getMatchSampleRecursiveV( cv::Mat& p_matDisplay,
+    const CMatchTracking* _getMatchSampleRecursiveV( cv::Mat& p_matDisplay,
                                                        const cv::Mat& p_matImage,
                                                        const int32_t& p_iVMinimum,
                                                        const int32_t& p_iDeltaV,
                                                        const Eigen::Vector3d& p_vecCoefficients,
-                                                       const cv::Mat& p_matReferenceDescriptor,
-                                                       const cv::Mat& p_matOriginalDescriptor,
+                                                       const CDescriptor& p_matReferenceDescriptor,
+                                                       const CDescriptor& p_matOriginalDescriptor,
+                                                       const double& p_dKeyPointSize,
                                                        const uint8_t& p_uRecursionDepth ) const;
 
-    const CMatchTracking _getMatch( const cv::Mat& p_matImage,
+    const CMatchTracking* _getMatch( const cv::Mat& p_matImage,
                                                 std::vector< cv::KeyPoint >& p_vecPoolKeyPoints,
-                                                const cv::Mat& p_matReferenceDescriptor,
-                                                const cv::Mat& p_matOriginalDescriptor ) const;
+                                                const CDescriptor& p_matDescriptorReference,
+                                                const CDescriptor& p_matDescriptorOriginal ) const;
 
     inline const double _getCurveX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const;
     inline const double _getCurveY( const Eigen::Vector3d& p_vecCoefficients, const double& p_dX ) const;

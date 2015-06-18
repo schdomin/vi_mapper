@@ -12,8 +12,9 @@
 #include "txt_io/pose_message.h"
 #include "utility/CStack.h"
 #include "core/CTrackerStereo.h"
-#include "core/CDetectorTestStereoDepth.h"
+//#include "core/CDetectorTestStereoDepth.h"
 #include "utility/CMiniTimer.h"
+#include "utility/CMiniVisionToolbox.h"
 
 //ds data vectors
 CStack< txt_io::CIMUMessage > g_vecMessagesIMU;
@@ -81,7 +82,6 @@ int main( int argc, char **argv )
     //ds default files
     std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
     std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
-    std::string strG2ODump           = "/home/dominik/libs/g2o/bin/testdump.g2o";
 
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
@@ -234,16 +234,20 @@ int main( int argc, char **argv )
     const uint64_t uFrameCount( cDetector.getFrameCount( ) );
 
     std::printf( "(main) dataset completed\n" );
-    std::printf( "(main) ----------------------------------------------- PERFORMANCE -----------------------------------------------\n" );
-    std::printf( "(main)         duration: %f\n", dDuration );
-    std::printf( "(main)     total frames: %lu\n", uFrameCount );
-    std::printf( "(main) frame rate (avg): %f\n", uFrameCount/dDuration );
-    std::printf( "(main) -----------------------------------------------------------------------------------------------------------\n" );
+    std::printf( "(main) duration: %fs\n", dDuration );
+    std::printf( "(main) total frames: %lu\n", uFrameCount );
+    std::printf( "(main) frame rate (avg): %f FPS\n", uFrameCount/dDuration );
 
-    //ds dump file
-    cDetector.savesolveAndOptimizeG2O( strG2ODump );
+    if( 1 < uFrameCount )
+    {
+        //ds generate full file name
+        const std::string strG2ODump( "/home/dominik/libs/g2o/bin/graphs/graph_" + CMiniTimer::getTimestamp( ) + ".g2o" );
 
-    std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODump.c_str( ) );
+        //ds dump file
+        cDetector.saveToG2O( strG2ODump );
+
+        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODump.c_str( ) );
+    }
 
     //ds if detector was not manually shut down
     if( !cDetector.isShutdownRequested( ) )
@@ -290,11 +294,15 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         Eigen::Vector3d vecAngularVelocity;
         Eigen::Vector3d vecLinearAcceleration;
 
-        //ds parse the values
+        //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
+        //ds flip the z and y value for consistency with the world frame
+        vecLinearAcceleration[1] = -vecLinearAcceleration[1];
+        vecLinearAcceleration[2] = -vecLinearAcceleration[2];
+
         //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
-        vecLinearAcceleration[1] += 9.80665;
+        //vecLinearAcceleration[1] += 9.80665;
 
         //ds set message fields
         msgIMU.setAngularVelocity( vecAngularVelocity );

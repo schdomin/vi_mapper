@@ -34,6 +34,17 @@ public:
         return ( std::chrono::duration< double >( tmEnd-CMiniTimer::vec_tmStart[p_uIndex] ) ).count( );
     }
 
+    static const std::string getTimestamp( )
+    {
+        //ds current time
+        const std::time_t tmCurrent = std::time( NULL );
+
+        //ds compute stamp and return
+        char chBufferTimestamp[100];
+        std::strftime( chBufferTimestamp, sizeof( chBufferTimestamp ), "%Y-%m-%d-%H%M%S", std::localtime( &tmCurrent ) );
+        return chBufferTimestamp;
+    }
+
 };
 
 #endif //CMINITIMER_H

@@ -26,56 +26,63 @@ typedef cv::Mat         CDescriptor;
 typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
 
+struct CMeasurementLandmark
+{
+    const UIDLandmark uID;
+    const cv::Point2d ptUVLEFT;
+    const cv::Point2d ptUVRIGHT;
+    const CPoint3DInCameraFrame vecPointXYZ;
+    const Eigen::Vector3d vecCameraPosition;
+    const Eigen::Matrix3d matKRotationLEFT;
+    const Eigen::Vector3d vecKTranslationLEFT;
+
+    CMeasurementLandmark( const UIDLandmark& p_uID,
+                          const cv::Point2d& p_ptUVLEFT,
+                          const cv::Point2d& p_ptUVRIGHT,
+                          const CPoint3DInCameraFrame& p_vecPointXYZ,
+                          const Eigen::Vector3d& p_vecCameraPosition,
+                          const Eigen::Matrix3d& p_matKRotation,
+                          const Eigen::Vector3d& p_vecKTranslation ): uID( p_uID ),
+                                                                      ptUVLEFT( p_ptUVLEFT ),
+                                                                      ptUVRIGHT( p_ptUVRIGHT ),
+                                                                      vecPointXYZ( p_vecPointXYZ ),
+                                                                      vecCameraPosition( p_vecCameraPosition ),
+                                                                      matKRotationLEFT( p_matKRotation ),
+                                                                      vecKTranslationLEFT( p_vecKTranslation )
+    {
+        //ds nothing to do
+    }
+
+};
+
+struct CMeasurementPose
+{
+    const Eigen::Isometry3d matTransformationLEFTtoWORLD;
+    const Eigen::Vector3d vecLinearAccelerationNormalized;
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecLandmarks;
+
+    CMeasurementPose( const Eigen::Isometry3d p_matTransformationLEFTtoWORLD,
+                      const Eigen::Vector3d& p_vecLinearAcceleration,
+                      const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_vecLandmarks ): matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
+                                                                                                            vecLinearAccelerationNormalized( p_vecLinearAcceleration ),
+                                                                                                            vecLandmarks( p_vecLandmarks )
+    {
+        //ds nothing to do
+    }
+};
+
 struct CMatchTracking
 {
-    const cv::Point2d ptPosition;
+    const cv::KeyPoint cKeyPoint;
     const CDescriptor matDescriptor;
 
-    CMatchTracking( const cv::Point2d& p_ptPosition, const CDescriptor& p_matDescriptor ): ptPosition( p_ptPosition ), matDescriptor( p_matDescriptor )
+    CMatchTracking( const cv::KeyPoint& p_cKeyPoint, const CDescriptor& p_matDescriptor ): cKeyPoint( p_cKeyPoint ), matDescriptor( p_matDescriptor )
     {
         //ds nothing to do
     }
     ~CMatchTracking( )
     {
         //ds nothing to do
-    }
-};
-
-struct CLandmarkMeasurement
-{
-    const UIDLandmark uID;
-    const CPoint2DInCameraFrame vecPositionUV;
-    const cv::Point2i ptPositionUV;
-
-    CLandmarkMeasurement( const UIDLandmark& p_uID, const CPoint2DInCameraFrame& p_vecPositionUV, const cv::Point2i& p_ptPositionUV ): uID( p_uID ), vecPositionUV( p_vecPositionUV ), ptPositionUV( p_ptPositionUV )
-    {
-        //ds nothing to do
-    }
-    CLandmarkMeasurement( const UIDLandmark& p_uID, const CPoint2DInCameraFrameHomogenized& p_vecPositionUV, const cv::Point2i& p_ptPositionUV ): uID( p_uID ), vecPositionUV( p_vecPositionUV.head( 2 ) ), ptPositionUV( p_ptPositionUV )
-    {
-        //ds nothing to do
-    }
-};
-
-struct CPositionRaw
-{
-    const CPoint3DInWorldFrame vecPointXYZ;
-    const cv::Point2d ptPosition;
-    const Eigen::Vector3d vecCameraPosition;
-    const Eigen::Matrix3d matKRotation;
-    const Eigen::Vector3d vecKTranslation;
-
-    CPositionRaw( const CPoint3DInWorldFrame& p_vecPointXYZ,
-               const cv::Point2d& p_ptPosition,
-               const Eigen::Vector3d& p_vecCameraPosition,
-               const Eigen::Matrix3d& p_matKRotation,
-               const Eigen::Vector3d& p_vecKTranslation ): vecPointXYZ( p_vecPointXYZ ),
-                                                           ptPosition( p_ptPosition ),
-                                                           vecCameraPosition( p_vecCameraPosition ),
-                                                           matKRotation( p_matKRotation ),
-                                                           vecKTranslation( p_vecKTranslation )
-    {
-
     }
 };
 

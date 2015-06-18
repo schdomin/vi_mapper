@@ -62,7 +62,7 @@ private:
     UIDLandmark m_uAvailableLandmarkID;
     std::vector< CLandmarkInWorldFrame > m_vecLandmarks;
     std::vector< std::pair< Eigen::Isometry3d, std::vector< CLandmark > > > m_vecActiveMeasurementPoints;
-    std::vector< std::pair< Eigen::Isometry3d, std::vector< CLandmarkMeasurement > > > m_vecLogMeasurementPoints;
+    std::vector< std::pair< Eigen::Isometry3d, std::vector< CMeasurementLandmark > > > m_vecLogMeasurementPoints;
 
     //ds control
     bool m_bIsShutdownRequested;
@@ -103,7 +103,7 @@ private:
     void _trackLandmarksManual( cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT, const Eigen::Isometry3d& p_matCurrentTransformation );
 
     //ds epipolar lines
-    const std::vector< CLandmarkMeasurement > _getVisibleLandmarksOnEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_uLineLength );
+    const std::vector< CMeasurementLandmark > _getVisibleLandmarksOnEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_uLineLength );
 
     const std::vector< CLandmark > _getLandmarksGFTT( cv::Mat& p_matDisplay, const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT, const uint32_t& p_uTileNumberBase, const Eigen::Isometry3d& p_matTransformation );
 

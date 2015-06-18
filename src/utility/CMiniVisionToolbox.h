@@ -86,7 +86,8 @@ public:
     static const Eigen::Vector4d getPointHomogeneousStereoLinearTriangulationLU( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight );
 
     static const CPoint3DInCameraFrame getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
-
+    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
+    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationSVDDLT( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
 };
 
 #endif //#define CMINIVISIONTOOLBOX_H_

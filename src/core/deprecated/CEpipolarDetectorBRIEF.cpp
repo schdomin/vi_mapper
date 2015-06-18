@@ -163,7 +163,7 @@ void CEpipolarDetectorBRIEF::solveAndOptimizeG2O( const std::string& p_strOutfil
     ++uNextAvailableUID;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< std::pair< Eigen::Isometry3d, std::vector< CLandmarkMeasurement > > >::const_iterator pPose = m_vecLogMeasurementPoints.begin( )+1; pPose != m_vecLogMeasurementPoints.end( ); ++pPose )
+    for( std::vector< std::pair< Eigen::Isometry3d, std::vector< CMeasurementLandmark > > >::const_iterator pPose = m_vecLogMeasurementPoints.begin( )+1; pPose != m_vecLogMeasurementPoints.end( ); ++pPose )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );
@@ -187,7 +187,7 @@ void CEpipolarDetectorBRIEF::solveAndOptimizeG2O( const std::string& p_strOutfil
         cOptimizer.addEdge( pEdgePoseFromTo );
 
         //ds check visible landmarks and add the edges for the current pose
-        for( const CLandmarkMeasurement& pLandmark: pPose->second )
+        for( const CMeasurementLandmark& pLandmark: pPose->second )
         {
             //ds set up the edges
             g2o::EdgeSE3PointXYZUV* pEdgeLandmarkCoordinates      = new g2o::EdgeSE3PointXYZUV( );
@@ -255,12 +255,12 @@ void CEpipolarDetectorBRIEF::_trackLandmarksAuto( cv::Mat& p_matImageLEFT, const
 
 
     //ds draw current lines and retrieve active landmarks
-    const std::vector< CLandmarkMeasurement > vecVisibleLandmarks( _getVisibleLandmarksOnEpipolarLineEssential( p_matTransformation, matDisplayLeft, p_matImageLEFT, 10+dTransformationDelta*500 ) );
+    const std::vector< CMeasurementLandmark > vecVisibleLandmarks( _getVisibleLandmarksOnEpipolarLineEssential( p_matTransformation, matDisplayLeft, p_matImageLEFT, 10+dTransformationDelta*500 ) );
 
     //ds add to data structure if delta is sufficiently high
     if( m_dTranslationDeltaForMAPMeters < ( vecTranslationCurrent-m_vecTranslationLast ).squaredNorm( ) )
     {
-        m_vecLogMeasurementPoints.push_back( std::pair< Eigen::Isometry3d, std::vector< CLandmarkMeasurement > >( p_matTransformation, vecVisibleLandmarks ) );
+        m_vecLogMeasurementPoints.push_back( std::pair< Eigen::Isometry3d, std::vector< CMeasurementLandmark > >( p_matTransformation, vecVisibleLandmarks ) );
         m_vecTranslationLast = vecTranslationCurrent;
         std::printf( "<>(_trackLandmarksAuto) stashed pose ( number: %lu ) with landmarks ( total: %lu )\n", m_vecLogMeasurementPoints.size( ), vecVisibleLandmarks.size( ) );
     }
@@ -368,12 +368,12 @@ void CEpipolarDetectorBRIEF::_trackLandmarksManual( cv::Mat& p_matImageLEFT, con
 
 
     //ds draw current lines and retrieve active landmarks
-    const std::vector< CLandmarkMeasurement > vecVisibleLandmarks( _getVisibleLandmarksOnEpipolarLineEssential( p_matTransformation, matDisplayLeft, p_matImageLEFT, 10+dTransformationDelta*500 ) );
+    const std::vector< CMeasurementLandmark > vecVisibleLandmarks( _getVisibleLandmarksOnEpipolarLineEssential( p_matTransformation, matDisplayLeft, p_matImageLEFT, 10+dTransformationDelta*500 ) );
 
     //ds add to data structure if delta is sufficiently high
     if( m_dTranslationDeltaForMAPMeters < ( vecTranslationCurrent-m_vecTranslationLast ).squaredNorm( ) )
     {
-        m_vecLogMeasurementPoints.push_back( std::pair< Eigen::Isometry3d, std::vector< CLandmarkMeasurement > >( p_matTransformation, vecVisibleLandmarks ) );
+        m_vecLogMeasurementPoints.push_back( std::pair< Eigen::Isometry3d, std::vector< CMeasurementLandmark > >( p_matTransformation, vecVisibleLandmarks ) );
         m_vecTranslationLast = vecTranslationCurrent;
         std::printf( "stashed pose with landmarks (current poses: %lu)\n", m_vecLogMeasurementPoints.size( ) );
     }
@@ -508,10 +508,10 @@ void CEpipolarDetectorBRIEF::_trackLandmarksManual( cv::Mat& p_matImageLEFT, con
     }
 }
 
-const std::vector< CLandmarkMeasurement > CEpipolarDetectorBRIEF::_getVisibleLandmarksOnEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_iLineLength )
+const std::vector< CMeasurementLandmark > CEpipolarDetectorBRIEF::_getVisibleLandmarksOnEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const int32_t& p_iLineLength )
 {
     //ds detected landmarks at this position - VISIBLE != ACTIVE
-    std::vector< CLandmarkMeasurement > vecVisibleLandmarksTotal;
+    std::vector< CMeasurementLandmark > vecVisibleLandmarksTotal;
 
     //ds active scan points after detection
     std::vector< std::pair< Eigen::Isometry3d, std::vector< CLandmark > > > vecActiveMeasurementPoints;
@@ -533,7 +533,7 @@ const std::vector< CLandmarkMeasurement > CEpipolarDetectorBRIEF::_getVisibleLan
         for( CLandmark& cLandmarkReference: cScanPoint.second )
         {
             //ds compute the projection of the point (line) in the current frame (working in normalized coordinates)
-            const Eigen::Vector3d vecCoefficients( matEssential*cLandmarkReference.vecPositionUVReference );
+            const Eigen::Vector3d vecCoefficients( matEssential*cLandmarkReference.vecPositionUVLEFTReference );
 
             //ds compute maximum and minimum points (from top to bottom line)
             const CPoint2DInCameraFrameHomogenized& vecLastDetection( cLandmarkReference.vecPositionUVLast );
@@ -641,7 +641,7 @@ const std::vector< CLandmarkMeasurement > CEpipolarDetectorBRIEF::_getVisibleLan
                 {
                     //ds get the match over U
                     cLandmarkReference.vecPositionUVLast = _getMatchSampleUBRIEF( p_matDisplay, p_matImage, iUMinimum, iDeltaU, vecCoefficients, matReferenceDescriptor, m_cExtractorBRIEF, m_cMatcherBRIEF, fKeyPointSize );
-                    vecVisibleLandmarksTotal.push_back( CLandmarkMeasurement( cLandmarkReference.uID, cLandmarkReference.vecPositionUVLast ) );
+                    vecVisibleLandmarksTotal.push_back( CMeasurementLandmark( cLandmarkReference.uID, cLandmarkReference.vecPositionUVLast ) );
                     vecActiveLandmarksPerScan.push_back( cLandmarkReference );
                     ++uCountMatches;
                 }
@@ -667,7 +667,7 @@ const std::vector< CLandmarkMeasurement > CEpipolarDetectorBRIEF::_getVisibleLan
                 {
                     //ds get the match over V
                     cLandmarkReference.vecPositionUVLast = _getMatchSampleVBRIEF( p_matDisplay, p_matImage, iVForUMinimum, iDeltaV, vecCoefficients, matReferenceDescriptor, m_cExtractorBRIEF, m_cMatcherBRIEF, fKeyPointSize );
-                    vecVisibleLandmarksTotal.push_back( CLandmarkMeasurement( cLandmarkReference.uID, cLandmarkReference.vecPositionUVLast ) );
+                    vecVisibleLandmarksTotal.push_back( CMeasurementLandmark( cLandmarkReference.uID, cLandmarkReference.vecPositionUVLast ) );
                     vecActiveLandmarksPerScan.push_back( cLandmarkReference );
                     ++uCountMatches;
                 }

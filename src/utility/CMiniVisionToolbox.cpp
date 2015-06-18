@@ -436,9 +436,9 @@ const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulatio
 {
     //ds wrap the input
     return CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( CWrapperOpenCV::fromCVVector< double, 2 >( p_vecPointLeft ),
-                                                                      CWrapperOpenCV::fromCVVector< double, 2 >( p_vecPointRight ),
-                                                                      CWrapperOpenCV::fromCVMatrix< double, 3, 4 >( p_matProjectionLeft ),
-                                                                      CWrapperOpenCV::fromCVMatrix< double, 3, 4 >( p_matProjectionRight ) );
+                                                                             CWrapperOpenCV::fromCVVector< double, 2 >( p_vecPointRight ),
+                                                                             CWrapperOpenCV::fromCVMatrix< double, 3, 4 >( p_matProjectionLeft ),
+                                                                             CWrapperOpenCV::fromCVMatrix< double, 3, 4 >( p_matProjectionRight ) );
 }
 
 const Eigen::Vector4d CMiniVisionToolbox::getPointHomogeneousStereoLinearTriangulationLU( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight )
@@ -467,4 +467,42 @@ const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulatio
 
     //ds solve the system and return
     return matAInhomogeneous.jacobiSvd( Eigen::ComputeFullU | Eigen::ComputeFullV ).solve( vecRHS );
+}
+
+const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
+{
+    //ds A matrix for system: A*X=0
+    Eigen::Matrix< double, 4 , 4 > matAHomogeneous;
+
+    //ds fill the matrix
+    matAHomogeneous.row(0) = p_ptPointLEFT.x*p_matProjectionLEFT.row(2)-p_matProjectionLEFT.row(0);
+    matAHomogeneous.row(1) = p_ptPointLEFT.y*p_matProjectionLEFT.row(2)-p_matProjectionLEFT.row(1);
+    matAHomogeneous.row(2) = p_ptPointRIGHT.x*p_matProjectionRIGHT.row(2)-p_matProjectionRIGHT.row(0);
+    matAHomogeneous.row(3) = p_ptPointRIGHT.y*p_matProjectionRIGHT.row(2)-p_matProjectionRIGHT.row(1);
+
+    //ds inhomogeneous solution
+    const Eigen::Matrix< double, 4, 3 > matAInhomogeneous( matAHomogeneous.block< 4, 3 >( 0, 0 ) );
+    const Eigen::Vector4d vecRHS( -matAHomogeneous.col( 3 ) );
+
+    //ds solve the system and return
+    return matAInhomogeneous.fullPivHouseholderQr( ).solve( vecRHS );
+}
+
+const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationSVDDLT( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
+{
+    //ds A matrix for system: A*X=0
+    Eigen::Matrix4d matAHomogeneous;
+
+    matAHomogeneous.row(0) = p_ptPointLEFT.x*p_matProjectionLEFT.row(2)-p_matProjectionLEFT.row(0);
+    matAHomogeneous.row(1) = p_ptPointLEFT.y*p_matProjectionLEFT.row(2)-p_matProjectionLEFT.row(1);
+    matAHomogeneous.row(2) = p_ptPointRIGHT.x*p_matProjectionRIGHT.row(2)-p_matProjectionRIGHT.row(0);
+    matAHomogeneous.row(3) = p_ptPointRIGHT.y*p_matProjectionRIGHT.row(2)-p_matProjectionRIGHT.row(1);
+
+    //ds solve system subject to ||A*x||=0 ||x||=1
+    const Eigen::JacobiSVD< Eigen::Matrix4d > matSVD( matAHomogeneous, Eigen::ComputeFullU | Eigen::ComputeFullV );
+
+    //ds solution x is the last column of V
+    const Eigen::Vector4d vecX( matSVD.matrixV( ).col( 3 ) );
+
+    return vecX.head( 3 )/vecX(3);
 }
