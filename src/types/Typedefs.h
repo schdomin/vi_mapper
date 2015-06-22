@@ -32,6 +32,7 @@ struct CMeasurementLandmark
     const cv::Point2d ptUVLEFT;
     const cv::Point2d ptUVRIGHT;
     const CPoint3DInCameraFrame vecPointXYZ;
+    const CPoint3DInWorldFrame  vecPointXYZWORLD;
     const Eigen::Vector3d vecCameraPosition;
     const Eigen::Matrix3d matKRotationLEFT;
     const Eigen::Vector3d vecKTranslationLEFT;
@@ -40,12 +41,14 @@ struct CMeasurementLandmark
                           const cv::Point2d& p_ptUVLEFT,
                           const cv::Point2d& p_ptUVRIGHT,
                           const CPoint3DInCameraFrame& p_vecPointXYZ,
+                          const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
                           const Eigen::Vector3d& p_vecCameraPosition,
                           const Eigen::Matrix3d& p_matKRotation,
                           const Eigen::Vector3d& p_vecKTranslation ): uID( p_uID ),
                                                                       ptUVLEFT( p_ptUVLEFT ),
                                                                       ptUVRIGHT( p_ptUVRIGHT ),
                                                                       vecPointXYZ( p_vecPointXYZ ),
+                                                                      vecPointXYZWORLD( p_vecPointXYZWORLD ),
                                                                       vecCameraPosition( p_vecCameraPosition ),
                                                                       matKRotationLEFT( p_matKRotation ),
                                                                       vecKTranslationLEFT( p_vecKTranslation )

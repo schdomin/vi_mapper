@@ -187,7 +187,7 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     const Eigen::Vector3d vecLinearAccelerationNormalized( p_vecLinearAcceleration.normalized( ) );
 
     //ds draw position on trajectory mat
-    cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+vecTranslationCurrent( 0 )*10, m_uOffsetTrajectoryV-vecTranslationCurrent( 1 )*10 ), 1, cv::Scalar( 255, 0, 0 ), -1 );
+    cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+vecTranslationCurrent( 0 )*10, m_uOffsetTrajectoryV-vecTranslationCurrent( 1 )*10 ), 2, cv::Scalar( 255, 0, 0 ), -1 );
 
     //ds get images into triple channel mats (display only)
     cv::Mat matDisplayLEFT;
@@ -212,7 +212,7 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
 
 
     //ds get currently visible landmarks
-    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( m_cMatcherEpipolar.getVisibleLandmarksEssential( matDisplayLEFT, matDisplayRIGHT, p_matImageLEFT, p_matImageRIGHT, p_matTransformationLEFTtoWORLD, uEpipolarBaseLineLength ) );
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( m_cMatcherEpipolar.getVisibleLandmarksEssential( m_uFrameCount, matDisplayLEFT, matDisplayRIGHT, p_matImageLEFT, p_matImageRIGHT, p_matTransformationLEFTtoWORLD, uEpipolarBaseLineLength, m_matTrajectoryXY ) );
     m_uNumberofLastVisibleLandmarks = vecVisibleLandmarks->size( );
 
     //ds add to data structure if delta is sufficiently high

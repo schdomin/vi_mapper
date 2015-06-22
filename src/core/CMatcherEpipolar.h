@@ -6,6 +6,7 @@
 #include "CTriangulator.h"
 #include "utility/CPinholeCamera.h"
 #include "types/CLandmark.h"
+#include "utility/CPositSolver.h"
 
 class CMatcherEpipolar
 {
@@ -64,6 +65,9 @@ private:
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uRecursionLimit;
 
+    //Ds allocate a solver
+    gtools::CPositSolver m_cSolverPose;
+
 //ds api
 public:
 
@@ -91,12 +95,14 @@ public:
                                                                                      const Eigen::Matrix3d& p_matEssential,
                                                                                      const int32_t& p_iHalfLineLengthBase ) const;*/
 
-    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplayLEFT,
-                                                                                     cv::Mat& p_matDisplayRIGHT,
-                                                                                     const cv::Mat& p_matImageLEFT,
-                                                                                     const cv::Mat& p_matImageRIGHT,
-                                                                                     const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
-                                                                                     const int32_t& p_iHalfLineLengthBase );
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( const uint64_t p_uFrame,
+                                                                                                      cv::Mat& p_matDisplayLEFT,
+                                                                                                      cv::Mat& p_matDisplayRIGHT,
+                                                                                                      const cv::Mat& p_matImageLEFT,
+                                                                                                      const cv::Mat& p_matImageRIGHT,
+                                                                                                      const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
+                                                                                                      const int32_t& p_iHalfLineLengthBase,
+                                                                                                      cv::Mat& p_matDisplayTrajectory );
 
     const std::vector< CMeasurementPoint >::size_type getNumberOfActiveMeasurementPoints( ) const
     {

@@ -45,7 +45,7 @@ void CLandmark::addPosition( const cv::Point2d& p_ptUVLEFT,
                              const Eigen::Matrix3d& p_matKRotation,
                              const Eigen::Vector3d& p_vecKTranslation )
 {
-    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZ, p_vecCameraPosition, p_matKRotation, p_vecKTranslation ) );
+    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZ, vecPointXYZCalibrated, p_vecCameraPosition, p_matKRotation, p_vecKTranslation ) );
 
     //ds check if we can recalibrate the 3d position
     if( m_dDistanceDeltaForCalibration < ( m_vecLastCameraPosition-p_vecCameraPosition ).squaredNorm( ) )
@@ -54,7 +54,7 @@ void CLandmark::addPosition( const cv::Point2d& p_ptUVLEFT,
         m_vecLastCameraPosition = p_vecCameraPosition;
 
         //ds get calibrated point
-        vecPointXYZCalibrated = _getCalibratedLSHH( vecPointXYZCalibrated );
+        vecPointXYZCalibrated = _getOptimizedLandmarkLMA( vecPointXYZCalibrated );
     }
 }
 
@@ -69,16 +69,23 @@ const CMeasurementLandmark* CLandmark::getLastMeasurement( ) const
     return m_vecMeasurements.back( );
 }
 
-const CPoint3DInWorldFrame CLandmark::_getCalibratedLSHH( const CPoint3DInWorldFrame& p_vecInitialGuess )
+const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkLMA( const CPoint3DInWorldFrame& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix3d matH( Eigen::Matrix3d::Zero( ) );
     Eigen::Vector3d vecB( 0.0, 0.0, 0.0 );
     CPoint3DInWorldFrame vecX( p_vecInitialGuess );
 
+    //ds previous iterations RSS
+    //double dRSSPrevious             = 0.0;
+    //double dLevenbergDampingCurrent = m_dLevenbergDamping;
+
     //ds iterations (break-out if convergence reached early)
     for( uint32_t u = 0; u < m_uIterations; ++u )
     {
+        //ds reset rss
+        //double dRSSCurrent = 0.0;
+
         //ds do calibration over all recorded values
         for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
         {
@@ -95,6 +102,7 @@ const CPoint3DInWorldFrame CLandmark::_getCalibratedLSHH( const CPoint3DInWorldF
             //ds compute current error
             const Eigen::Vector2d vecError( static_cast< double >( dX/dZ )-iUReference, static_cast< double >( dY/dZ )-iVReference );
 
+            //ds kernelized LS
             const double dSquaredError( vecError.squaredNorm( ) );
             float dContribution( 1.0 );
             if( m_dMaximumError < dSquaredError )
@@ -103,6 +111,8 @@ const CPoint3DInWorldFrame CLandmark::_getCalibratedLSHH( const CPoint3DInWorldF
                 dContribution = std::sqrt( m_dMaximumError/dSquaredError );
             }
 
+            //ds accumulate rss
+            //dRSSCurrent += dContribution*dSquaredError;
 
             //ds compute jacobian
             Eigen::Matrix< double, 2, 3 > matJacobian;
@@ -121,6 +131,14 @@ const CPoint3DInWorldFrame CLandmark::_getCalibratedLSHH( const CPoint3DInWorldF
         //ds update x solution (take the minus here)
         vecX -= vecDeltaX;
 
+        /*ds check if we have to adjust the damping
+        if( dRSSCurrent > dRSSPrevious )
+        {
+            dLevenbergDampingCurrent /= m_dFactorDamping;
+            dRSSPrevious = dRSSCurrent;
+            //std::printf( "levenberg damping: %f\n", dLevenbergDampingCurrent );
+        }*/
+
         //std::printf( "iteration[%04lu][%04u]: %6.2f %6.2f %6.2f\n", uID, u, vecX(0), vecX(1), vecX(2) );
 
         //ds check if we have converged
@@ -130,21 +148,19 @@ const CPoint3DInWorldFrame CLandmark::_getCalibratedLSHH( const CPoint3DInWorldF
 
             double dSumSquaredErrors( 0.0 );
 
-            std::cout << std::endl;
-
             //ds loop over all previous measurements again
             for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
             {
                 //ds get projected point
                 const CPoint2DHomogenized vecProjectionHomogeneous( pMeasurement->matKRotationLEFT*vecX + pMeasurement->vecKTranslationLEFT );
 
-                //ds compute pixel coordinates
-                const Eigen::Vector2d vecUV = vecProjectionHomogeneous.head< 2 >( )/vecProjectionHomogeneous(2) - CWrapperOpenCV::fromCVVector( pMeasurement->ptUVLEFT ) ;
+                //ds compute pixel coordinates TODO remove cast
+                const Eigen::Vector2d vecUV = CWrapperOpenCV::getInterDistance( static_cast< Eigen::Vector2d >( vecProjectionHomogeneous.head< 2 >( )/vecProjectionHomogeneous(2) ), pMeasurement->ptUVLEFT );
 
                 //ds compute squared error
                 const double dSquaredError( vecUV.squaredNorm( ) );
 
-                std::cout << "current error: " << dSquaredError << std::endl;
+                //std::cout << "current error: " << dSquaredError << std::endl;
 
                 //ds add up
                 dSumSquaredErrors += dSquaredError;
@@ -153,13 +169,13 @@ const CPoint3DInWorldFrame CLandmark::_getCalibratedLSHH( const CPoint3DInWorldF
             //ds average the measurement
             dCurrentAverageSquaredError = dSumSquaredErrors/m_vecMeasurements.size( );
 
-            std::cout << "converged in [" << u << "] iterations to (" << vecX.transpose( ) << ") initial: (" << p_vecInitialGuess.transpose( ) << ")" << std::endl;
-            std::cout << "sum of squared errors: " << dCurrentAverageSquaredError << std::endl;
+            std::printf( "[%04lu] converged (%2u) in %3u iterations to (%6.2f %6.2f %6.2f) from (%6.2f %6.2f %6.2f) ARSS: %6.2f\n", uID, uCalibrations, u, vecX(0), vecX(1), vecX(2), p_vecInitialGuess(0), p_vecInitialGuess(1), p_vecInitialGuess(2), dCurrentAverageSquaredError );
             return vecX;
         }
     }
 
-    //std::cout << " FAILED" << std::endl;
+    //std::cout << "[" << uID << "] FAILED" << std::endl;
+    std::printf( "LANDMARK OPTIMIZATION FAILED\n" );
 
     //ds if still here the calibration did not converge - keep the initial estimate
     return p_vecInitialGuess;

@@ -1,7 +1,7 @@
 #ifndef CLANDMARK_H
 #define CLANDMARK_H
 
-#include "configuration/Types.h"
+#include "types/Typedefs.h"
 
 class CLandmark
 {
@@ -46,9 +46,9 @@ private:
 
     //ds LM LS configuration
     const double m_dDistanceDeltaForCalibration = 0.25;
-    const uint32_t m_uCalibrationPoints         = 10 ;
     const uint32_t m_uIterations                = 100;
     const double m_dLevenbergDamping            = 10.0;
+    //const double m_dFactorDamping               = 1.05;
     const double m_dConvergenceDelta            = 1e-5;
     const double m_dMaximumError                = 25.0;
 
@@ -69,7 +69,7 @@ public:
 private:
 
     //ds calibrate 3d point
-    const CPoint3DInWorldFrame _getCalibratedLSHH( const CPoint3DInWorldFrame& p_vecInitialGuess );
+    const CPoint3DInWorldFrame _getOptimizedLandmarkLMA( const CPoint3DInWorldFrame& p_vecInitialGuess );
 
 };
 

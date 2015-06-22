@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-#include "configuration/Types.h"
+#include "types/Typedefs.h"
 #include "utility/CLogger.h"
 
 class CPinholeCamera

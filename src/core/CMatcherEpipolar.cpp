@@ -556,12 +556,14 @@ const std::shared_ptr< std::vector< CLandmark* > > CMatcherEpipolar::getVisibleL
     return vecVisibleLandmarks;
 }*/
 
-const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpipolar::getVisibleLandmarksEssential( cv::Mat& p_matDisplayLEFT,
-                                                                                                   cv::Mat& p_matDisplayRIGHT,
-                                                                                                   const cv::Mat& p_matImageLEFT,
-                                                                                                   const cv::Mat& p_matImageRIGHT,
-                                                                                                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                                                                   const int32_t& p_iHalfLineLengthBase )
+const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpipolar::getVisibleLandmarksEssential( const uint64_t p_uFrame,
+                                                                                                                    cv::Mat& p_matDisplayLEFT,
+                                                                                                                    cv::Mat& p_matDisplayRIGHT,
+                                                                                                                    const cv::Mat& p_matImageLEFT,
+                                                                                                                    const cv::Mat& p_matImageRIGHT,
+                                                                                                                    const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                                                                                                    const int32_t& p_iHalfLineLengthBase,
+                                                                                                                    cv::Mat& p_matDisplayTrajectory )
 {
     //ds detected landmarks at this position
     std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( std::make_shared< std::vector< const CMeasurementLandmark* > >( ) );
@@ -574,6 +576,8 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
 
     //ds new active measurement points
     std::vector< CMeasurementPoint > vecMeasurementPointsActive;
+
+    uint32_t uMeasurements( 0 );
 
     //ds active measurements
     for( const CMeasurementPoint cMeasurementPoint: m_vecMeasurementPointsActive )
@@ -748,8 +752,72 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerMeasurementPoint->empty( ) )
         {
-            //ds register the measurement point anew
-            vecMeasurementPointsActive.push_back( CMeasurementPoint( cMeasurementPoint.matTransformationLEFTtoWORLD, vecActiveLandmarksPerMeasurementPoint ) );
+            //ds vector for pose solver
+            gtools::Vector3dVector vecLandmarksWORLD( vecVisibleLandmarksPerMeasurementPoint.size( ) );
+            gtools::Vector2dVector vecImagePoints( vecVisibleLandmarksPerMeasurementPoint.size( ) );
+
+            //ds solve pose
+            for( uint32_t u = 0; u < vecVisibleLandmarksPerMeasurementPoint.size( ); ++u )
+            {
+                //ds feed it position in world
+                vecLandmarksWORLD[u] = vecVisibleLandmarksPerMeasurementPoint[u]->vecPointXYZWORLD;
+                vecImagePoints[u]    = CWrapperOpenCV::fromCVVector( vecVisibleLandmarksPerMeasurementPoint[u]->ptUVLEFT );
+            }
+
+            //ds feed the solver with the 3D points (in camera frame)
+            m_cSolverPose.modelPoints = vecLandmarksWORLD;
+
+            //ds feed the solver with the 2D points
+            m_cSolverPose.imagePoints = vecImagePoints;
+
+            //ds initial guess of the transformation
+            m_cSolverPose.T = matTransformationWORLDtoLEFT;
+
+            double dErrorSolverPosePrevious( 0.0 );
+            const double dDeltaConvergence( 1e-5 );
+
+            //ds run LS - SNIPPET
+            for(int iteration = 0; iteration< 10; iteration++)
+            {
+                const double dErrorSolverPoseCurrent( m_cSolverPose.oneRound( ) );
+
+                //std::cout << "iteration "<< iteration << std::endl;
+                //std::cout << " error: " << dErrorSolverPoseCurrent << std::endl;
+
+                //ds check convergence
+                if( dDeltaConvergence > std::fabs( dErrorSolverPosePrevious-dErrorSolverPoseCurrent ) )
+                {
+                    break;
+                }
+                else
+                {
+                    dErrorSolverPosePrevious = dErrorSolverPoseCurrent;
+                }
+
+
+              /*char filename[1024];
+              std::sprintf (filename, "/home/dominik/debug/frame-%04lu_measurement-%02u_iteration-%05d.dat", p_uFrame, uMeasurements, iteration);
+              gtools::Vector2dVector currentPoints;
+              m_cSolverPose.project(currentPoints);
+              std::ofstream os(filename);
+              for (size_t j = 0; j<vecImagePoints.size(); j++){
+                Eigen::Vector2d ip = vecImagePoints[j];
+                Eigen::Vector2d cp = currentPoints[j];
+                os << ip.x() << " " << ip.y() << std::endl;
+                os << cp.x() << " " << cp.y() << std::endl;
+                os << std::endl;
+              }*/
+            }
+
+            const Eigen::Isometry3d matTransformationLEFTtoWORLDCorrected( m_cSolverPose.T.inverse( ) );
+            const Eigen::Vector3d vecTranslationCurrent( matTransformationLEFTtoWORLDCorrected.translation( ) );
+
+            //ds draw position on trajectory mat
+            cv::circle( p_matDisplayTrajectory, cv::Point2d( 180+vecTranslationCurrent( 0 )*10, 360-vecTranslationCurrent( 1 )*10 ), 2, CColorCodeBGR( 0, 0, 255 ), -1 );
+
+            //ds register the measurement point and its visible landmarks anew
+            //vecMeasurementPointsActive.push_back( CMeasurementPoint( cMeasurementPoint.matTransformationLEFTtoWORLD, vecActiveLandmarksPerMeasurementPoint ) );
+            vecMeasurementPointsActive.push_back( CMeasurementPoint( matTransformationLEFTtoWORLDCorrected, vecActiveLandmarksPerMeasurementPoint ) );
 
             //ds combine visible landmarks
             vecVisibleLandmarks->insert( vecVisibleLandmarks->end( ), vecVisibleLandmarksPerMeasurementPoint.begin( ), vecVisibleLandmarksPerMeasurementPoint.end( ) );
@@ -758,6 +826,8 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         {
             std::printf( "<CMatcherEpipolar>(getVisibleLandmarksEssential) erased detection point\n" );
         }
+
+        ++uMeasurements;
     }
 
     //ds info

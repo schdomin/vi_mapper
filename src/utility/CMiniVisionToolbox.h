@@ -1,7 +1,7 @@
 #ifndef CMINIVISIONTOOLBOX_H_
 #define CMINIVISIONTOOLBOX_H_
 
-#include "configuration/Types.h"
+#include <types/Typedefs.h>
 
 class CMiniVisionToolbox
 {

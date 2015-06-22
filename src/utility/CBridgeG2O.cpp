@@ -50,8 +50,8 @@ void CBridgeG2O::saveXYZAndDisparity( const std::string& p_strOutfile,
     //ds add landmarks
     for( const CLandmark* pLandmark: p_vecLandmarks )
     {
-        //ds check if at least one time calibrated
-        if( 0 < pLandmark->uCalibrations )
+        //ds check if calibration criteria is met
+        if( m_uMinimumCalibrationsForDump < pLandmark->uCalibrations )
         {
             //ds set landmark vertex
             g2o::VertexPointXYZ* pVertexLandmark = new g2o::VertexPointXYZ( );
@@ -218,8 +218,8 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
     //ds add landmarks
     for( const CLandmark* pLandmark: p_vecLandmarks )
     {
-        //ds check if at least one time calibrated
-        if( 0 < pLandmark->uCalibrations )
+        //ds check if calibration criteria is met
+        if( m_uMinimumCalibrationsForDump < pLandmark->uCalibrations )
         {
             //ds set landmark vertex
             g2o::VertexPointXYZ* pVertexLandmark = new g2o::VertexPointXYZ( );
@@ -290,7 +290,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
         pEdgeLinearAcceleration->setVertex( 0, pVertexPoseCurrent );
         pEdgeLinearAcceleration->setMeasurement( pMeasurementPoint->vecLinearAccelerationNormalized );
         pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
-        const double arrInformationMatrixLinearAcceleration[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1 };
+        const double arrInformationMatrixLinearAcceleration[9] = { 100000, 0, 0, 0, 100000, 0, 0, 0, 100000 };
         pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
         cGraph.addEdge( pEdgeLinearAcceleration );
 
@@ -344,7 +344,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
 
                     //ds information matrix
                     const double dInformationQualityDisparity( std::abs( iDisparity )+1 );
-                    const double arrInformationMatrixDisparity[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 10000*dInformationQualityDisparity };
+                    const double arrInformationMatrixDisparity[9] = { 1, 0, 0, 0, 1, 0, 0, 0, dInformationQualityDisparity };
                     pEdgeLandmarkDisparity->setInformation( g2o::Matrix3D( arrInformationMatrixDisparity ) );
 
                     cGraph.addEdge( pEdgeLandmarkDisparity );

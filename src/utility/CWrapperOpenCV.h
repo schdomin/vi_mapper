@@ -10,7 +10,7 @@ class CWrapperOpenCV
 //ds methods
 public:
 
-    template< typename tType, uint32_t uRows, uint32_t uCols > static const Eigen::Matrix< tType, uRows, uCols > fromCVMatrix( const cv::Mat& p_matCV )
+    template< typename tType, uint32_t uRows, uint32_t uCols > inline static const Eigen::Matrix< tType, uRows, uCols > fromCVMatrix( const cv::Mat& p_matCV )
     {
         //ds allocate eigen matrix
         Eigen::Matrix< tType, uRows, uCols > matEigen;
@@ -27,7 +27,7 @@ public:
         return matEigen;
     }
 
-    template< typename tType, uint32_t uRows > static const Eigen::Matrix< tType, uRows, 1 > fromCVVector( const cv::Vec< tType, uRows >& p_vecCV )
+    template< typename tType, uint32_t uRows > inline static const Eigen::Matrix< tType, uRows, 1 > fromCVVector( const cv::Vec< tType, uRows >& p_vecCV )
     {
         //ds allocate eigen matrix
         Eigen::Matrix< tType, uRows, 1 > vecEigen;
@@ -41,7 +41,7 @@ public:
         return vecEigen;
     }
 
-    template< typename tType, uint32_t uRows > static const cv::Vec< tType, uRows > toCVVector( const Eigen::Matrix< tType, uRows, 1 >& p_vecEigen )
+    template< typename tType, uint32_t uRows > inline static const cv::Vec< tType, uRows > toCVVector( const Eigen::Matrix< tType, uRows, 1 >& p_vecEigen )
     {
         //ds allocate cv vector
         cv::Vec< tType, uRows > vecCV;
@@ -56,7 +56,7 @@ public:
     }
 
     //ds overloads
-    static const cv::Vec4d toCVVector( const Eigen::Vector4d& p_vecEigen )
+    inline static const cv::Vec4d toCVVector( const Eigen::Vector4d& p_vecEigen )
     {
         //ds allocate cv vector
         cv::Vec4d vecCV;
@@ -69,12 +69,12 @@ public:
 
         return vecCV;
     }
-    static const cv::Point2d toCVVector( const Eigen::Vector2d& p_vecEigen )
+    inline static const cv::Point2d toCVVector( const Eigen::Vector2d& p_vecEigen )
     {
         //ds allocate cv vector
         return cv::Vec2d( p_vecEigen(0), p_vecEigen(1) );
     }
-    static const cv::Mat_< double > toCVMatrix( const Eigen::Matrix< double, 3, 3 >& p_matEigen )
+    inline static const cv::Mat_< double > toCVMatrix( const Eigen::Matrix< double, 3, 3 >& p_matEigen )
     {
         //ds allocate cv vector
         cv::Mat_< double > matCV( 3, 3 );
@@ -90,7 +90,7 @@ public:
 
         return matCV;
     }
-    static const cv::Mat_< double > toCVMatrix( const Eigen::Matrix< double, 3, 4 >& p_matEigen )
+    inline static const cv::Mat_< double > toCVMatrix( const Eigen::Matrix< double, 3, 4 >& p_matEigen )
     {
         //ds allocate cv vector
         cv::Mat_< double > matCV( 3, 4 );
@@ -106,13 +106,27 @@ public:
 
         return matCV;
     }
-    static const Eigen::Vector2d fromCVVector( const cv::Vec2d& p_vecCV )
+    inline static const Eigen::Vector2d fromCVVector( const cv::Vec2d& p_vecCV )
     {
         return Eigen::Vector2d( p_vecCV(0), p_vecCV(1) );
     }
-    static const Eigen::Vector2d fromCVVector( const cv::Point2d& p_vecCV )
+    inline static const Eigen::Vector2d fromCVVector( const cv::Point2d& p_vecCV )
     {
         return Eigen::Vector2d( p_vecCV.x, p_vecCV.y );
+    }
+
+    inline static const Eigen::Vector2f fromCV( const cv::Point2d& p_vecCV )
+    {
+        return Eigen::Vector2f( p_vecCV.x, p_vecCV.y );
+    }
+
+    inline static const Eigen::Vector2d getInterDistance( const Eigen::Vector2d& p_vecA, const cv::Point2d& p_ptB )
+    {
+        return Eigen::Vector2d( p_vecA(0)-p_ptB.x, p_vecA(1)-p_ptB.y );
+    }
+    inline static const Eigen::Vector2d getInterDistance( const cv::Point2d& p_ptA, const Eigen::Vector2d& p_vecB )
+    {
+        return Eigen::Vector2d( p_ptA.x-p_vecB(0), p_ptA.y-p_vecB(1) );
     }
 
 };

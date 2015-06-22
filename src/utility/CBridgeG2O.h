@@ -15,6 +15,10 @@ class CBridgeG2O
         eOFFSET_IMUtoLEFT = 3
     };
 
+private:
+
+    static const uint32_t m_uMinimumCalibrationsForDump = 2;
+
 public:
 
     static void saveXYZAndDisparity( const std::string& p_strOutfile,
