@@ -5,7 +5,7 @@
 #include <memory>
 
 #include "CPinholeCamera.h"
-#include "CWrapperOpenCV.h"
+#include "utility/CWrapperOpenCV.h"
 
 class CStereoCamera
 {

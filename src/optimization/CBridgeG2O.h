@@ -1,7 +1,7 @@
 #ifndef CBRIDGEG2O_H
 #define CBRIDGEG2O_H
 
-#include "CStereoCamera.h"
+#include "vision/CStereoCamera.h"
 #include "types/CLandmark.h"
 
 
@@ -17,7 +17,8 @@ class CBridgeG2O
 
 private:
 
-    static const uint32_t m_uMinimumCalibrationsForDump = 2;
+    static constexpr double m_dMaximumReliableDepth    = 7.5;
+    static const uint8_t m_uMinimumCalibrationsForDump = 0;
 
 public:
 

@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include "utility/CPinholeCamera.h"
+#include "vision/CPinholeCamera.h"
 
 class CDetectorMonoTilewise
 {

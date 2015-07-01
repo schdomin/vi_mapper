@@ -1,7 +1,7 @@
 #ifndef CCONFIGURATIONCAMERA_H_
 #define CCONFIGURATIONCAMERA_H_
 
-#include "utility/CPinholeCamera.h"
+#include "vision/CPinholeCamera.h"
 
 class CConfigurationCamera
 {

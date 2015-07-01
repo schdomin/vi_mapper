@@ -1,7 +1,7 @@
 #include "CTriangulator.h"
 
 #include "exceptions/CExceptionNoMatchFound.h"
-#include "utility/CMiniVisionToolbox.h"
+#include "vision/CMiniVisionToolbox.h"
 #include "utility/CLogger.h"
 
 CTriangulator::CTriangulator( const std::shared_ptr< CStereoCamera > p_pStereoCamera,
@@ -11,7 +11,7 @@ CTriangulator::CTriangulator( const std::shared_ptr< CStereoCamera > p_pStereoCa
                                                                                             m_pExtractor( p_pExtractor ),
                                                                                             m_pMatcher( p_pMatcher ),
                                                                                             m_fMatchingDistanceCutoff( p_fMatchingDistanceCutoff ),
-                                                                                            m_uLimitedSearchRangeToLeft( 50 ),
+                                                                                            m_uLimitedSearchRangeToLeft( 100 ),
                                                                                             m_uLimitedSearchRangeToRight( 10 ),
                                                                                             m_uLimitedSearchRange( m_uLimitedSearchRangeToLeft+m_uLimitedSearchRangeToRight ),
                                                                                             m_uAdaptiveSteps( 10 )
@@ -214,7 +214,7 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimitedSVDLS( cv:
     assert( 0 < iUReference );
 
     //ds compute loop range (dont care about overflows to keep performance here, the matcher can handle negative coordinates)
-    const uint32_t uBegin( iUReference-m_uLimitedSearchRangeToLeft );
+    const uint32_t uBegin( std::max( iUReference-m_uLimitedSearchRangeToLeft, static_cast< uint32_t >( 0 ) ) );
 
     //ds right keypoint vector
     std::vector< cv::KeyPoint > vecPoolKeyPoints( m_uLimitedSearchRange );

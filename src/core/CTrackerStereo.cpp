@@ -9,7 +9,7 @@
 #include "configuration/CConfigurationCamera.h"
 #include "utility/CWrapperOpenCV.h"
 #include "exceptions/CExceptionNoMatchFound.h"
-#include "utility/CMiniVisionToolbox.h"
+#include "vision/CMiniVisionToolbox.h"
 #include "utility/CMiniTimer.h"
 
 CTrackerStereo::CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
@@ -31,21 +31,22 @@ CTrackerStereo::CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
                                                                            m_dMatchingDistanceCutoffTriangulation( 400.0 ),
                                                                            m_dMatchingDistanceCutoffTracking( 350.0 ),*/
 
-                                                                           /*//ds BRIEF (calibrated 2015-05-31)
-                                                                           m_uKeyPointSize( 7 ),
-                                                                           m_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 20.0, m_uKeyPointSize, true ) ),
+                                                                           //ds BRIEF (calibrated 2015-05-31)
+                                                                          // m_uKeyPointSize( 7 ),
+                                                                           m_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 20.0, 7, true ) ),
                                                                            m_pExtractor( std::make_shared< cv::BriefDescriptorExtractor >( 64 ) ),
-                                                                           m_pMatcher( std::make_shared< cv::FlannBasedMatcher >( new cv::flann::LshIndexParams( 20, m_uKeyPointSize, 2 ) ) ),
-                                                                           m_fMatchingDistanceCutoffTriangulation( 75.0 ),
-                                                                           m_fMatchingDistanceCutoffTracking( 40.0 ),*/
+                                                                           m_pMatcher( std::make_shared< cv::BFMatcher >( ) ),
+                                                                           //m_pMatcher( std::make_shared< cv::FlannBasedMatcher >( new cv::flann::LshIndexParams( 20, 7, 2 ) ) ),
+                                                                           m_dMatchingDistanceCutoffTriangulation( 300.0 ),
+                                                                           m_dMatchingDistanceCutoffTracking( 250.0 ),
 
-                                                                           //ds BRISK (calibrated 2015-06-09)
+                                                                           /*//ds BRISK (calibrated 2015-06-09)
                                                                            //m_uKeyPointSize( 8 ),
                                                                            m_pDetector( std::make_shared< cv::BRISK >( 40, 2, 1.1 ) ), //std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 20.0, m_uKeyPointSize, true ) ),
                                                                            m_pExtractor( std::make_shared< cv::BRISK >( 40, 2, 1.1 ) ),
                                                                            m_pMatcher( std::make_shared< cv::BFMatcher >( ) ),
                                                                            m_dMatchingDistanceCutoffTriangulation( 450.0 ),
-                                                                           m_dMatchingDistanceCutoffTracking( 400.0 ),
+                                                                           m_dMatchingDistanceCutoffTracking( 400.0 ),*/
 
                                                                            /*//ds SURF
                                                                            m_pDetector( std::make_shared< cv::SurfFeatureDetector >( 5000 ) ),
@@ -175,9 +176,6 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                                       const Eigen::Vector3d& p_vecAngularVelocity,
                                       const Eigen::Vector3d& p_vecLinearAcceleration )
 {
-    //ds increment count
-    ++m_uFrameCount;
-
     //ds current translation
     const CPoint3DInWorldFrame vecTranslationCurrent( p_matTransformationLEFTtoWORLD.translation( ) );
 
@@ -241,7 +239,7 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         }
 
         //ds detect landmarks
-        const std::shared_ptr< std::vector< CLandmark* > > vecNewLandmarks( _getNewLandmarksTriangulated( m_matDisplayLowerReference, p_matImageLEFT, p_matImageRIGHT, p_matTransformationLEFTtoWORLD, matMaskDetection ) );
+        const std::shared_ptr< std::vector< CLandmark* > > vecNewLandmarks( _getNewLandmarksTriangulated( m_uFrameCount, m_matDisplayLowerReference, p_matImageLEFT, p_matImageRIGHT, p_matTransformationLEFTtoWORLD, matMaskDetection ) );
 
         //ds add to permanent reference holder
         m_vecLandmarks->insert( m_vecLandmarks->end( ), vecNewLandmarks->begin( ), vecNewLandmarks->end( ) );
@@ -267,13 +265,13 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     //cv::circle( m_matTrajectoryZ, cv::Point2d( m_uFrameCount, 350-dDeltaIMU*5 ), 1, CColorCodeBGR( 255, 0, 0 ), -1 );
 
     //ds build display mat
+    _drawInfoBox( matDisplayLEFT );
     cv::Mat matDisplayUpper = cv::Mat( m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
     cv::hconcat( matDisplayLEFT, matDisplayRIGHT, matDisplayUpper );
     cv::Mat matDisplayComplete = cv::Mat( 2*m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
     cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
 
     //ds display
-    _drawInfoBox( matDisplayComplete );
     cv::imshow( "stereo matching", matDisplayComplete );
     cv::imshow( "trajectory (x,y)", m_matTrajectoryXY );
     cv::imshow( "some stuff", m_matTrajectoryZ );
@@ -282,6 +280,9 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     int iLastKeyStroke( cv::waitKey( m_uWaitKeyTimeout ) );
     if( -1 != iLastKeyStroke )
     {
+        //ds increment count
+        ++m_uFrameCount;
+
         //ds user input - reset frame rate counting
         m_uFramesCurrentCycle = 0;
 
@@ -313,10 +314,14 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     else
     {
         _updateFrameRateForInfoBox( );
+
+        //ds increment count
+        ++m_uFrameCount;
     }
 }
 
-const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandmarksTriangulated( cv::Mat& p_matDisplay,
+const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandmarksTriangulated( const uint64_t& p_uFrame,
+                                                                                     cv::Mat& p_matDisplay,
                                                                                      const cv::Mat& p_matImageLEFT,
                                                                                      const cv::Mat& p_matImageRIGHT,
                                                                                      const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
@@ -377,7 +382,8 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                                                      vecPointTriangulatedLEFT,
                                                      vecCameraPosition,
                                                      matKRotation,
-                                                     vecKTranslation ) );
+                                                     vecKTranslation,
+                                                     p_uFrame ) );
 
                 //ds add to newly detected
                 vecNewLandmarks->push_back( cLandmark );
@@ -402,7 +408,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                 cv::circle( p_matDisplay, ptLandmarkLEFT, 2, CColorCodeBGR( 0, 0, 255 ), -1 );
                 //cv::circle( p_matDisplay, ptLandmarkLEFT, cKeyPoint.size, CColorCodeBGR( 0, 0, 255 ) );
 
-                //std::printf( "<CTrackerStereo>(_getNewLandmarks) could not find match for keypoint (invalid depth: %f m)\n", vecPointTriangulated(2) );
+                std::printf( "<CTrackerStereo>(_getNewLandmarks) could not find match for keypoint (invalid depth: %f m)\n", vecPointTriangulatedLEFT(2) );
             }
         }
         catch( const CExceptionNoMatchFound& p_cException )

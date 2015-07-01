@@ -1,5 +1,5 @@
-#ifndef CTRACKERSTEREO_H
-#define CTRACKERSTEREO_H
+#ifndef CMOCKEDTRACKERSTEREO_H
+#define CMOCKEDTRACKERSTEREO_H
 
 #include <memory>
 
@@ -7,45 +7,39 @@
 #include "txt_io/pinhole_image_message.h"
 #include "txt_io/pose_message.h"
 
-#include "vision/CStereoCamera.h"
+#include "vision/CMockedStereoCamera.h"
 #include "optimization/CBridgeG2O.h"
-#include "CTriangulator.h"
-#include "CDetectorMonoTilewise.h"
-#include "CMatcherEpipolar.h"
+#include "CMockedMatcherEpipolar.h"
 
-class CTrackerStereo
+class CMockedTrackerStereo
 {
 
 //ds ctor/dtor
 public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
+    CMockedTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
                     const EPlaybackMode& p_eMode,
+                    const std::string& p_strLandmarksMocked,
                     const uint32_t& p_uWaitKeyTimeout = 1 );
-    ~CTrackerStereo( );
+    ~CMockedTrackerStereo( );
 
 //ds members
 private:
+
+    //ds mocking
+    const std::shared_ptr< std::vector< CMockedLandmark > > m_vecLandmarksMocked;
 
     //ds vision setup
     const uint32_t m_uWaitKeyTimeout;
     const std::shared_ptr< CPinholeCamera > m_pCameraLEFT;
     const std::shared_ptr< CPinholeCamera > m_pCameraRIGHT;
-    const std::shared_ptr< CStereoCamera > m_pCameraSTEREO;
+    const std::shared_ptr< CMockedStereoCamera > m_pCameraSTEREO;
 
     //ds reference information
     uint64_t m_uFrameCount;
     CPoint3DInWorldFrame m_vecTranslationLast;
     double m_dTranslationDeltaForMAPMeters;
-
-    //ds feature related
-    //const uint32_t m_uKeyPointSize;
-    std::shared_ptr< cv::FeatureDetector > m_pDetector;
-    std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
-    std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
-    const float m_dMatchingDistanceCutoffTriangulation;
-    const float m_dMatchingDistanceCutoffTracking;
 
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uVisibleLandmarksMinimum;
@@ -54,8 +48,7 @@ private:
     const double m_dMaximumDepthMeters;
 
     //const CDetectorMonoTilewise m_cDetector;
-    std::shared_ptr< CTriangulator > m_pTriangulator;
-    CMatcherEpipolar m_cMatcherEpipolar;
+    CMockedMatcherEpipolar m_cMatcherEpipolar;
 
     //ds tracking (we use the ID counter instead of accessing the vector size every time for speed)
     UIDLandmark m_uAvailableLandmarkID;
@@ -63,7 +56,7 @@ private:
     uint64_t m_uNumberofLastVisibleLandmarks;
 
     //ds g2o data
-    std::vector< CMeasurementPose > m_vecLogMeasurementPoints;
+    std::vector< CMeasurementPose > m_vecLogG2OMeasurementPoints;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -75,7 +68,7 @@ private:
 
     //ds info display
     cv::Mat m_matTrajectoryXY;
-    cv::Mat m_matTrajectoryZ;
+    cv::Point2d m_ptPositionXY;
     const uint32_t m_uOffsetTrajectoryU;
     const uint32_t m_uOffsetTrajectoryV;
     uint64_t m_uTimingToken;
@@ -83,6 +76,10 @@ private:
     double m_dPreviousFrameRate;
     uint64_t m_uTotalMeasurementPoints;
     uint64_t m_uMAPPoints;
+
+    //ds debug logging
+    std::FILE* m_pFileLandmarkCreation;
+    std::FILE* m_pFileLandmarkFinal;
 
 //ds accessors
 public:
@@ -99,8 +96,8 @@ public:
     //ds postprocessing
     void saveToG2O( const std::string& p_strOutfile ) const
     {
-        //CBridgeG2O::saveXYZAndDisparity( p_strOutfile, *m_pStereoCamera, *m_vecLandmarks, m_vecLogMeasurementPoints );
-        CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogMeasurementPoints );
+        //CBridgeG2O::saveXYZAndDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+        CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
     }
 
 //ds helpers
@@ -113,11 +110,10 @@ private:
                           const Eigen::Vector3d& p_vecLinearAcceleration );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarksTriangulated( const uint64_t& p_uFrame,
-                                                      cv::Mat& p_matDisplay,
-                                                      const cv::Mat& p_matImageLEFT,
-                                                      const cv::Mat& p_matImageRIGHT,
-                                                      const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                      const cv::Mat& p_matMask );
+                                                                                     cv::Mat& p_matDisplay,
+                                                                                     cv::Mat& p_matDisplayTrajectory,
+                                                                                     const cv::Point2d& p_ptPositionXY,
+                                                                                     const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD );
 
     //ds control
     void _shutDown( );
@@ -127,4 +123,4 @@ private:
     void _drawInfoBox( cv::Mat& p_matDisplay ) const;
 };
 
-#endif //#define CTRACKERSTEREO_H
+#endif //#define CMOCKEDTRACKERSTEREO_H

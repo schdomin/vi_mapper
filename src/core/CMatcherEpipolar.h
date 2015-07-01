@@ -4,9 +4,8 @@
 #include <memory>
 
 #include "CTriangulator.h"
-#include "utility/CPinholeCamera.h"
 #include "types/CLandmark.h"
-#include "utility/CPositSolver.h"
+#include "optimization/CPositSolver.h"
 
 class CMatcherEpipolar
 {
@@ -16,10 +15,15 @@ private:
 
     struct CMeasurementPoint
     {
+        const UIDMeasurementPoint uID;
         const Eigen::Isometry3d matTransformationLEFTtoWORLD;
         const std::shared_ptr< std::vector< CLandmark* > > vecLandmarks;
 
-        CMeasurementPoint( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ), vecLandmarks( p_vecLandmarks )
+        CMeasurementPoint( const UIDMeasurementPoint& p_uID,
+                           const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                           const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): uID( p_uID ),
+                                                                                                matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
+                                                                                                vecLandmarks( p_vecLandmarks )
         {
             //ds nothing to do
         }
@@ -32,6 +36,7 @@ private:
 //ds ctor/dtor
 public:
 
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTriangulator,
                       const float& p_fMatchingDistanceCutoff,
                       const uint8_t& p_uMaximumFailedSubsequentTrackingsPerLandmark );
@@ -54,6 +59,8 @@ private:
     const double m_dMatchingDistanceCutoff;
     const double m_dMatchingDistanceCutoffOriginal;
 
+    //ds measurement point storage (we use the ID counter instead of accessing the vector size every time for speed)
+    UIDMeasurementPoint m_uAvailableMeasurementPointID;
     std::vector< CMeasurementPoint > m_vecMeasurementPointsActive;
 
     //ds internal
@@ -63,17 +70,21 @@ private:
     const int32_t m_iSearchVMax;
     const cv::Rect m_cSearchROI;
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
-    const uint8_t m_uRecursionLimit;
+    const uint8_t m_uRecursionLimitEpipolarLines;
 
-    //Ds allocate a solver
+    //ds debug logging
     gtools::CPositSolver m_cSolverPose;
+    std::FILE* m_pFileOdometryError;
+    std::FILE* m_pFileEpipolarDetection;
 
 //ds api
 public:
 
     void addMeasurementPoint( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks )
     {
-        m_vecMeasurementPointsActive.push_back( CMeasurementPoint( p_matTransformationLEFTtoWORLD, p_vecLandmarks ) );
+        m_vecMeasurementPointsActive.push_back( CMeasurementPoint( m_uAvailableMeasurementPointID, p_matTransformationLEFTtoWORLD, p_vecLandmarks ) );
+
+        ++m_uAvailableMeasurementPointID;
     }
 
     /*const std::shared_ptr< std::vector< CLandmark* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplay,

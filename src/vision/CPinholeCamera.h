@@ -199,7 +199,7 @@ public:
         //ds return homogeneous
         return vecProjectionInhomogeneous/vecProjectionInhomogeneous(2);
     }
-    const CPoint2DHomogenized getHomogeneousProjection( const CPoint3DInWorldFrame& p_vecPoint ) const
+    const CPoint2DHomogenized getHomogeneousProjection( const CPoint3DInCameraFrame& p_vecPoint ) const
     {
         //ds compute inhomo projection
         const Eigen::Vector3d vecProjectionInhomogeneous( m_matProjection*CPoint3DHomogenized( p_vecPoint(0), p_vecPoint(1), p_vecPoint(2), 1.0 ) );
@@ -207,7 +207,7 @@ public:
         //ds return homogeneous
         return vecProjectionInhomogeneous/vecProjectionInhomogeneous(2);
     }
-    const cv::Point2d getProjection( const CPoint3DInWorldFrame& p_vecPoint ) const
+    const cv::Point2d getProjection( const CPoint3DInCameraFrame& p_vecPoint ) const
     {
         //ds compute inhomo projection
         const Eigen::Vector3d vecProjectionInhomogeneous( m_matProjection*CPoint3DHomogenized( p_vecPoint(0), p_vecPoint(1), p_vecPoint(2), 1.0 ) );

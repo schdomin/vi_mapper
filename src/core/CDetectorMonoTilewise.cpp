@@ -1,6 +1,6 @@
 #include <core/CDetectorMonoTilewise.h>
 #include "exceptions/CExceptionNoMatchFound.h"
-#include "utility/CMiniVisionToolbox.h"
+#include "vision/CMiniVisionToolbox.h"
 #include "utility/CLogger.h"
 
 CDetectorMonoTilewise::CDetectorMonoTilewise( const std::shared_ptr< CPinholeCamera > p_pCamera,

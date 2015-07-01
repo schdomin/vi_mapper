@@ -1,7 +1,7 @@
 #ifndef CTRIANGULATOR_H
 #define CTRIANGULATOR_H
 
-#include "utility/CStereoCamera.h"
+#include "vision/CStereoCamera.h"
 
 class CTriangulator
 {

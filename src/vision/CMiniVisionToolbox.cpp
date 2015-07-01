@@ -1,5 +1,5 @@
 #include "CMiniVisionToolbox.h"
-#include "CWrapperOpenCV.h"
+#include "utility/CWrapperOpenCV.h"
 
 const cv::Point2i CMiniVisionToolbox::getPointBoundarized( const int32_t& p_iPointX, const int32_t& p_iPointY, const uint32_t& p_uImageRows, const uint32_t& p_uImageCols )
 {

@@ -11,7 +11,7 @@
 #include "configuration/CConfigurationCamera.h"
 #include "configuration/CConfigurationOpenCV.h"
 #include "core/CTriangulator.h"
-#include "utility/CStereoCamera.h"
+#include "vision/CStereoCamera.h"
 #include "utility/CLogger.h"
 #include "exceptions/CExceptionNoMatchFound.h"
 
@@ -24,10 +24,9 @@ const uint32_t g_uKeyPointSize( 7 );
 std::shared_ptr< cv::GoodFeaturesToTrackDetector > g_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 20.0, g_uKeyPointSize, true ) );
 std::shared_ptr< cv::BriefDescriptorExtractor > g_pExtractor( std::make_shared< cv::BriefDescriptorExtractor >( 64 ) );
 std::shared_ptr< cv::BFMatcher > g_pMatcher( std::make_shared< cv::BFMatcher >( ) );
-const double g_dMatchingDistanceCutoffTriangulation( 200.0 );
 
 //ds triangulator
-std::shared_ptr< CTriangulator > g_pTriangulator( std::make_shared< CTriangulator >( g_pCameraSTEREO, g_pExtractor, g_pMatcher, g_dMatchingDistanceCutoffTriangulation ) );
+std::shared_ptr< CTriangulator > g_pTriangulator( 0 );
 
 //ds display
 cv::Mat g_matDisplay( cv::Mat( g_pCameraSTEREO->m_uPixelHeight, 2*g_pCameraSTEREO->m_uPixelWidth, CV_8UC3 ) );
@@ -100,10 +99,10 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
         }
         catch( const CExceptionNoMatchFound& p_cException )
         {
-
+            //std::cout << "exception: " << p_cException.what( ) << std::endl;
         }
 
-        try
+        /*try
         {
             vecPointTriangulatedSTEREOQRLS  = new CPoint3DInCameraFrame( g_pTriangulator->getPointTriangulatedLimitedQRLS( matPreprocessedRIGHT, cKeyPoint, matReferenceDescriptorLEFT ) );
         }
@@ -119,16 +118,16 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
         catch( const CExceptionNoMatchFound& p_cException )
         {
 
-        }
+        }*/
 
-        try
+        /*try
         {
             std::vector< cv::KeyPoint > vecKeyPointsEDS;
             std::vector< CPoint3DInCameraFrame > vecTriangulatedPoints;
 
             //ds normalized coords
             const CPoint2DInCameraFrame vecLandmarkLEFTNormalized( g_pCameraSTEREO->m_pCameraLEFT->getNormalized( ptLandmarkLEFT ) );
-            //const CPoint2DInCameraFrame vecLandmarkLEFTNormalized( ptLandmarkLEFT.x/g_pCameraSTEREO->m_pCameraLEFT->m_dFx, ptLandmarkLEFT.y/g_pCameraSTEREO->m_pCameraLEFT->m_dFy );
+            //const CPoint2DInCameraFrame vecLandmarkLEFTNormalized( ptLandmarkLEFT.x/g_pCameraSTEREO->m_pCameraLEFT->m_dFx, ptLandmarkLEFT.y/g_pCameraSTEREO->m_pCameraLEFT->m_dFy );*/
 
             /*ds calibrate scaling factor for depth of one meter (EPIPOLAR CONSTRAINT)
             double dErrorPixel( 1000.0 );
@@ -166,7 +165,7 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
 
             //ds exponential depth sampling triangulation EDS
             //for( int32_t iExponent = -50; iExponent < 50; ++iExponent )
-            #pragma omp parallel for
+            /*#pragma omp parallel for
             for( uint32_t uDepthDecimeter = 1; uDepthDecimeter < 100; ++uDepthDecimeter )
             {
                 //ds current depth
@@ -231,7 +230,7 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
         catch( const CExceptionNoMatchFound& p_cException )
         {
 
-        }
+        }*/
 
         //ds escape if no depth has been computed
         if( 0 == vecPointTriangulatedSTEREOEDS && 0 == vecPointTriangulatedSTEREOQRLS && 0 == vecPointTriangulatedSTEREOSVDLS && 0 == vecPointTriangulatedSTEREOSVDDLT )
@@ -263,7 +262,7 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
             strDepthInfo += "|X";
         }
 
-        if( 0 != vecPointTriangulatedSTEREOQRLS )
+        /*if( 0 != vecPointTriangulatedSTEREOQRLS )
         {
             //ds compute error
             const cv::Point2d ptLandmarkRIGHT( g_pCameraSTEREO->m_pCameraRIGHT->getProjection(*vecPointTriangulatedSTEREOQRLS ) );
@@ -324,11 +323,17 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
         else
         {
             strDepthInfo += "|X";
-        }
+        }*/
 
         cv::putText( matDisplayLEFT, strDepthInfo, cv::Point2d( ptLandmarkLEFT.x+cKeyPoint.size, ptLandmarkLEFT.y+cKeyPoint.size ), cv::FONT_HERSHEY_PLAIN, 0.75, CColorCodeBGR( 0, 0, 255 ) );
 
         ++uActivePoints;
+
+        //ds free memory
+        if( 0 != vecPointTriangulatedSTEREOSVDLS ){ delete vecPointTriangulatedSTEREOSVDLS; }
+        if( 0 != vecPointTriangulatedSTEREOQRLS ){ delete vecPointTriangulatedSTEREOQRLS; }
+        if( 0 != vecPointTriangulatedSTEREOSVDDLT ){ delete vecPointTriangulatedSTEREOSVDDLT; }
+        if( 0 != vecPointTriangulatedSTEREOEDS ){ delete vecPointTriangulatedSTEREOEDS; }
     }
 
     //ds compute averages
@@ -368,10 +373,10 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
 //ds sensor topic callbacks
 void callbackCameraRIGHT( const sensor_msgs::ImageConstPtr p_pImageRIGHT );
 void callbackCameraLEFT( const sensor_msgs::ImageConstPtr p_pImageLEFT );
-void callbackIMU0( const sensor_msgs::ImuConstPtr p_msgIMU )
+/*void callbackIMU0( const sensor_msgs::ImuConstPtr p_msgIMU )
 {
     //ds not used
-}
+}*/
 
 int main( int argc, char** argv )
 {
@@ -395,12 +400,20 @@ int main( int argc, char** argv )
 
     std::printf( "(main) OpenMP set threads: %i | cur threads: %u | max threads: %i\n", uOpenMPNumberOfThreads, uOpenMPThreadsActive, omp_get_max_threads( ) );
 
+    //ds cutoff distance
+    double dMatchingDistanceCutoffTriangulation( 300.0 );
+
+    if( 2 == argc )
+    {
+        dMatchingDistanceCutoffTriangulation = std::atof( argv[1] );
+    }
+
     //ds configuration parameters
-    std::string strTopicCameraRIGHT( "/thin_visensor_node/camera_0/image_raw" );
-    std::string strTopicCameraLEFT ( "/thin_visensor_node/camera_1/image_raw" );
+    std::string strTopicCameraRIGHT( "/thin_visensor_node/camera_right/image_raw" );
+    std::string strTopicCameraLEFT ( "/thin_visensor_node/camera_left/image_raw" );
     std::string strTopicIMU        ( "/thin_visensor/imu_adis16448" );
     uint32_t uMaximumQueueSizeCamera( 10 );
-    uint32_t uMaximumQueueSizeIMU   ( 100 );
+    //uint32_t uMaximumQueueSizeIMU   ( 100 );
 
     //ds setup node
     ros::init( argc, argv, "test_depth" );
@@ -420,13 +433,16 @@ int main( int argc, char** argv )
     std::printf( "(main) ROS topic camera LEFT  := '%s'\n", strTopicCameraRIGHT.c_str( ) );
     std::printf( "(main) ROS topic camera RIGHT := '%s'\n", strTopicCameraLEFT.c_str( ) );
     std::printf( "(main) ROS topic IMU          := '%s'\n", strTopicIMU.c_str( ) );
+    std::printf( "(main) matching distance cut  := '%f'\n", dMatchingDistanceCutoffTriangulation );
     std::fflush( stdout );
     CLogger::closeBox( );
+
+    g_pTriangulator = std::make_shared< CTriangulator >( g_pCameraSTEREO, g_pExtractor, g_pMatcher, dMatchingDistanceCutoffTriangulation );
 
     //ds subscribe to topics
     ros::Subscriber cSubscriberCameraRIGHT = pNode->subscribe( strTopicCameraRIGHT, uMaximumQueueSizeCamera, callbackCameraRIGHT );
     ros::Subscriber cSubscriberCameraLEFT  = pNode->subscribe( strTopicCameraLEFT , uMaximumQueueSizeCamera, callbackCameraLEFT );
-    ros::Subscriber cSubscribeIMU0         = pNode->subscribe( strTopicIMU        , uMaximumQueueSizeIMU   , callbackIMU0 );
+    //ros::Subscriber cSubscribeIMU0         = pNode->subscribe( strTopicIMU        , uMaximumQueueSizeIMU   , callbackIMU0 );
 
     //ds start callback pump
     ros::spin( );

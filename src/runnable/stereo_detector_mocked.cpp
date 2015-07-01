@@ -11,8 +11,7 @@
 #include "txt_io/pinhole_image_message.h"
 #include "txt_io/pose_message.h"
 #include "utility/CStack.h"
-#include "core/CTrackerStereo.h"
-//#include "core/CDetectorTestStereoDepth.h"
+#include "core/CMockedTrackerStereo.h"
 #include "utility/CMiniTimer.h"
 #include "vision/CMiniVisionToolbox.h"
 
@@ -67,7 +66,7 @@ int main( int argc, char **argv )
     const uint32_t uImageCols = 752;
 
     //ds setup node
-    ros::init( argc, argv, "stereo_detector_alberto_node" );
+    ros::init( argc, argv, "stereo_detector_mocked" );
     std::shared_ptr< ros::NodeHandle > pNode( new ros::NodeHandle( "~" ) );
 
     //ds escape here on failure
@@ -84,6 +83,7 @@ int main( int argc, char **argv )
     std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
     //std::string strInfileMessageDump = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/solution.log";
     //std::string strImageFolder       = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/data";
+    std::string strMockedLandmarks   = "/home/dominik/workspace_catkin/src/vi_mapper/mocking/landmarks_nonoise.txt";
 
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
@@ -125,8 +125,7 @@ int main( int argc, char **argv )
     CLogger::closeBox( );
 
     //ds feature detector
-    //CDetectorTestStereoDepth cDetector( uImageRows, uImageCols, true, uFrequencyPlaybackHz );
-    CTrackerStereo cDetector( uFrequencyPlaybackHz, eMode, uWaitKeyTimeout );
+    CMockedTrackerStereo cDetector( uFrequencyPlaybackHz, eMode, strMockedLandmarks, uWaitKeyTimeout );
 
     //ds get start time
     const uint64_t uToken( CMiniTimer::tic( ) );
