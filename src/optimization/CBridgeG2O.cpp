@@ -390,8 +390,8 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
                     pEdgeProjectedDepth->setParameterId( 0, EG2OParameterID::eCAMERA_LEFT );
 
                     //ds information matrix
-                    const double dInformationQualityDepth( m_dMaximumReliableDepth/dDepthMeters );
-                    const double arrInformationMatrixDepth[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 1000*dInformationQualityDepth };
+                    //const double dInformationQualityDepth( m_dMaximumReliableDepth/( 1.0+dDepthMeters ) );
+                    const double arrInformationMatrixDepth[9] = { 1, 0, 0, 0, 1, 0, 0, 0, 10000 };
                     pEdgeProjectedDepth->setInformation( g2o::Matrix3D( arrInformationMatrixDepth ) );
 
                     cGraph.addEdge( pEdgeProjectedDepth );

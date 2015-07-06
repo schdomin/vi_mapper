@@ -84,6 +84,10 @@ private:
     uint64_t m_uTotalMeasurementPoints;
     uint64_t m_uMAPPoints;
 
+    //ds debug logging
+    std::FILE* m_pFileLandmarkCreation;
+    std::FILE* m_pFileLandmarkFinal;
+
 //ds accessors
 public:
 

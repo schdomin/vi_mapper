@@ -18,7 +18,7 @@ class CBridgeG2O
 private:
 
     static constexpr double m_dMaximumReliableDepth    = 7.5;
-    static const uint8_t m_uMinimumCalibrationsForDump = 0;
+    static const uint8_t m_uMinimumCalibrationsForDump = 5;
 
 public:
 

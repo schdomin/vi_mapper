@@ -31,22 +31,22 @@ CTrackerStereo::CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
                                                                            m_dMatchingDistanceCutoffTriangulation( 400.0 ),
                                                                            m_dMatchingDistanceCutoffTracking( 350.0 ),*/
 
-                                                                           //ds BRIEF (calibrated 2015-05-31)
-                                                                          // m_uKeyPointSize( 7 ),
+                                                                           /*//ds BRIEF (calibrated 2015-05-31)
+                                                                           // m_uKeyPointSize( 7 ),
                                                                            m_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 20.0, 7, true ) ),
                                                                            m_pExtractor( std::make_shared< cv::BriefDescriptorExtractor >( 64 ) ),
                                                                            m_pMatcher( std::make_shared< cv::BFMatcher >( ) ),
                                                                            //m_pMatcher( std::make_shared< cv::FlannBasedMatcher >( new cv::flann::LshIndexParams( 20, 7, 2 ) ) ),
                                                                            m_dMatchingDistanceCutoffTriangulation( 300.0 ),
-                                                                           m_dMatchingDistanceCutoffTracking( 250.0 ),
+                                                                           m_dMatchingDistanceCutoffTracking( 250.0 ),*/
 
-                                                                           /*//ds BRISK (calibrated 2015-06-09)
+                                                                           //ds BRISK (calibrated 2015-06-09)
                                                                            //m_uKeyPointSize( 8 ),
                                                                            m_pDetector( std::make_shared< cv::BRISK >( 40, 2, 1.1 ) ), //std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 20.0, m_uKeyPointSize, true ) ),
                                                                            m_pExtractor( std::make_shared< cv::BRISK >( 40, 2, 1.1 ) ),
                                                                            m_pMatcher( std::make_shared< cv::BFMatcher >( ) ),
                                                                            m_dMatchingDistanceCutoffTriangulation( 450.0 ),
-                                                                           m_dMatchingDistanceCutoffTracking( 400.0 ),*/
+                                                                           m_dMatchingDistanceCutoffTracking( 400.0 ),
 
                                                                            /*//ds SURF
                                                                            m_pDetector( std::make_shared< cv::SurfFeatureDetector >( 5000 ) ),
@@ -65,13 +65,13 @@ CTrackerStereo::CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
 
                                                                            m_uMaximumFailedSubsequentTrackingsPerLandmark( 5 ),
                                                                            m_uVisibleLandmarksMinimum( 5 ),
-                                                                           m_dMinimumDepthMeters( 0.5 ),
+                                                                           m_dMinimumDepthMeters( 0.25 ),
                                                                            m_dMaximumDepthMeters( 100.0 ),
 
 
                                                                            //m_cDetector( m_pCameraLEFT, m_pDetector ),
                                                                            m_pTriangulator( std::make_shared< CTriangulator >( m_pCameraSTEREO, m_pExtractor, m_pMatcher, m_dMatchingDistanceCutoffTriangulation ) ),
-                                                                           m_cMatcherEpipolar( m_pTriangulator, m_dMatchingDistanceCutoffTracking, m_uMaximumFailedSubsequentTrackingsPerLandmark ),
+                                                                           m_cMatcherEpipolar( m_pTriangulator, m_dMinimumDepthMeters, m_dMaximumDepthMeters, m_dMatchingDistanceCutoffTracking, m_uMaximumFailedSubsequentTrackingsPerLandmark ),
 
                                                                            m_uAvailableLandmarkID( 0 ),
                                                                            m_vecLandmarks( std::make_shared< std::vector< CLandmark* > >( ) ),
@@ -92,6 +92,14 @@ CTrackerStereo::CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
                                                                            m_uTotalMeasurementPoints( 0 ),
                                                                            m_uMAPPoints( 0 )
 {
+    //ds debug logging
+    m_pFileLandmarkCreation = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_creation.txt", "w" );
+    m_pFileLandmarkFinal    = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_final.txt", "w" );
+
+    //ds dump file format
+    std::fprintf( m_pFileLandmarkCreation, "FRAME ID_LANDMARK X Y Z DEPTH U_LEFT V_LEFT U_RIGHT V_RIGHT KEYPOINT_SIZE\n" );
+    std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK X_INITIAL Y_INITIAL Z_INITIAL X_FINAL Y_FINAL Z_FINAL DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL CALIBRATIONS\n" );
+
     //ds initialize reference frames with black images
     m_matDisplayLowerReference = cv::Mat::zeros( m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
 
@@ -132,8 +140,32 @@ CTrackerStereo::~CTrackerStereo( )
     //ds free all landmarks
     for( const CLandmark* pLandmark: *m_vecLandmarks )
     {
+        //ds compute errors
+        const double dErrorX = std::fabs( ( pLandmark->vecPointXYZCalibrated.x( )-pLandmark->vecPointXYZInitial.x( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.x( ) ) ) );
+        const double dErrorY = std::fabs( ( pLandmark->vecPointXYZCalibrated.y( )-pLandmark->vecPointXYZInitial.y( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.y( ) ) ) );
+        const double dErrorZ = std::fabs( ( pLandmark->vecPointXYZCalibrated.z( )-pLandmark->vecPointXYZInitial.z( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.z( ) ) ) );
+        const double dErrorTotal = dErrorX + dErrorY + dErrorZ;
+
+        //ds write final state to file before deleting
+        std::fprintf( m_pFileLandmarkFinal, "%06lu %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %4.2f %4.2f %4.2f %4.2f %04u\n", pLandmark->uID,
+                                                                              pLandmark->vecPointXYZInitial.x( ),
+                                                                              pLandmark->vecPointXYZInitial.y( ),
+                                                                              pLandmark->vecPointXYZInitial.z( ),
+                                                                              pLandmark->vecPointXYZCalibrated.x( ),
+                                                                              pLandmark->vecPointXYZCalibrated.y( ),
+                                                                              pLandmark->vecPointXYZCalibrated.z( ),
+                                                                              dErrorX,
+                                                                              dErrorY,
+                                                                              dErrorZ,
+                                                                              dErrorTotal,
+                                                                              pLandmark->uCalibrations );
+
         delete pLandmark;
     }
+
+    //ds debug
+    std::fclose( m_pFileLandmarkCreation );
+    std::fclose( m_pFileLandmarkFinal );
 
     std::printf( "<CTrackerStereo>(~CTrackerStereo) instance deallocated\n" );
 }
@@ -371,6 +403,9 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                 //ds draw reprojection of triangulation
                 const cv::Point2d ptLandmarkRIGHT( m_pCameraRIGHT->getProjection( vecPointTriangulatedLEFT ) );
 
+                //ds soft epipolar constraint
+                assert( 1.0 > std::fabs( ptLandmarkLEFT.y-ptLandmarkRIGHT.y ) );
+
                 //ds allocate a new landmark and add the current position
                 CLandmark* cLandmark( new CLandmark( m_uAvailableLandmarkID,
                                                      matReferenceDescriptor,
@@ -384,6 +419,19 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                                                      matKRotation,
                                                      vecKTranslation,
                                                      p_uFrame ) );
+
+                //ds log creation
+                std::fprintf( m_pFileLandmarkCreation, "%04lu %06lu %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f\n", p_uFrame,
+                                                                                              cLandmark->uID,
+                                                                                              cLandmark->vecPointXYZCalibrated.x( ),
+                                                                                              cLandmark->vecPointXYZCalibrated.y( ),
+                                                                                              cLandmark->vecPointXYZCalibrated.z( ),
+                                                                                              dDepthMeters,
+                                                                                              ptLandmarkLEFT.x,
+                                                                                              ptLandmarkLEFT.y,
+                                                                                              ptLandmarkRIGHT.x,
+                                                                                              ptLandmarkRIGHT.y,
+                                                                                              cLandmark->dKeyPointSize );
 
                 //ds add to newly detected
                 vecNewLandmarks->push_back( cLandmark );

@@ -80,10 +80,10 @@ int main( int argc, char **argv )
     }
 
     //ds default files
-    std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
-    std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
-    //std::string strInfileMessageDump = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/solution.log";
-    //std::string strImageFolder       = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/data";
+    //std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
+    //std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
+    std::string strInfileMessageDump = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/solution.log";
+    std::string strImageFolder       = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/data";
 
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
@@ -144,15 +144,15 @@ int main( int argc, char **argv )
         if( 0 != g_pActiveMessageCamera_0 && 0 != g_pActiveMessageCamera_1 && !g_vecMessagesIMU.isEmpty( ) && 0 != g_pActiveMessagesPose )
         {
             //ds pop the camera images
-            std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_0( g_pActiveMessageCamera_0 );
-            std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_1( g_pActiveMessageCamera_1 );
+            std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_RIGHT( g_pActiveMessageCamera_0 );
+            std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_LEFT( g_pActiveMessageCamera_1 );
 
             //ds current triplet timestamp
-            double dTimestamp_0( cImageCamera_0->timestamp( ) );
-            double dTimestamp_1( cImageCamera_1->timestamp( ) );
+            double dTimestamp_RIGHT( cImageCamera_RIGHT->timestamp( ) );
+            double dTimestamp_LEFT( cImageCamera_LEFT->timestamp( ) );
 
             //ds sequence numbers have to match
-            if( dTimestamp_0 == dTimestamp_1 )
+            if( dTimestamp_RIGHT == dTimestamp_LEFT )
             {
                 //ds reset holders
                 g_pActiveMessageCamera_0 = 0;
@@ -162,13 +162,13 @@ int main( int argc, char **argv )
                 txt_io::CIMUMessage cMessageIMU( g_vecMessagesIMU.pop( ) );
 
                 //ds look for the matching timestamp in the stack (assuming that IMU messages have arrived in chronological order)
-                while( dTimestamp_0 < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.isEmpty( ) )
+                while( dTimestamp_RIGHT < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.isEmpty( ) )
                 {
                     cMessageIMU = g_vecMessagesIMU.pop( );
                 }
 
                 //ds in case we have not received the matching timestamp yet - TODO this blocks indefinitely if there is no IMU data arriving
-                while( dTimestamp_0 > cMessageIMU.timestamp( ) )
+                while( dTimestamp_RIGHT > cMessageIMU.timestamp( ) )
                 {
                     //ds pop the most recent imu measurement and check
                     if( !g_vecMessagesIMU.isEmpty( ) )
@@ -188,17 +188,17 @@ int main( int argc, char **argv )
                     if( 0 != g_pActiveMessagesPose )
                     {
                         //ds check if we can use this pose
-                        if( dTimestamp_0 <= g_pActiveMessagesPose->timestamp( ) )
+                        if( dTimestamp_RIGHT <= g_pActiveMessagesPose->timestamp( ) )
                         {
                             //ds callback with triplet
-                            cDetector.receivevDataVIWithPose( cImageCamera_1, cImageCamera_0, cMessageIMU, g_pActiveMessagesPose );
+                            cDetector.receivevDataVIWithPose( cImageCamera_LEFT, cImageCamera_RIGHT, cMessageIMU, g_pActiveMessagesPose );
                             g_pActiveMessagesPose = 0;
                             bCalledDetector = true;
                         }
                         else
                         {
                             //ds log skipped frame
-                            std::printf( "(main) WARNING: skipped single frame (outdated pose information) - timestamp camera_0: %.5lf s\n", dTimestamp_0 );
+                            std::printf( "(main) WARNING: skipped single frame (outdated pose information) - timestamp camera_right: %.5lf s\n", dTimestamp_RIGHT );
                         }
                     }
 
@@ -209,20 +209,20 @@ int main( int argc, char **argv )
                 if( !bCalledDetector )
                 {
                     //ds log skipped frame
-                    std::printf( "(main) WARNING: skipped single frame (no pose information) - timestamp camera_0: %.5lf s\n", dTimestamp_0 );
+                    std::printf( "(main) WARNING: skipped single frame (no pose information) - timestamp camera_right: %.5lf s\n", dTimestamp_RIGHT );
                 }
             }
             else
             {
-                std::printf( "(main) WARNING: could not find matching frames - timestamp camera_0: %.5lf s\n", dTimestamp_0 );
+                std::printf( "(main) WARNING: could not find matching frames - timestamp camera_right: %.5lf s\n", dTimestamp_RIGHT );
 
                 //ds reset the respectively elder one
-                if( dTimestamp_0 > dTimestamp_1 )
+                if( dTimestamp_RIGHT > dTimestamp_LEFT )
                 {
                     g_pActiveMessageCamera_1 = 0;
                     g_pActiveMessagesPose    = 0;
                 }
-                if( dTimestamp_0 < dTimestamp_1 )
+                if( dTimestamp_RIGHT < dTimestamp_LEFT )
                 {
                     g_pActiveMessageCamera_0 = 0;
                     g_pActiveMessagesPose    = 0;
@@ -316,7 +316,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
     else if( "IMAGE0" == strMessageType )
     {
         //ds camera_0 message
-        g_pActiveMessageCamera_0 = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_0", "camera_0", g_uFrameIDCamera_0, dTimeSeconds ) );
+        g_pActiveMessageCamera_0 = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_right", "camera_right", g_uFrameIDCamera_0, dTimeSeconds ) );
 
         //ds set image information
         std::string strImageFile;
@@ -336,7 +336,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
     else if( "IMAGE1" == strMessageType )
     {
         //ds camera_1 message
-        g_pActiveMessageCamera_1 = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_1", "camera_1", g_uFrameIDCamera_1, dTimeSeconds ) );
+        g_pActiveMessageCamera_1 = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_left", "camera_left", g_uFrameIDCamera_1, dTimeSeconds ) );
 
         //ds set image information
         std::string strImageFile;

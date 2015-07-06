@@ -38,6 +38,8 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTriangulator,
+                      const double& p_dMinimumDepthMeters,
+                      const double& p_dMaximumDepthMeters,
                       const float& p_fMatchingDistanceCutoff,
                       const uint8_t& p_uMaximumFailedSubsequentTrackingsPerLandmark );
     ~CMatcherEpipolar( );
@@ -56,6 +58,8 @@ private:
     //ds matching
     const std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
     const std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
+    const double m_dMinimumDepthMeters;
+    const double m_dMaximumDepthMeters;
     const double m_dMatchingDistanceCutoff;
     const double m_dMatchingDistanceCutoffOriginal;
 

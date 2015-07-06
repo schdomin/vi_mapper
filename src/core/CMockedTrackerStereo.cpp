@@ -52,12 +52,13 @@ CMockedTrackerStereo::CMockedTrackerStereo( const uint32_t& p_uFrequencyPlayback
                                                                            m_uTotalMeasurementPoints( 0 ),
                                                                            m_uMAPPoints( 0 )
 {
+    //ds debug logging
     m_pFileLandmarkCreation = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_creation.txt", "w" );
     m_pFileLandmarkFinal    = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_final.txt", "w" );
 
     //ds dump file format
-    std::fprintf( m_pFileLandmarkCreation, "FRAME ID_LANDMARK X Y Z DEPTH U_LEFT V_LEFT U_RIGHT V_RIGHT KEYPOINT_SIZE\n" );
-    std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK X_INITIAL Y_INITIAL Z_INITIAL X_FINAL Y_FINAL Z_FINAL ERROR_X ERROR_Y ERROR_Z ERROR_TOTAL CALIBRATIONS\n" );
+    std::fprintf( m_pFileLandmarkCreation, "FRAME | ID_LANDMARK |      X      Y      Z |  DEPTH | U_LEFT V_LEFT | U_RIGHT V_RIGHT | KEYPOINT_SIZE\n" );
+    std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | CALIBRATIONS | MEAN_X MEAN_Y MEAN_Z\n" );
 
     //ds initialize reference frames with black images
     m_matDisplayLowerReference = cv::Mat::zeros( m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
@@ -92,7 +93,7 @@ CMockedTrackerStereo::~CMockedTrackerStereo( )
         const double dErrorTotal = dErrorX + dErrorY + dErrorZ;
 
         //ds write final state to file before deleting
-        std::fprintf( m_pFileLandmarkFinal, "%06lu %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %4.2f %4.2f %4.2f %4.2f %04u\n", pLandmark->uID,
+        std::fprintf( m_pFileLandmarkFinal, "     %06lu |    %6.2f    %6.2f    %6.2f |  %6.2f  %6.2f  %6.2f |   %5.2f   %5.2f   %5.2f       %5.2f |       %06u | %6.2f %6.2f %6.2f\n", pLandmark->uID,
                                                                               pLandmark->vecPointXYZInitial.x( ),
                                                                               pLandmark->vecPointXYZInitial.y( ),
                                                                               pLandmark->vecPointXYZInitial.z( ),
@@ -103,7 +104,10 @@ CMockedTrackerStereo::~CMockedTrackerStereo( )
                                                                               dErrorY,
                                                                               dErrorZ,
                                                                               dErrorTotal,
-                                                                              pLandmark->uCalibrations );
+                                                                              pLandmark->uCalibrations,
+                                                                              pLandmark->vecMeanMeasurement.x( ),
+                                                                              pLandmark->vecMeanMeasurement.y( ),
+                                                                              pLandmark->vecMeanMeasurement.z( ) );
 
         delete pLandmark;
     }
@@ -326,7 +330,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
                                                  p_uFrame ) );
 
             //ds log creation
-            std::fprintf( m_pFileLandmarkCreation, "%04lu %06lu %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f\n", p_uFrame,
+            std::fprintf( m_pFileLandmarkCreation, " %04lu |      %06lu | %6.2f %6.2f %6.2f | %6.2f | %6.2f %6.2f |  %6.2f  %6.2f |        %6.2f\n", p_uFrame,
                                                                                           cLandmark->uID,
                                                                                           cLandmark->vecPointXYZCalibrated.x( ),
                                                                                           cLandmark->vecPointXYZCalibrated.y( ),

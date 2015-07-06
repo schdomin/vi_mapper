@@ -22,15 +22,16 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
                                                        uFailedSubsequentTrackings( 0 ),
                                                        uCalibrations( 0 ),
                                                        dCurrentAverageSquaredError( 0.0 ),
+                                                       vecMeanMeasurement( p_vecPointXYZ ),
                                                        m_vecLastCameraPosition( p_vecCameraPosition )
 {
     //ds construct filestring and open dump file
-    char chBuffer[256];
-    std::snprintf( chBuffer, 256, "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks/landmark%06lu.txt", uID );
-    m_pFilePosition = std::fopen( chBuffer, "w" );
+    //char chBuffer[256];
+    //std::snprintf( chBuffer, 256, "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks/landmark%06lu.txt", uID );
+    //m_pFilePosition = std::fopen( chBuffer, "w" );
 
     //ds dump file format
-    std::fprintf( m_pFilePosition, "FRAME LANDMARK ITERATION MEASUREMENTS INLIERS ERROR\n" );
+    //std::fprintf( m_pFilePosition, "FRAME LANDMARK ITERATION MEASUREMENTS INLIERS ERROR\n" );
 
     //ds add this position
     addPosition( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCamera, vecPointXYZInitial, p_vecCameraPosition, p_matKRotation, p_vecKTranslation );
@@ -42,7 +43,7 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
 CLandmark::~CLandmark( )
 {
     //ds close file
-    std::fclose( m_pFilePosition );
+    //std::fclose( m_pFilePosition );
 
     //ds free positions
     for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
@@ -54,13 +55,16 @@ CLandmark::~CLandmark( )
 void CLandmark::addPosition( const uint64_t& p_uFrame,
                              const cv::Point2d& p_ptUVLEFT,
                              const cv::Point2d& p_ptUVRIGHT,
-                             const CPoint3DInCameraFrame& p_vecPointXYZ,
-                             const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
+                             const CPoint3DInCameraFrame& p_vecPointXYZCAMERA,
+                             const CPoint3DInWorldFrame& p_vecPointXYZ,
                              const Eigen::Vector3d& p_vecCameraPosition,
                              const Eigen::Matrix3d& p_matKRotation,
                              const Eigen::Vector3d& p_vecKTranslation )
 {
-    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZ, p_vecPointXYZWORLD, p_vecCameraPosition, p_matKRotation, p_vecKTranslation ) );
+    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCAMERA, p_vecPointXYZ, p_vecCameraPosition, p_matKRotation, p_vecKTranslation ) );
+
+    //ds update mean
+    vecMeanMeasurement = ( vecMeanMeasurement + p_vecPointXYZ )/2.0;
 
     //ds check if we can recalibrate the 3d position
     if( m_dDistanceDeltaForCalibration < ( m_vecLastCameraPosition-p_vecCameraPosition ).squaredNorm( ) )
@@ -163,7 +167,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkLMA( const uint64_t& 
 
         //std::printf( "iteration[%04lu][%04u]: %6.2f %6.2f %6.2f\n", uID, u, vecX(0), vecX(1), vecX(2) );
 
-        std::fprintf( m_pFilePosition, "%04lu %06lu %03u %03lu %03u %6.2f\n", p_uFrame, uID, uIteration, m_vecMeasurements.size( ), uInliers, dRSSCurrent );
+        //std::fprintf( m_pFilePosition, "%04lu %06lu %03u %03lu %03u %6.2f\n", p_uFrame, uID, uIteration, m_vecMeasurements.size( ), uInliers, dRSSCurrent );
 
         //ds check if we have converged
         if( m_dConvergenceDelta > vecDeltaX.squaredNorm( ) )

@@ -6,6 +6,8 @@
 #include "utility/CLogger.h"
 
 CMatcherEpipolar::CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTriangulator,
+                                    const double& p_dMinimumDepthMeters,
+                                    const double& p_dMaximumDepthMeters,
                                     const float& p_fMatchingDistanceCutoff,
                                     const uint8_t& p_uMaximumFailedSubsequentTrackingsPerLandmark ): m_pTriangulator( p_pTriangulator ),
                                                                               m_pCameraLEFT( m_pTriangulator->m_pCameraSTEREO->m_pCameraLEFT ),
@@ -13,6 +15,8 @@ CMatcherEpipolar::CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTr
                                                                               m_pCameraSTEREO( m_pTriangulator->m_pCameraSTEREO ),
                                                                               m_pExtractor( m_pTriangulator->m_pExtractor ),
                                                                               m_pMatcher( m_pTriangulator->m_pMatcher ),
+                                                                              m_dMinimumDepthMeters( p_dMinimumDepthMeters ),
+                                                                              m_dMaximumDepthMeters( p_dMaximumDepthMeters ),
                                                                               m_dMatchingDistanceCutoff( p_fMatchingDistanceCutoff ),
                                                                               m_dMatchingDistanceCutoffOriginal( 2*p_fMatchingDistanceCutoff ),
                                                                               m_uAvailableMeasurementPointID( 0 ),
@@ -33,6 +37,8 @@ CMatcherEpipolar::CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTr
     CLogger::openBox( );
     std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) descriptor extractor: %s\n", m_pExtractor->name( ).c_str( ) );
     std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) descriptor matcher: %s\n", m_pMatcher->name( ).c_str( ) );
+    std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) minimum depth cutoff: %f\n", m_dMinimumDepthMeters );
+    std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) maximum depth cutoff: %f\n", m_dMinimumDepthMeters );
     std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) matching distance cutoff: %f\n", m_dMatchingDistanceCutoff );
     std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) maximum number of non-detections before dropping landmark: %u\n", m_uMaximumFailedSubsequentTrackingsPerLandmark );
     std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) instance allocated\n" );
@@ -709,18 +715,34 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                     pMatch = _getMatchSampleRecursiveV( p_matDisplayLEFT, p_matImageLEFT, iVForUMinimum, uDeltaV, vecCoefficients, pLandmarkReference->matDescriptorLast, pLandmarkReference->matDescriptorReference, pLandmarkReference->dKeyPointSize, 0 );
                 }
 
+                assert( m_cSearchROI.contains( pMatch->cKeyPoint.pt ) );
+
                 //ds triangulate point
                 const CPoint3DInCameraFrame vecPointTriangulatedLEFT( m_pTriangulator->getPointTriangulatedLimited( p_matImageRIGHT, pMatch->cKeyPoint, pMatch->matDescriptor ) );
                 //const CPoint3DInCameraFrame vecPointTriangulatedRIGHT( m_pCameraSTEREO->m_matTransformLEFTtoRIGHT*vecPointTriangulatedLEFT );
 
+                //ds depth
+                const double& dDepthMeters = vecPointTriangulatedLEFT.z( );
+
+                //ds check depth
+                if( m_dMinimumDepthMeters > dDepthMeters || m_dMaximumDepthMeters < dDepthMeters )
+                {
+                    throw CExceptionNoMatchFound( "<CMatcherEpipolar>(getVisibleLandmarksEssential) invalid depth: " + std::to_string( dDepthMeters ) );
+                }
+
                 //ds get projection
                 const cv::Point2d ptUVRIGHT( m_pCameraRIGHT->getProjection( vecPointTriangulatedLEFT ) );
+
+                //ds soft epipolar constraint
+                assert( 1.0 > std::fabs( pMatch->cKeyPoint.pt.y-ptUVRIGHT.y ) );
+                assert( m_cSearchROI.contains( ptUVRIGHT ) );
 
                 //ds update landmark
                 pLandmarkReference->matDescriptorLast          = pMatch->matDescriptor;
                 pLandmarkReference->uFailedSubsequentTrackings = 0;
                 pLandmarkReference->addPosition( p_uFrame, pMatch->cKeyPoint.pt, ptUVRIGHT, vecPointTriangulatedLEFT, static_cast< CPoint3DInWorldFrame >( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT ), vecCameraPosition, matKRotation, vecKTranslation );
 
+                //ds register measurement
                 vecVisibleLandmarksPerMeasurementPoint.push_back( pLandmarkReference->getLastMeasurement( ) );
 
                 //ds new positions
@@ -786,8 +808,8 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
             //ds initial guess of the transformation
             m_cSolverPose.T = matTransformationWORLDtoLEFT;
 
-            double dErrorSolverPosePrevious( 0.0 );
-            const double dDeltaConvergence( 1e-5 );
+            //double dErrorSolverPosePrevious( 0.0 );
+            //const double dDeltaConvergence( 1e-5 );
 
             m_cSolverPose.init();
 

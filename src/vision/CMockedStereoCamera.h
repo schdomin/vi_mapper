@@ -72,6 +72,9 @@ private:
     UIDLandmark m_uAvailableMockedLandmarkID;
     std::vector< CMockedLandmark > m_vecLandmarksMocked;
 
+    //ds noise
+    std::default_random_engine m_cGenerator;
+
 //ds accessors
 public:
 
@@ -98,13 +101,31 @@ public:
                 if( 0 < vecPointXYZLEFT.z( ) )
                 {
                     //ds compute projection in LEFT
-                    const cv::Point2d ptUVLEFT( m_pCameraLEFT->getProjection( vecPointXYZLEFT ) );
+                    cv::Point2d ptUVLEFT( m_pCameraLEFT->getProjection( vecPointXYZLEFT ) );
+
+                    //ds allocate normal distribution and compute the respective noises
+                    std::normal_distribution< double > cDistributionNormal( cLandmark.dNoiseMean, cLandmark.dNoiseStandardDeviation );
+
+                    //ds noise in V is the same for both to satisfy epipolar constraint
+                    const double dNoiseVPixel      = cDistributionNormal( m_cGenerator );
+                    const double dNoiseUPixelLEFT  = cDistributionNormal( m_cGenerator );
+                    const double dNoiseUPixelRIGHT = cDistributionNormal( m_cGenerator );
+
+                    //std::cout << dNoiseVPixel << " " << dNoiseUPixelLEFT << " " << dNoiseUPixelRIGHT << std::endl;
+
+                    //ds add noise to detected point
+                    ptUVLEFT.x += dNoiseUPixelLEFT;
+                    ptUVLEFT.y += dNoiseVPixel;
 
                     //ds if the point is in the camera frame
                     if( m_cVisibleRange.contains( ptUVLEFT ) )
                     {
                         //ds compute projection in RIGHT
-                        const cv::Point2d ptUVRIGHT( m_pCameraRIGHT->getProjection( vecPointXYZLEFT ) );
+                        cv::Point2d ptUVRIGHT( m_pCameraRIGHT->getProjection( vecPointXYZLEFT ) );
+
+                        //ds add noise to detected point
+                        ptUVRIGHT.x += dNoiseUPixelRIGHT;
+                        ptUVRIGHT.y += dNoiseVPixel;
 
                         //ds if the point is in the camera frame
                         if( m_cVisibleRange.contains( ptUVRIGHT ) )
@@ -120,11 +141,13 @@ public:
                         else
                         {
                             //++uOutOfFOVRIGHT;
+                            cv::circle( p_matDisplayTrajectory, cv::Point2d( 180+cLandmark.vecPointXYZWORLD.x( )*10, 360-cLandmark.vecPointXYZWORLD.y( )*10 ), 10, CColorCodeBGR( 200, 0, 150 ), 1 );
                         }
                     }
                     else
                     {
                         //++uOutOfFOVLEFT;
+                        cv::circle( p_matDisplayTrajectory, cv::Point2d( 180+cLandmark.vecPointXYZWORLD.x( )*10, 360-cLandmark.vecPointXYZWORLD.y( )*10 ), 10, CColorCodeBGR( 200, 0, 150 ), 1 );
                     }
                 }
                 else

@@ -32,6 +32,14 @@ std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::
 
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
 
+//ds command line parsing (setting params IN/OUT)
+void setParametersNaive( const int& p_iArgc,
+                         char** const p_pArgv,
+                         std::string& p_strMode,
+                         std::string& p_strInfileCameraIMUMessages,
+                         std::string& p_strImageFolder,
+                         std::string& p_strInfileMockedLandmarks );
+
 int main( int argc, char **argv )
 {
     //assert( false );
@@ -40,25 +48,25 @@ int main( int argc, char **argv )
     CLogger::openBox( );
     std::printf( "(main) launched: %s\n", argv[0] );
 
-    //ds parameters TODO clean implementation
+    //ds defaults
+    std::string strMode              = "interactive";
+    std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
+    std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
+    std::string strMockedLandmarks   = "/home/dominik/workspace_catkin/src/vi_mapper/mocking/landmarks_noise.txt";
+
+    //ds get params
+    setParametersNaive( argc, argv, strMode, strInfileMessageDump, strImageFolder, strMockedLandmarks );
+
+    //ds get playback mode to enum
     EPlaybackMode eMode( ePlaybackInteractive );
 
-    //ds check parameters
-    if( 2 == argc )
+    if( "stepwise" == strMode )
     {
-        //ds stepping desired
-        if( 0 != argv[1] && 0 == std::strcmp( "-stepwise", argv[1] ) )
-        {
-            std::printf( "(main)[parameters] stepwise mode desired\n" );
-            eMode = ePlaybackStepwise;
-        }
-
-        //ds benchmark
-        else if( 0 != argv[1] && 0 == std::strcmp( "-benchmark", argv[1] ) )
-        {
-            std::printf( "(main)[parameters] benchmark mode desired\n" );
-            eMode = ePlaybackBenchmark;
-        }
+        eMode = ePlaybackStepwise;
+    }
+    else if( "benchmark" == strMode )
+    {
+        eMode = ePlaybackBenchmark;
     }
 
     //ds image resolution
@@ -77,13 +85,6 @@ int main( int argc, char **argv )
         std::fflush( stdout );
         return 1;
     }
-
-    //ds default files
-    std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
-    std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
-    //std::string strInfileMessageDump = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/solution.log";
-    //std::string strImageFolder       = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/data";
-    std::string strMockedLandmarks   = "/home/dominik/workspace_catkin/src/vi_mapper/mocking/landmarks_nonoise.txt";
 
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
@@ -118,9 +119,12 @@ int main( int argc, char **argv )
     std::printf( "(main) ROS Node namespace   := '%s'\n", pNode->getNamespace( ).c_str( ) );
     std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
     std::printf( "(main) uImageCols (width)   := '%u'\n", uImageCols );
-    std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
+    std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
     std::printf( "(main) uFrequencyPlaybackHz := '%u'\n", uFrequencyPlaybackHz );
     std::printf( "(main) uSleepMicroseconds   := '%u'\n", uSleepMicroseconds );
+    std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
+    std::printf( "(main) strImageFolder       := '%s'\n", strImageFolder.c_str( ) );
+    std::printf( "(main) strMockedLandmarks   := '%s'\n", strMockedLandmarks.c_str( ) );
     std::fflush( stdout );
     CLogger::closeBox( );
 
@@ -197,7 +201,7 @@ int main( int argc, char **argv )
                         else
                         {
                             //ds log skipped frame
-                            std::printf( "(main) WARNING: skipped single frame (outdated pose information) - timestamp camera_0: %.5lf s\n", dTimestamp_0 );
+                            std::printf( "(main) WARNING: skipped single frame (outdated pose information) - timestamp camera_right: %.5lf s\n", dTimestamp_0 );
                         }
                     }
 
@@ -208,12 +212,12 @@ int main( int argc, char **argv )
                 if( !bCalledDetector )
                 {
                     //ds log skipped frame
-                    std::printf( "(main) WARNING: skipped single frame (no pose information) - timestamp camera_0: %.5lf s\n", dTimestamp_0 );
+                    std::printf( "(main) WARNING: skipped single frame (no pose information) - timestamp camera_right: %.5lf s\n", dTimestamp_0 );
                 }
             }
             else
             {
-                std::printf( "(main) WARNING: could not find matching frames - timestamp camera_0: %.5lf s\n", dTimestamp_0 );
+                std::printf( "(main) WARNING: could not find matching frames - timestamp camera_right: %.5lf s\n", dTimestamp_0 );
 
                 //ds reset the respectively elder one
                 if( dTimestamp_0 > dTimestamp_1 )
@@ -379,4 +383,61 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
     }
 
     //usleep( p_uSleepMicroseconds );
+}
+
+void setParametersNaive( const int& p_iArgc,
+                         char** const p_pArgv,
+                         std::string& p_strMode,
+                         std::string& p_strInfileCameraIMUMessages,
+                         std::string& p_strImageFolder,
+                         std::string& p_strInfileMockedLandmarks )
+{
+    //ds attribute names (C style for printf)
+    const char* arrParameter1( "-mode" );
+    const char* arrParameter2( "-messages" );
+    const char* arrParameter3( "-images" );
+    const char* arrParameter4( "-landmarks" );
+
+    try
+    {
+        //ds parse optional command line arguments: -mode=interactive -messages="/asdasd/" -images="/asdasdgfa/" -landmarks="/asdasddsd/"
+        std::vector< std::string > vecCommandLineArguments;
+        for( uint32_t u = 1; u < static_cast< uint32_t >( p_iArgc ); ++u )
+        {
+            //ds get parameter to string
+            const std::string strParameter( p_pArgv[u] );
+
+            //ds find '=' sign
+            const std::string::size_type uStart( strParameter.find( '=' ) );
+
+            vecCommandLineArguments.push_back( strParameter.substr( 0, uStart ) );
+            vecCommandLineArguments.push_back( strParameter.substr( uStart+1, strParameter.length( )-uStart ) );
+        }
+
+        //ds check possible parameters
+        const std::vector< std::string >::const_iterator itParameter1( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter1 ) );
+        const std::vector< std::string >::const_iterator itParameter2( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter2 ) );
+        const std::vector< std::string >::const_iterator itParameter3( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter3 ) );
+        const std::vector< std::string >::const_iterator itParameter4( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter4 ) );
+
+        //ds set parameters if found
+        if( vecCommandLineArguments.end( ) != itParameter1 ){ p_strMode                    = *( itParameter1+1 ); }
+        if( vecCommandLineArguments.end( ) != itParameter2 ){ p_strInfileCameraIMUMessages = *( itParameter2+1 ); }
+        if( vecCommandLineArguments.end( ) != itParameter3 ){ p_strImageFolder             = *( itParameter3+1 ); }
+        if( vecCommandLineArguments.end( ) != itParameter4 ){ p_strInfileMockedLandmarks   = *( itParameter4+1 ); }
+    }
+    catch( const std::invalid_argument& p_cException )
+    {
+        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s %s\n", arrParameter1, arrParameter2, arrParameter3, arrParameter4 );
+        std::printf( "(setParametersNaive) terminated: %s\n", p_pArgv[0] );
+        std::fflush( stdout );
+        exit( -1 );
+    }
+    catch( const std::out_of_range& p_cException )
+    {
+        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s %s\n", arrParameter1, arrParameter2, arrParameter3, arrParameter4 );
+        std::printf( "(setParametersNaive) terminated: %s\n", p_pArgv[0] );
+        std::fflush( stdout );
+        exit( -1 );
+    }
 }

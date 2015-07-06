@@ -96,7 +96,7 @@ struct CMockedLandmark
     const CPoint3DInWorldFrame vecPointXYZWORLD;
     const cv::Rect cRangeVisible;
     const double dNoiseMean;
-    const double dNoiseVariance;
+    const double dNoiseStandardDeviation;
 
     CMockedLandmark( const UIDLandmark& p_uID,
                      const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
@@ -109,7 +109,7 @@ struct CMockedLandmark
                                                        vecPointXYZWORLD( p_vecPointXYZWORLD ),
                                                        cRangeVisible( cv::Point2d( p_dULCornerX, p_dULCornerY ), cv::Point2d( p_dLRCornerX, p_dLRCornerY ) ),
                                                        dNoiseMean( p_dNoiseMean ),
-                                                       dNoiseVariance( p_dNoiseVariance )
+                                                       dNoiseStandardDeviation( p_dNoiseVariance )
     {
         //ds nothing to do
     }

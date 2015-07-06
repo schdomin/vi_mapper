@@ -39,6 +39,7 @@ public:
     uint8_t uFailedSubsequentTrackings;
     uint32_t uCalibrations;
     double dCurrentAverageSquaredError;
+    CPoint3DInWorldFrame vecMeanMeasurement;
 
 private:
 
