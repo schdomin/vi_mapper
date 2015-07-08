@@ -122,11 +122,11 @@ public:
 
     inline static const Eigen::Vector2d getInterDistance( const Eigen::Vector2d& p_vecA, const cv::Point2d& p_ptB )
     {
-        return Eigen::Vector2d( p_vecA(0)-p_ptB.x, p_vecA(1)-p_ptB.y );
+        return Eigen::Vector2d( p_vecA.x( )-p_ptB.x, p_vecA.y( )-p_ptB.y );
     }
     inline static const Eigen::Vector2d getInterDistance( const cv::Point2d& p_ptA, const Eigen::Vector2d& p_vecB )
     {
-        return Eigen::Vector2d( p_ptA.x-p_vecB(0), p_ptA.y-p_vecB(1) );
+        return Eigen::Vector2d( p_ptA.x-p_vecB.x( ), p_ptA.y-p_vecB.y( ) );
     }
 
 };

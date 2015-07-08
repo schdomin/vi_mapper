@@ -133,7 +133,7 @@ public:
                             //ds epipolar constraint
                             assert( std::round( ptUVLEFT.y ) == std::round( ptUVRIGHT.y ) );
 
-                            mapDetections.insert( std::pair< UIDLandmark, CMockedDetection >( cLandmark.uID, CMockedDetection( cLandmark.uID, ptUVLEFT, ptUVRIGHT ) ) );
+                            mapDetections.insert( std::pair< UIDLandmark, CMockedDetection >( cLandmark.uID, CMockedDetection( cLandmark.uID, ptUVLEFT, ptUVRIGHT, dNoiseUPixelLEFT, dNoiseUPixelRIGHT, dNoiseVPixel ) ) );
 
                             //ds draw visible landmark on map
                             cv::circle( p_matDisplayTrajectory, cv::Point2d( 180+cLandmark.vecPointXYZWORLD.x( )*10, 360-cLandmark.vecPointXYZWORLD.y( )*10 ), 10, CColorCodeBGR( 0, 175, 0 ), 1 );

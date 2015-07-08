@@ -13,13 +13,13 @@ class CMockedMatcherEpipolar
 //ds private structs
 private:
 
-    struct CMeasurementPoint
+    struct CLandmarkCreationPoint
     {
         const UIDMeasurementPoint uID;
         const Eigen::Isometry3d matTransformationLEFTtoWORLD;
         const std::shared_ptr< std::vector< CLandmark* > > vecLandmarks;
 
-        CMeasurementPoint( const UIDMeasurementPoint& p_uID,
+        CLandmarkCreationPoint( const UIDMeasurementPoint& p_uID,
                            const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                            const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): uID( p_uID ),
                                                                                                 matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
@@ -27,7 +27,7 @@ private:
         {
             //ds nothing to do
         }
-        ~CMeasurementPoint( )
+        ~CLandmarkCreationPoint( )
         {
             //ds nothing to do
         }
@@ -53,7 +53,7 @@ private:
 
     //ds measurement point storage (we use the ID counter instead of accessing the vector size every time for speed)
     UIDMeasurementPoint m_uAvailableMeasurementPointID;
-    std::vector< CMeasurementPoint > m_vecMeasurementPointsActive;
+    std::vector< CLandmarkCreationPoint > m_vecLandmarkCreationPointsActive;
 
     //ds internal
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
@@ -66,12 +66,9 @@ private:
 //ds api
 public:
 
-    void addMeasurementPoint( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks )
-    {
-        m_vecMeasurementPointsActive.push_back( CMeasurementPoint( m_uAvailableMeasurementPointID, p_matTransformationLEFTtoWORLD, p_vecLandmarks ) );
+    void addMeasurementPoint( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks );
 
-        ++m_uAvailableMeasurementPointID;
-    }
+    const Eigen::Isometry3d getPoseOptimized( const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT );
 
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( const uint64_t p_uFrame,
                                                                                                       cv::Mat& p_matDisplayLEFT,
@@ -81,9 +78,9 @@ public:
                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
                                                                                                       cv::Mat& p_matDisplayTrajectory );
 
-    const std::vector< CMeasurementPoint >::size_type getNumberOfActiveMeasurementPoints( ) const
+    const std::vector< CLandmarkCreationPoint >::size_type getNumberOfActiveMeasurementPoints( ) const
     {
-        return m_vecMeasurementPointsActive.size( );
+        return m_vecLandmarkCreationPointsActive.size( );
     }
 
 };

@@ -53,12 +53,12 @@ CMockedTrackerStereo::CMockedTrackerStereo( const uint32_t& p_uFrequencyPlayback
                                                                            m_uMAPPoints( 0 )
 {
     //ds debug logging
-    m_pFileLandmarkCreation = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_creation.txt", "w" );
+    m_pFileLandmarkCreation = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_creation_mocked.txt", "w" );
     m_pFileLandmarkFinal    = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_final.txt", "w" );
 
     //ds dump file format
-    std::fprintf( m_pFileLandmarkCreation, "FRAME | ID_LANDMARK |      X      Y      Z |  DEPTH | U_LEFT V_LEFT | U_RIGHT V_RIGHT | KEYPOINT_SIZE\n" );
-    std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | CALIBRATIONS | MEAN_X MEAN_Y MEAN_Z\n" );
+    std::fprintf( m_pFileLandmarkCreation, "FRAME | ID_LANDMARK |      X      Y      Z :  DEPTH | U_LEFT V_LEFT : NOISE_U NOISE_V | U_RIGHT V_RIGHT : NOISE_U NOISE_V | KEYPOINT_SIZE\n" );
+    std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | MEASUREMENTS | CALIBRATIONS | MEAN_X MEAN_Y MEAN_Z\n" );
 
     //ds initialize reference frames with black images
     m_matDisplayLowerReference = cv::Mat::zeros( m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
@@ -93,7 +93,7 @@ CMockedTrackerStereo::~CMockedTrackerStereo( )
         const double dErrorTotal = dErrorX + dErrorY + dErrorZ;
 
         //ds write final state to file before deleting
-        std::fprintf( m_pFileLandmarkFinal, "     %06lu |    %6.2f    %6.2f    %6.2f |  %6.2f  %6.2f  %6.2f |   %5.2f   %5.2f   %5.2f       %5.2f |       %06u | %6.2f %6.2f %6.2f\n", pLandmark->uID,
+        std::fprintf( m_pFileLandmarkFinal, "     %06lu |    %6.2f    %6.2f    %6.2f |  %6.2f  %6.2f  %6.2f |   %5.2f   %5.2f   %5.2f       %5.2f |       %06lu |       %06u | %6.2f %6.2f %6.2f\n", pLandmark->uID,
                                                                               pLandmark->vecPointXYZInitial.x( ),
                                                                               pLandmark->vecPointXYZInitial.y( ),
                                                                               pLandmark->vecPointXYZInitial.z( ),
@@ -104,6 +104,7 @@ CMockedTrackerStereo::~CMockedTrackerStereo( )
                                                                               dErrorY,
                                                                               dErrorZ,
                                                                               dErrorTotal,
+                                                                              pLandmark->m_vecMeasurements.size( ),
                                                                               pLandmark->uCalibrations,
                                                                               pLandmark->vecMeanMeasurement.x( ),
                                                                               pLandmark->vecMeanMeasurement.y( ),
@@ -205,15 +206,19 @@ void CMockedTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         //ds detect landmarks
         const std::shared_ptr< std::vector< CLandmark* > > vecNewLandmarks( _getNewLandmarksTriangulated( m_uFrameCount, m_matDisplayLowerReference, matDisplayTrajectory, m_ptPositionXY, p_matTransformationLEFTtoWORLD ) );
 
-        //ds add to permanent reference holder
-        m_vecLandmarks->insert( m_vecLandmarks->end( ), vecNewLandmarks->begin( ), vecNewLandmarks->end( ) );
+        //ds check if landmarks were found
+        if( !vecNewLandmarks->empty( ) )
+        {
+            //ds add to permanent reference holder
+            m_vecLandmarks->insert( m_vecLandmarks->end( ), vecNewLandmarks->begin( ), vecNewLandmarks->end( ) );
 
-        //ds add this measurement point to the epipolar matcher
-        m_cMatcherEpipolar.addMeasurementPoint( p_matTransformationLEFTtoWORLD, vecNewLandmarks );
+            //ds add this measurement point to the epipolar matcher
+            m_cMatcherEpipolar.addMeasurementPoint( p_matTransformationLEFTtoWORLD, vecNewLandmarks );
 
-        ++m_uTotalMeasurementPoints;
+            ++m_uTotalMeasurementPoints;
 
-        cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+p_matTransformationLEFTtoWORLD.translation( )( 0 )*10, m_uOffsetTrajectoryV-p_matTransformationLEFTtoWORLD.translation( )( 1 )*10 ), 20, CColorCodeBGR( 0, 255, 0 ), 1 );
+            cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+p_matTransformationLEFTtoWORLD.translation( )( 0 )*10, m_uOffsetTrajectoryV-p_matTransformationLEFTtoWORLD.translation( )( 1 )*10 ), 20, CColorCodeBGR( 0, 255, 0 ), 1 );
+        }
     }
 
     //ds build display mat
@@ -279,6 +284,11 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
 {
     //ds precompute extrinsics
     const Eigen::Isometry3d matTransformationWORLDtoLEFT( p_matTransformationLEFTtoWORLD.inverse( ) );
+    const MatrixProjection matProjectionWORLDtoLEFT( m_pCameraLEFT->m_matProjection*matTransformationWORLDtoLEFT.matrix( ) );
+
+
+
+
     const Eigen::Matrix3d matKRotation( m_pCameraLEFT->m_matIntrinsic*matTransformationWORLDtoLEFT.linear( ) );
     const Eigen::Vector3d vecCameraPosition( matTransformationWORLDtoLEFT.translation( ) );
     const Eigen::Vector3d vecKTranslation( m_pCameraLEFT->m_matIntrinsic*vecCameraPosition );
@@ -310,10 +320,15 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
             const CPoint3DInWorldFrame vecPointTriangulatedWORLD( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
 
             //ds draw reprojection of triangulation
-            const cv::Point2d ptLandmarkRIGHT( m_pCameraRIGHT->getProjection( vecPointTriangulatedLEFT ) );
+            cv::Point2d ptLandmarkRIGHT( m_pCameraRIGHT->getProjection( vecPointTriangulatedLEFT ) );
 
-            //ds epipolar constraint
-            assert( std::round( ptLandmarkLEFT.y ) == std::round( ptLandmarkRIGHT.y ) );
+            //ds enforce epipolar constraint TODO integrate epipolar error
+            const double dEpipolarError( ptLandmarkRIGHT.y-ptLandmarkLEFT.y );
+            if( 0.1 < dEpipolarError )
+            {
+                std::printf( "<CMockedTrackerStereo>(_getNewLandmarksTriangulated) landmark [%lu] epipolar error: %f\n", m_uAvailableLandmarkID, dEpipolarError );
+            }
+            ptLandmarkRIGHT.y = ptLandmarkLEFT.y;
 
             //ds allocate a new landmark and add the current position (HACK: set mocked landmark id into keypoint size field to avoid another landmark class)
             CLandmark* cLandmark( new CLandmark( m_uAvailableLandmarkID,
@@ -327,10 +342,11 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
                                                  vecCameraPosition,
                                                  matKRotation,
                                                  vecKTranslation,
+                                                 matProjectionWORLDtoLEFT,
                                                  p_uFrame ) );
 
             //ds log creation
-            std::fprintf( m_pFileLandmarkCreation, " %04lu |      %06lu | %6.2f %6.2f %6.2f | %6.2f | %6.2f %6.2f |  %6.2f  %6.2f |        %6.2f\n", p_uFrame,
+            std::fprintf( m_pFileLandmarkCreation, " %04lu |      %06lu | %6.2f %6.2f %6.2f : %6.2f | %6.2f %6.2f :   %5.2f   %5.2f |  %6.2f  %6.2f :   %5.2f   %5.2f |        %6.2f\n", p_uFrame,
                                                                                           cLandmark->uID,
                                                                                           cLandmark->vecPointXYZCalibrated.x( ),
                                                                                           cLandmark->vecPointXYZCalibrated.y( ),
@@ -338,8 +354,12 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
                                                                                           dDepthMeters,
                                                                                           ptLandmarkLEFT.x,
                                                                                           ptLandmarkLEFT.y,
+                                                                                          cDetection.second.dNoiseULEFT,
+                                                                                          cDetection.second.dNoiseV,
                                                                                           ptLandmarkRIGHT.x,
                                                                                           ptLandmarkRIGHT.y,
+                                                                                          cDetection.second.dNoiseURIGHT,
+                                                                                          cDetection.second.dNoiseV,
                                                                                           cLandmark->dKeyPointSize );
 
             //ds add to newly detected

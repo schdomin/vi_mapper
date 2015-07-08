@@ -19,13 +19,11 @@ typedef Eigen::Matrix<double, 6, 6> Matrix6d;
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
 typedef Eigen::Matrix<double, 2, 6> Matrix2_6d;
 
-struct CPositSolver{
+struct CPositSolverProjection{
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  CPositSolver(){
+  CPositSolverProjection( const Eigen::Matrix< double, 3, 4>& p_matProjection ){
     T.setIdentity();
-    K << 468.2793078854663, 0.0,               368.7120388971904,
-         0.0,               466.4527618561632, 215.186116509721,
-         0.0,               0.0,               1.0;
+    P = p_matProjection;
     num_inliers=0;
     num_reprojected_points=0;
     image_cols=752;
@@ -62,7 +60,7 @@ struct CPositSolver{
   Vector2dVector image_points;
   
   Eigen::Isometry3d T;
-  Eigen::Matrix3d K;
+  Eigen::Matrix< double, 3, 4 > P;
   int num_reprojected_points;
   int num_inliers;
   float image_rows, image_cols;
@@ -71,12 +69,10 @@ struct CPositSolver{
   std::vector<bool> inliers;
   
   inline void project(Vector2dVector& dest){
-    Eigen::Matrix3d KR = K*T.linear();
-    Eigen::Vector3d Kt = K*T.translation();
     dest.resize(model_points.size());
     for (size_t i = 0; i<model_points.size(); i++){
       const Eigen::Vector3d& p=model_points[i];
-      Eigen::Vector3d pp=KR*p + Kt;
+      Eigen::Vector3d pp=P*T*p;
       if (pp.z()<0)
 	pp << 0,0,-1;
       pp *= (1./pp.z());
@@ -100,7 +96,8 @@ struct CPositSolver{
     float z = tp.z();
 
     // apply the projection to the transformed point
-    Eigen::Vector3d pp1 = K*tp;
+    Eigen::Vector4d vecPointHomogeneous( tp.x( ), tp.y( ), tp.z( ), 1.0 );
+    Eigen::Vector3d pp1 = P*vecPointHomogeneous;
     Eigen::Vector2d pp (pp1.x()/pp1.z(), pp1.y()/pp1.z());
 
     // if the projected point is outside the image, drop it
@@ -112,7 +109,7 @@ struct CPositSolver{
     error = pp - imagePoint;
 
     // jacobian of the transform part = [ I 2*skew(T*modelPoint) ]
-    Eigen::Matrix<double, 3, 6> Jt;
+    Eigen::Matrix<double, 4, 6> Jt;
     Jt.setZero();
     Jt.block<3,3>(0,0).setIdentity();
     Jt.block<3,3>(0,3)=-2*skew(tp);
@@ -126,7 +123,7 @@ struct CPositSolver{
       0,   1/z, -pp1.y()/(z*z);
 
     // apply the chain rule and get the damn jacobian
-    J=Jp*K*Jt;
+    J=Jp*P*Jt;
     return true;
   }
 
@@ -135,7 +132,7 @@ struct CPositSolver{
     std::fill(inliers.begin(), inliers.end(), true);
   }
 
-  double oneRound( bool use_only_inliers ){
+  double oneRound( ){
     Matrix6d H;
     Vector6d b;
     H.setZero();
@@ -145,8 +142,6 @@ struct CPositSolver{
     num_reprojected_points = 0;
     num_inliers = 0;
     for (size_t i = 0; i<model_points.size(); i++){
-      if (use_only_inliers && !inliers[i])
-	continue;
       Eigen::Vector2d e;
       Matrix2_6d J;
       if (errorAndJacobian(e,J,model_points[i], image_points[i])) {
@@ -182,74 +177,54 @@ struct CPositSolver{
 
     return chi2;
   }
+
+  double oneRoundInliersOnly( ){
+      Matrix6d H;
+      Vector6d b;
+      H.setZero();
+      b.setZero();
+      double chi2 = 0;
+
+      num_reprojected_points = 0;
+      num_inliers = 0;
+      for (size_t i = 0; i<model_points.size(); i++){
+        if (!inliers[i])
+      continue;
+        Eigen::Vector2d e;
+        Matrix2_6d J;
+        if (errorAndJacobian(e,J,model_points[i], image_points[i])) {
+          double en = e.squaredNorm();
+      if (en<inlier_error_threshold) {
+        num_inliers++;
+        inliers[i]=true;
+      } else
+        inliers[i]=false;
+
+          double scale = 1;
+          if (en>maxError) {
+        scale  = maxError/en;
+          }
+          chi2 += e.transpose()*e;
+          H+=J.transpose()*J;
+          b+=J.transpose()*e*scale;
+          num_reprojected_points++;
+        }
+
+      }
+      //H += sqrt(chi2)*Matrix6f::Identity();
+      //cerr << "inliers: " << inliers << endl;
+      //cerr << H << endl;
+      // add damping?
+      Vector6d dt = H.ldlt().solve(-b);
+      T = v2t(dt)*T;
+
+      Eigen::Matrix3d R = T.linear();
+      Eigen::Matrix3d E = R.transpose() * R;
+      E.diagonal().array() -= 1;
+      T.linear() -= 0.5 * R * E;
+
+      return chi2;
+    }
 };
 
 } //ds namespace gtools
-
-
-
-/*int main(){
-
-  int numPoints = 50;
-  float cx=0, cy=0, cz=1;
-  float xspread = 1, yspread = 1, zspread = 0.1;
-  
-  // sample randomly model points
-  Vector3fVector model_points;
-  model_points.resize(numPoints);
-  for (size_t i = 0; i<numPoints; i++){
-    float x = (drand48()-0.5)*xspread + cx;
-    float y = (drand48()-0.5)*yspread + cy;
-    float z = (drand48()-0.5)*zspread + cz;
-    model_points[i] = Eigen::Vector3f(x,y,z);
-  }
-  
-  // constructs a solver
-  PositSolver solver;
-
-  // feed the solver with the 3D points in the camera frame
-  solver.model_points = model_points;
-
-  // projects the model to image points 
-  // this is a simulation, in real you get the points from your matching
-  Vector2fVector imagePoints;
-  solver.project(imagePoints);
-
-
-  solver.imagePoints = imagePoints;
-
-  // sets a wrong initial guess to the solver and checks how it behaves
-  solver.T.translation() << 0.2, 0.2, 0.2;
-  solver.T.linear()=Eigen::AngleAxisf(M_PI/8, Eigen::Vector3f(0,1,1)).toRotationMatrix();
-
-  
-
-  for (int iteration = 0; iteration< 10; iteration++){
-    cerr << "iteration "<< iteration << endl;
-    cerr << " error: " << solver.oneRound() << endl;
-
-
-    char filename[1024];
-    sprintf (filename, "iteration-%05d.dat", iteration);
-    Vector2fVector current_points;
-    solver.project(current_points);
-    ofstream os(filename);
-    for (size_t j = 0; j<imagePoints.size(); j++){
-      Eigen::Vector2f ip = imagePoints[j];
-      Eigen::Vector2f cp = current_points[j];
-      os << ip.x() << " " << ip.y() << endl;
-      os << cp.x() << " " << cp.y() << endl;
-      os << endl;
-    }
-
-
-  }
-  
-  // put a certain number of points in the scene;
-  // translate and project them
-  
-  // eliminate the points which are non visible
-  
-  
-}*/
-

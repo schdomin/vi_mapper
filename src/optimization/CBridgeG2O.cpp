@@ -175,7 +175,7 @@ void CBridgeG2O::saveXYZAndDisparity( const std::string& p_strOutfile,
                 //ds triangulated 3d point (uncalibrated)
                 pEdgeLandmarkPointXYZ->setVertex( 0, pVertexPoseCurrent );
                 pEdgeLandmarkPointXYZ->setVertex( 1, pVertexLandmark );
-                pEdgeLandmarkPointXYZ->setMeasurement( pMeasurementLandmark->vecPointXYZ );
+                pEdgeLandmarkPointXYZ->setMeasurement( pMeasurementLandmark->vecPointXYZLEFT );
                 pEdgeLandmarkPointXYZ->setParameterId( 0, EG2OParameterID::eWORLD );
 
                 //ds the closer to the camera the point is the better the measurement
@@ -200,7 +200,7 @@ void CBridgeG2O::saveXYZAndDisparity( const std::string& p_strOutfile,
                 //cOptimizer.addEdge( pEdgeLandmarkDetectionRIGHT );
 
                 //ds maximum depth to produce a reliable XYZ estimate
-                if( m_dMaximumReliableDepth > pMeasurementLandmark->vecPointXYZ.z( ) )
+                if( m_dMaximumReliableDepth > pMeasurementLandmark->vecPointXYZLEFT.z( ) )
                 {
                     cGraph.addEdge( pEdgeLandmarkPointXYZ );
                     ++uMeasurementsStoredXYZ;
@@ -375,8 +375,8 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
                 g2o::VertexPointXYZ* pVertexLandmark = dynamic_cast< g2o::VertexPointXYZ* >( itLandmark->second );
 
                 //ds get key values
-                const int32_t iDisparity   = pMeasurementLandmark->ptUVLEFT.x-pMeasurementLandmark->ptUVRIGHT.x;
-                const double& dDepthMeters = pMeasurementLandmark->vecPointXYZ.z( );
+                const double& dDisparity   = pMeasurementLandmark->ptUVLEFT.x-pMeasurementLandmark->ptUVRIGHT.x;
+                const double& dDepthMeters = pMeasurementLandmark->vecPointXYZLEFT.z( );
 
                 //ds minimum quality to produce a reliable depth estimate
                 if( m_dMaximumReliableDepth > dDepthMeters )
@@ -402,14 +402,14 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
                     //ds disparity (LEFT camera)
                     g2o::EdgeSE3PointXYZDisparity* pEdgeLandmarkDisparity = new g2o::EdgeSE3PointXYZDisparity( );
 
-                    const double dDisparity( iDisparity/( p_cStereoCamera.m_pCameraLEFT->m_dFx*p_cStereoCamera.m_dBaselineMeters ) );
+                    const double dDisparityNormalized( dDisparity/( p_cStereoCamera.m_pCameraLEFT->m_dFx*p_cStereoCamera.m_dBaselineMeters ) );
                     pEdgeLandmarkDisparity->setVertex( 0, pVertexPoseCurrent );
                     pEdgeLandmarkDisparity->setVertex( 1, pVertexLandmark );
-                    pEdgeLandmarkDisparity->setMeasurement( g2o::Vector3D( pMeasurementLandmark->ptUVLEFT.x, pMeasurementLandmark->ptUVLEFT.y, dDisparity ) );
+                    pEdgeLandmarkDisparity->setMeasurement( g2o::Vector3D( pMeasurementLandmark->ptUVLEFT.x, pMeasurementLandmark->ptUVLEFT.y, dDisparityNormalized ) );
                     pEdgeLandmarkDisparity->setParameterId( 0, EG2OParameterID::eCAMERA_LEFT );
 
                     //ds information matrix
-                    const double dInformationQualityDisparity( std::abs( iDisparity )+1 );
+                    const double dInformationQualityDisparity( std::abs( dDisparity )+1 );
                     const double arrInformationMatrixDisparity[9] = { 1, 0, 0, 0, 1, 0, 0, 0, dInformationQualityDisparity };
                     pEdgeLandmarkDisparity->setInformation( g2o::Matrix3D( arrInformationMatrixDisparity ) );
 

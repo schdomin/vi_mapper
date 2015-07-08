@@ -26,17 +26,19 @@ typedef cv::Mat         CDescriptor;
 typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
 typedef uint64_t        UIDMeasurementPoint;
+typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 
 struct CMeasurementLandmark
 {
     const UIDLandmark uID;
     const cv::Point2d ptUVLEFT;
     const cv::Point2d ptUVRIGHT;
-    const CPoint3DInCameraFrame vecPointXYZ;
+    const CPoint3DInCameraFrame vecPointXYZLEFT;
     const CPoint3DInWorldFrame  vecPointXYZWORLD;
     const Eigen::Vector3d vecCameraPosition;
-    const Eigen::Matrix3d matKRotationLEFT;
-    const Eigen::Vector3d vecKTranslationLEFT;
+    const Eigen::Matrix3d matPRotationWORLDtoLEFT;
+    const Eigen::Vector3d vecPTranslationWORLDtoLEFT;
+    const MatrixProjection matProjectionWORLDtoLEFT;
 
     CMeasurementLandmark( const UIDLandmark& p_uID,
                           const cv::Point2d& p_ptUVLEFT,
@@ -45,14 +47,16 @@ struct CMeasurementLandmark
                           const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
                           const Eigen::Vector3d& p_vecCameraPosition,
                           const Eigen::Matrix3d& p_matKRotation,
-                          const Eigen::Vector3d& p_vecKTranslation ): uID( p_uID ),
+                          const Eigen::Vector3d& p_vecKTranslation,
+                          const MatrixProjection& p_matProjectionWORLDtoLEFT ): uID( p_uID ),
                                                                       ptUVLEFT( p_ptUVLEFT ),
                                                                       ptUVRIGHT( p_ptUVRIGHT ),
-                                                                      vecPointXYZ( p_vecPointXYZ ),
+                                                                      vecPointXYZLEFT( p_vecPointXYZ ),
                                                                       vecPointXYZWORLD( p_vecPointXYZWORLD ),
                                                                       vecCameraPosition( p_vecCameraPosition ),
-                                                                      matKRotationLEFT( p_matKRotation ),
-                                                                      vecKTranslationLEFT( p_vecKTranslation )
+                                                                      matPRotationWORLDtoLEFT( p_matKRotation ),
+                                                                      vecPTranslationWORLDtoLEFT( p_vecKTranslation ),
+                                                                      matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT )
     {
         //ds nothing to do
     }
@@ -124,12 +128,21 @@ struct CMockedDetection
     const UIDLandmark uID;
     const cv::Point2d ptUVLEFT;
     const cv::Point2d ptUVRIGHT;
+    const double dNoiseULEFT;
+    const double dNoiseURIGHT;
+    const double dNoiseV;
 
     CMockedDetection( const UIDLandmark& p_uID,
                       const cv::Point2d& p_ptUVLEFT,
-                      const cv::Point2d& p_ptUVRIGHT ): uID( p_uID ),
-                                                        ptUVLEFT( p_ptUVLEFT ),
-                                                        ptUVRIGHT( p_ptUVRIGHT )
+                      const cv::Point2d& p_ptUVRIGHT,
+                      const double& p_dNoiseULEFT,
+                      const double& p_dNoiseURIGHT,
+                      const double& p_dNOiseV ): uID( p_uID ),
+                                                 ptUVLEFT( p_ptUVLEFT ),
+                                                 ptUVRIGHT( p_ptUVRIGHT ),
+                                                 dNoiseULEFT( p_dNoiseULEFT ),
+                                                 dNoiseURIGHT( p_dNoiseURIGHT ),
+                                                 dNoiseV( p_dNOiseV )
     {
         //ds nothing to do
     }
