@@ -271,14 +271,20 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
 
         //ds fields
         Eigen::Vector3d vecAngularVelocity;
-        Eigen::Vector3d vecLinearAcceleration;
+        CLinearAccelerationInIMUFrame vecLinearAcceleration;
 
         //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
-        //ds flip the z and y value for consistency with the world frame
-        std::swap( vecLinearAcceleration[1], vecLinearAcceleration[2] );
-        //std::swap( vecLinearAcceleration[0], vecLinearAcceleration[1] );
+        //ds IMU messages are published with wrong sign
+        vecLinearAcceleration.y( ) = -vecLinearAcceleration.y( );
+        vecLinearAcceleration.z( ) = -vecLinearAcceleration.z( );
+        vecAngularVelocity.y( )    = -vecAngularVelocity.y( );
+        vecAngularVelocity.z( )    = -vecAngularVelocity.z( );
+
+        //ds swap y and z
+        //std::swap( vecLinearAcceleration[1], vecLinearAcceleration[2] );
+        //std::swap( vecAngularVelocity[1], vecAngularVelocity[2] );
 
         //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
         //vecLinearAcceleration[1] += 9.80665;

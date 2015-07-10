@@ -40,7 +40,9 @@ private:
     double m_dTranslationDeltaForMAPMeters;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
+    Eigen::Isometry3d m_matTransformationMotionWORLDtoIMU;
     Eigen::Vector3d m_vecLinearAccelerationLAST;
+    Eigen::Vector3d m_vecLinearVelocityLAST;
     Eigen::Vector3d m_vecAngularVelocityLAST;
     double m_dTimestampLASTSeconds;
 
@@ -80,7 +82,6 @@ private:
 
     //ds info display
     cv::Mat m_matTrajectoryXY;
-    cv::Mat m_matTrajectoryZ;
     const uint32_t m_uOffsetTrajectoryU;
     const uint32_t m_uOffsetTrajectoryV;
     uint64_t m_uTimingToken;

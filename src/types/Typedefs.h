@@ -27,6 +27,8 @@ typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
 typedef uint64_t        UIDMeasurementPoint;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
+typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
+typedef Eigen::Vector3d CLinearAccelerationInIMUFrame;
 
 struct CMeasurementLandmark
 {
@@ -66,11 +68,11 @@ struct CMeasurementLandmark
 struct CMeasurementPose
 {
     const Eigen::Isometry3d matTransformationLEFTtoWORLD;
-    const Eigen::Vector3d vecLinearAccelerationNormalized;
+    const CLinearAccelerationInIMUFrame vecLinearAccelerationNormalized;
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecLandmarks;
 
     CMeasurementPose( const Eigen::Isometry3d p_matTransformationLEFTtoWORLD,
-                      const Eigen::Vector3d& p_vecLinearAcceleration,
+                      const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration,
                       const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_vecLandmarks ): matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
                                                                                                             vecLinearAccelerationNormalized( p_vecLinearAcceleration ),
                                                                                                             vecLandmarks( p_vecLandmarks )

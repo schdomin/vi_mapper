@@ -280,7 +280,7 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         m_vecLandmarks->insert( m_vecLandmarks->end( ), vecNewLandmarks->begin( ), vecNewLandmarks->end( ) );
 
         //ds add this measurement point to the epipolar matcher
-        m_cMatcherEpipolar.addMeasurementPoint( p_matTransformationLEFTtoWORLD, vecNewLandmarks );
+        m_cMatcherEpipolar.addKeyFrame( p_matTransformationLEFTtoWORLD, vecNewLandmarks );
 
         ++m_uTotalMeasurementPoints;
 
@@ -382,18 +382,21 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
     //m_pExtractor->compute( p_matImageLEFT, *vecKeyPoints, matReferenceDescriptors );
     m_pExtractor->compute( p_matImageLEFT, vecKeyPoints, matReferenceDescriptors );
 
+    //ds rightside keypoints buffer for descriptor computation
+    std::vector< cv::KeyPoint > vecKeyPointRIGHT( 1 );
+
     //ds process the keypoints and see if we can use them as landmarks
     for( uint32_t u = 0; u < vecKeyPoints.size( ); ++u )
     {
         //ds current points
-        const cv::KeyPoint cKeyPoint( vecKeyPoints[u] );
-        const cv::Point2f ptLandmarkLEFT( cKeyPoint.pt );
-        const CDescriptor& matReferenceDescriptor( matReferenceDescriptors.row(u) );
+        const cv::KeyPoint cKeyPointLEFT( vecKeyPoints[u] );
+        const cv::Point2f ptLandmarkLEFT( cKeyPointLEFT.pt );
+        const CDescriptor& matDescriptorLEFT( matReferenceDescriptors.row(u) );
 
         try
         {
             //ds triangulate the point
-            const CPoint3DInCameraFrame vecPointTriangulatedLEFT( m_pTriangulator->getPointTriangulatedLimited( p_matImageRIGHT, cKeyPoint, matReferenceDescriptor ) );
+            const CPoint3DInCameraFrame vecPointTriangulatedLEFT( m_pTriangulator->getPointTriangulatedLimited( p_matImageRIGHT, cKeyPointLEFT, matDescriptorLEFT ) );
             //const CPoint3DInCameraFrame vecPointTriangulatedRIGHT( m_pCameraSTEREO->m_matTransformLEFTtoRIGHT*vecPointTriangulatedLEFT );
 
             const double& dDepthMeters( vecPointTriangulatedLEFT(2) );
@@ -405,15 +408,26 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                 const CPoint3DInWorldFrame vecPointTriangulatedWORLD( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
 
                 //ds draw reprojection of triangulation
-                const cv::Point2d ptLandmarkRIGHT( m_pCameraRIGHT->getProjection( vecPointTriangulatedLEFT ) );
+                cv::Point2d ptLandmarkRIGHT( m_pCameraRIGHT->getProjection( vecPointTriangulatedLEFT ) );
 
-                //ds soft epipolar constraint
-                assert( 1.0 > std::fabs( ptLandmarkLEFT.y-ptLandmarkRIGHT.y ) );
+                //ds enforce epipolar constraint TODO integrate epipolar error
+                const double dEpipolarError( ptLandmarkRIGHT.y-ptLandmarkLEFT.y );
+                if( 0.1 < dEpipolarError )
+                {
+                    std::printf( "<CTrackerStereoMotionModel>(_getNewLandmarksTriangulated) landmark [%lu] epipolar error: %f\n", m_uAvailableLandmarkID, dEpipolarError );
+                }
+                ptLandmarkRIGHT.y = ptLandmarkLEFT.y;
+
+                //ds compute reference descriptor on right side as well
+                vecKeyPointRIGHT[0] = cv::KeyPoint( ptLandmarkRIGHT, cKeyPointLEFT.size );
+                CDescriptor matDescriptorRIGHT;
+                m_pExtractor->compute( p_matImageRIGHT, vecKeyPointRIGHT, matDescriptorRIGHT );
 
                 //ds allocate a new landmark and add the current position
                 CLandmark* cLandmark( new CLandmark( m_uAvailableLandmarkID,
-                                                     matReferenceDescriptor,
-                                                     cKeyPoint.size,
+                                                     matDescriptorLEFT,
+                                                     matDescriptorRIGHT,
+                                                     cKeyPointLEFT.size,
                                                      vecPointTriangulatedWORLD,
                                                      m_pCameraLEFT->getHomogenized( ptLandmarkLEFT ),
                                                      ptLandmarkLEFT,

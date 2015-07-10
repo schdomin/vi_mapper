@@ -10,7 +10,8 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CLandmark( const UIDLandmark& p_uID,
-               const CDescriptor& p_matDescriptor,
+               const CDescriptor& p_matDescriptorLEFT,
+               const CDescriptor& p_matDescriptorRIGHT,
                const double& p_dKeyPointSize,
                const CPoint3DInWorldFrame& p_vecPointXYZ,
                const CPoint2DInCameraFrameHomogenized& p_cPositionUVLEFTReference,
@@ -30,7 +31,8 @@ public:
     const UIDLandmark uID;
 
     const CDescriptor matDescriptorReference;
-    CDescriptor matDescriptorLast;
+    CDescriptor matDescriptorLastLEFT;
+    CDescriptor matDescriptorLastRIGHT;
     const double dKeyPointSize;
 
     CPoint3DInWorldFrame vecPointXYZInitial;

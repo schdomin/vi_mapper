@@ -53,6 +53,7 @@ public:
 
     const static double matTransformationIntialAlberto[16];
     const static double matTransformationIntialStandard[16];
+    const static double matRotationIMU[9];
 
 };
 
@@ -99,9 +100,13 @@ const double CConfigurationCamera::matTransformationIntialAlberto[] = { 0.994504
                                                                        -0.0903682, 0.982464,  0.163087,  -1.38018,
                                                                                0,  0,         0,          1};
 
-const double CConfigurationCamera::matTransformationIntialStandard[] = { 1, 0,  0, 0,
-                                                                         0, 0, -1, 0,
+const double CConfigurationCamera::matTransformationIntialStandard[] = { 1, 0,  0,  0,
+                                                                         0, 0, -1,  0,
                                                                          0, 1,  0, -1,
-                                                                         0, 0,  0, 1};
+                                                                         0, 0,  0,  1 };
+
+const double CConfigurationCamera::matRotationIMU[] = { 1, 0,  0,
+                                                        0, 0, -1,
+                                                        0, 1,  0 };
 
 #endif //#define CCONFIGURATIONCAMERA_H_

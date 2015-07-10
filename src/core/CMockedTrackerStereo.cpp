@@ -333,6 +333,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
             //ds allocate a new landmark and add the current position (HACK: set mocked landmark id into keypoint size field to avoid another landmark class)
             CLandmark* cLandmark( new CLandmark( m_uAvailableLandmarkID,
                                                  CDescriptor( ),
+                                                 CDescriptor( ),
                                                  cDetection.first,
                                                  vecPointTriangulatedWORLD,
                                                  m_pCameraLEFT->getHomogenized( ptLandmarkLEFT ),

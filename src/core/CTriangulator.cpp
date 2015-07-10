@@ -106,7 +106,6 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimited( const cv
     {
         vecPoolKeyPoints[u] = cv::KeyPoint( uBegin+u, iVReference, dKeyPointSize );
     }
-
     //ds compute descriptors
     cv::Mat matPoolDescriptors;
     m_pExtractor->compute( p_matImageRIGHT, vecPoolKeyPoints, matPoolDescriptors );
