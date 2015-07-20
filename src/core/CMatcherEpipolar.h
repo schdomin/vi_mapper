@@ -17,15 +17,15 @@ private:
 
     struct CKeyFrame
     {
-        const UIDMeasurementPoint uID;
+        const UIDKeyFrame uID;
         const Eigen::Isometry3d matTransformationLEFTtoWORLD;
         const std::shared_ptr< std::vector< CLandmark* > > vecLandmarks;
 
-        CKeyFrame( const UIDMeasurementPoint& p_uID,
-                           const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                           const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): uID( p_uID ),
-                                                                                                matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
-                                                                                                vecLandmarks( p_vecLandmarks )
+        CKeyFrame( const UIDKeyFrame& p_uID,
+                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                   const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): uID( p_uID ),
+                                                                                        matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
+                                                                                        vecLandmarks( p_vecLandmarks )
         {
             //ds nothing to do
         }
@@ -68,7 +68,7 @@ private:
     const double m_dMatchingDistanceCutoffOriginal;
 
     //ds measurement point storage (we use the ID counter instead of accessing the vector size every time for speed)
-    UIDMeasurementPoint m_uAvailableKeyFrameID;
+    UIDKeyFrame m_uAvailableKeyFrameID;
     std::vector< CKeyFrame > m_vecKeyFramesActive;
 
     //ds internal
@@ -139,9 +139,20 @@ public:
                                                                                                       const int32_t& p_iHalfLineLengthBase,
                                                                                                       cv::Mat& p_matDisplayTrajectory );
 
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( const uint64_t p_uFrame,
+                                                                                                      const cv::Mat& p_matImageLEFT,
+                                                                                                      const cv::Mat& p_matImageRIGHT,
+                                                                                                      const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
+                                                                                                      const int32_t& p_iHalfLineLengthBase );
+
     const std::vector< CKeyFrame >::size_type getNumberOfActiveMeasurementPoints( ) const
     {
         return m_vecKeyFramesActive.size( );
+    }
+
+    const uint64_t getNumberOfKeyFrames( ) const
+    {
+        return m_uAvailableKeyFrameID;
     }
 
 private:

@@ -70,6 +70,7 @@ public:
                                                       m_vecPrincipalPointNormalized( Eigen::Vector3d( m_dCxNormalized, m_dCyNormalized, 1.0 ) ),
                                                       m_vecRotationFromIMU( p_matQuaternionFromIMU ),
                                                       m_vecTranslationFromIMU( p_vecTranslationFromIMU ),
+                                                      m_matTransformationFromIMU( Eigen::Matrix4d::Identity( ) ),
                                                       m_uWidthPixel( p_uWidthPixel ),
                                                       m_uHeightPixel( p_uHeightPixel ),
                                                       m_iWidthPixel( m_uWidthPixel ),
@@ -81,7 +82,7 @@ public:
         m_matTransformationFromIMU.translation( ) = m_vecTranslationFromIMU;
 
         //ds TODO Eigen BUG? corner point 3,3 not set to zero
-        m_matTransformationFromIMU( 3, 3 ) = 1.0;
+        //m_matTransformationFromIMU( 3, 3 ) = 1.0;
 
         //ds set inverse transform
         m_matTransformationToIMU = m_matTransformationFromIMU.inverse( );
@@ -110,7 +111,7 @@ public:
     const double m_dFocalLengthMeters;
     const Eigen::Vector4d m_vecDistortionCoefficients;
     const Eigen::Matrix3d m_matRectification;
-    const Eigen::Matrix< double, 3, 4 > m_matProjection;
+    const MatrixProjection m_matProjection;
     const Eigen::Vector2d m_vecPrincipalPoint;
     const Eigen::Vector3d m_vecPrincipalPointNormalized;
 

@@ -25,7 +25,7 @@ typedef cv::Scalar      CColorCodeBGR;
 typedef cv::Mat         CDescriptor;
 typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
-typedef uint64_t        UIDMeasurementPoint;
+typedef uint64_t        UIDKeyFrame;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
 typedef Eigen::Vector3d CLinearAccelerationInIMUFrame;

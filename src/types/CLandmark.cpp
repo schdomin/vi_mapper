@@ -38,9 +38,6 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
 
     //ds add this position
     addPosition( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCamera, vecPointXYZInitial, p_vecCameraPosition, p_matKRotation, p_vecKTranslation, p_matProjectionWORLDtoLEFT );
-
-    //ds check initialization
-    assert( 0.0 < m_dMaximumError );
 }
 
 CLandmark::~CLandmark( )
@@ -93,7 +90,6 @@ const cv::Point2d CLandmark::getLastDetectionLEFT( ) const
 
 const CMeasurementLandmark* CLandmark::getLastMeasurement( ) const
 {
-    //ds current last element
     return m_vecMeasurements.back( );
 }
 
@@ -221,7 +217,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
-    Eigen::Vector4d vecB( 0.0, 0.0, 0.0, 0.0 );
+    Eigen::Vector4d vecB( Eigen::Vector4d::Zero( ) );
     CPoint3DInWorldFrameHomogenized vecX( p_vecInitialGuess.x( ), p_vecInitialGuess.y( ), p_vecInitialGuess.z( ), 1.0 );
 
     //std::printf( "[%06lu] vecX: %6.2f %6.2f %6.2f\n", uID, vecX.x( ), vecX.y( ), vecX.z( ) );
@@ -236,6 +232,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
             const double dUReference( pMeasurement->ptUVLEFT.x );
             const double dVReference( pMeasurement->ptUVLEFT.y );
             const double dInverseDepthMeters( 1.0/pMeasurement->vecPointXYZLEFT.z( ) );
+
             //ds compute projection
             const CPoint2DHomogenized vecProjectionHomogeneous( pMeasurement->matProjectionWORLDtoLEFT*vecX );
             const double dA( vecProjectionHomogeneous(0) );
@@ -259,7 +256,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
             vecB += dInverseDepthMeters*matJacobianTransposed*vecError;
         }
 
-        //ds solve constrained system (since x(3) = 0.0)
+        //ds solve constrained system H*dx=-b (since dx(3) = 0.0)
         const CPoint3DInWorldFrame vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
 
         //ds update x solution
@@ -274,7 +271,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
         {
             ++uCalibrations;
 
-            double dSumSquaredErrors( 0.0 );
+            double dSumSquaredErrors = 0.0;
 
             //ds loop over all previous measurements again
             for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
@@ -285,11 +282,8 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
                 //ds compute pixel coordinates TODO remove cast
                 const Eigen::Vector2d vecUV = CWrapperOpenCV::getInterDistance( static_cast< Eigen::Vector2d >( vecProjectionHomogeneous.head< 2 >( )/vecProjectionHomogeneous(2) ), pMeasurement->ptUVLEFT );
 
-                //ds compute squared error
-                const double dSquaredError( vecUV.squaredNorm( ) );
-
-                //ds add up
-                dSumSquaredErrors += dSquaredError;
+                //ds add up the squared error
+                dSumSquaredErrors += vecUV.squaredNorm( );
             }
 
             //ds average the measurement
@@ -300,8 +294,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
         }
     }
 
-    //std::cout << "[" << uID << "] FAILED" << std::endl;
-    std::printf( "<CLandmark>(_getOptimizedLandmarkLMA) landmark [%06lu] optimization failed\n", uID );
+    std::printf( "<CLandmark>(_getOptimizedLandmarkIDLMA) landmark [%06lu] optimization failed\n", uID );
 
     //ds if still here the calibration did not converge - keep the initial estimate
     return p_vecInitialGuess;
@@ -310,7 +303,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
 const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDWA( )
 {
     //ds return vector
-    CPoint3DInWorldFrame vecPointXYZWORLD( 0.0, 0.0, 0.0 );
+    CPoint3DInWorldFrame vecPointXYZWORLD( Eigen::Vector3d::Zero( ) );
 
     //ds total accumulated depth
     double dInverseDepthAccumulated = 0.0;
@@ -338,7 +331,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDWA( )
 
     ++uCalibrations;
 
-    double dSumSquaredErrors( 0.0 );
+    double dSumSquaredErrors = 0.0;
 
     //ds loop over all previous measurements again
     for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )

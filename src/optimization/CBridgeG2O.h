@@ -17,19 +17,20 @@ class CBridgeG2O
 
 private:
 
-    static constexpr double m_dMaximumReliableDepth    = 7.5;
-    static const uint8_t m_uMinimumCalibrationsForDump = 5;
+    static constexpr double m_dMaximumReliableDepth       = 7.5;
+    static const uint8_t m_uMinimumCalibrationsForDump    = 1;
+    static constexpr double m_dMaximumErrorPerCalibration = 10.0; //ds e.g after 3 calibrations an error of 30.0 is allowed
 
 public:
 
     static void saveXYZAndDisparity( const std::string& p_strOutfile,
-                                         const CStereoCamera& p_cStereoCamera,
-                                         const std::vector< CLandmark* >& p_vecLandmarks,
-                                         const std::vector< CMeasurementPose >& p_vecMeasurements );
+                                     const CStereoCamera& p_cStereoCamera,
+                                     const std::vector< CLandmark* >& p_vecLandmarks,
+                                     const std::vector< CMeasurementPose >& p_vecMeasurements );
     static void saveUVDepthOrDisparity( const std::string& p_strOutfile,
-                                         const CStereoCamera& p_cStereoCamera,
-                                         const std::vector< CLandmark* >& p_vecLandmarks,
-                                         const std::vector< CMeasurementPose >& p_vecMeasurements );
+                                        const CStereoCamera& p_cStereoCamera,
+                                        const std::vector< CLandmark* >& p_vecLandmarks,
+                                        const std::vector< CMeasurementPose >& p_vecMeasurements );
 
 };
 

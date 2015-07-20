@@ -286,7 +286,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
     for( const CLandmark* pLandmark: p_vecLandmarks )
     {
         //ds check if calibration criteria is met
-        if( m_uMinimumCalibrationsForDump <= pLandmark->uCalibrations )
+        if( m_uMinimumCalibrationsForDump <= pLandmark->uCalibrations && pLandmark->uCalibrations*m_dMaximumErrorPerCalibration > pLandmark->dCurrentAverageSquaredError )
         {
             //ds set landmark vertex
             g2o::VertexPointXYZ* pVertexLandmark = new g2o::VertexPointXYZ( );

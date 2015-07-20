@@ -81,12 +81,11 @@ private:
     uint64_t m_uTimingToken;
     uint32_t m_uFramesCurrentCycle;
     double m_dPreviousFrameRate;
-    uint64_t m_uTotalMeasurementPoints;
-    uint64_t m_uMAPPoints;
 
     //ds debug logging
     std::FILE* m_pFileLandmarkCreation;
     std::FILE* m_pFileLandmarkFinal;
+    std::FILE* m_pFileTrajectory;
 
 //ds accessors
 public:

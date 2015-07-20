@@ -33,6 +33,13 @@ std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::
 
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
 
+//ds command line parsing (setting params IN/OUT)
+void setParametersNaive( const int& p_iArgc,
+                         char** const p_pArgv,
+                         std::string& p_strMode,
+                         std::string& p_strInfileCameraIMUMessages,
+                         std::string& p_strImageFolder );
+
 int main( int argc, char **argv )
 {
     //assert( false );
@@ -41,25 +48,24 @@ int main( int argc, char **argv )
     CLogger::openBox( );
     std::printf( "(main) launched: %s\n", argv[0] );
 
-    //ds parameters TODO clean implementation
+    //ds defaults
+    std::string strMode              = "interactive";
+    std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
+    std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
+
+    //ds get params
+    setParametersNaive( argc, argv, strMode, strInfileMessageDump, strImageFolder );
+
+    //ds get playback mode to enum
     EPlaybackMode eMode( ePlaybackInteractive );
 
-    //ds check parameters
-    if( 2 == argc )
+    if( "stepwise" == strMode )
     {
-        //ds stepping desired
-        if( 0 != argv[1] && 0 == std::strcmp( "-stepwise", argv[1] ) )
-        {
-            std::printf( "(main)[parameters] stepwise mode desired\n" );
-            eMode = ePlaybackStepwise;
-        }
-
-        //ds benchmark
-        else if( 0 != argv[1] && 0 == std::strcmp( "-benchmark", argv[1] ) )
-        {
-            std::printf( "(main)[parameters] benchmark mode desired\n" );
-            eMode = ePlaybackBenchmark;
-        }
+        eMode = ePlaybackStepwise;
+    }
+    else if( "benchmark" == strMode )
+    {
+        eMode = ePlaybackBenchmark;
     }
 
     //ds image resolution
@@ -78,12 +84,6 @@ int main( int argc, char **argv )
         std::fflush( stdout );
         return 1;
     }
-
-    //ds default files
-    std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
-    std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
-    //std::string strInfileMessageDump = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/solution.log";
-    //std::string strImageFolder       = "/home/dominik/workspace_catkin/src/stereo_vins_ros/stereo_vins/bin/data";
 
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
@@ -118,9 +118,11 @@ int main( int argc, char **argv )
     std::printf( "(main) ROS Node namespace   := '%s'\n", pNode->getNamespace( ).c_str( ) );
     std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
     std::printf( "(main) uImageCols (width)   := '%u'\n", uImageCols );
-    std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
+    std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
     std::printf( "(main) uFrequencyPlaybackHz := '%u'\n", uFrequencyPlaybackHz );
     std::printf( "(main) uSleepMicroseconds   := '%u'\n", uSleepMicroseconds );
+    std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
+    std::printf( "(main) strImageFolder       := '%s'\n", strImageFolder.c_str( ) );
     std::fflush( stdout );
     CLogger::closeBox( );
 
@@ -299,7 +301,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
-        //ds flip the z and y value for consistency with the world frame
+        //ds change y and z sign
         vecLinearAcceleration[1] = -vecLinearAcceleration[1];
         vecLinearAcceleration[2] = -vecLinearAcceleration[2];
 
@@ -379,5 +381,58 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //std::cout << g_pActiveMessagesPose->getOrientationMatrix( ) << std::endl;
     }
 
-    //usleep( p_uSleepMicroseconds );
+    usleep( p_uSleepMicroseconds );
+}
+
+void setParametersNaive( const int& p_iArgc,
+                         char** const p_pArgv,
+                         std::string& p_strMode,
+                         std::string& p_strInfileCameraIMUMessages,
+                         std::string& p_strImageFolder )
+{
+    //ds attribute names (C style for printf)
+    const char* arrParameter1( "-mode" );
+    const char* arrParameter2( "-messages" );
+    const char* arrParameter3( "-images" );
+
+    try
+    {
+        //ds parse optional command line arguments: -mode=interactive -messages="/asdasd/" -images="/asdasdgfa/"
+        std::vector< std::string > vecCommandLineArguments;
+        for( uint32_t u = 1; u < static_cast< uint32_t >( p_iArgc ); ++u )
+        {
+            //ds get parameter to string
+            const std::string strParameter( p_pArgv[u] );
+
+            //ds find '=' sign
+            const std::string::size_type uStart( strParameter.find( '=' ) );
+
+            vecCommandLineArguments.push_back( strParameter.substr( 0, uStart ) );
+            vecCommandLineArguments.push_back( strParameter.substr( uStart+1, strParameter.length( )-uStart ) );
+        }
+
+        //ds check possible parameters
+        const std::vector< std::string >::const_iterator itParameter1( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter1 ) );
+        const std::vector< std::string >::const_iterator itParameter2( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter2 ) );
+        const std::vector< std::string >::const_iterator itParameter3( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter3 ) );
+
+        //ds set parameters if found
+        if( vecCommandLineArguments.end( ) != itParameter1 ){ p_strMode                    = *( itParameter1+1 ); }
+        if( vecCommandLineArguments.end( ) != itParameter2 ){ p_strInfileCameraIMUMessages = *( itParameter2+1 ); }
+        if( vecCommandLineArguments.end( ) != itParameter3 ){ p_strImageFolder             = *( itParameter3+1 ); }
+    }
+    catch( const std::invalid_argument& p_cException )
+    {
+        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s\n", arrParameter1, arrParameter2, arrParameter3 );
+        std::printf( "(setParametersNaive) terminated: %s\n", p_pArgv[0] );
+        std::fflush( stdout );
+        exit( -1 );
+    }
+    catch( const std::out_of_range& p_cException )
+    {
+        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s\n", arrParameter1, arrParameter2, arrParameter3 );
+        std::printf( "(setParametersNaive) terminated: %s\n", p_pArgv[0] );
+        std::fflush( stdout );
+        exit( -1 );
+    }
 }

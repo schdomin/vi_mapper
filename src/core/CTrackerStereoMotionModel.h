@@ -41,9 +41,10 @@ private:
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
     Eigen::Isometry3d m_matTransformationMotionWORLDtoIMU;
-    Eigen::Vector3d m_vecLinearAccelerationLAST;
-    Eigen::Vector3d m_vecLinearVelocityLAST;
-    Eigen::Vector3d m_vecAngularVelocityLAST;
+    //Eigen::Vector3d m_vecLinearAccelerationLAST;
+    //Eigen::Vector3d m_vecLinearVelocityLAST;
+    //Eigen::Vector3d m_vecAngularVelocityLAST;
+    Eigen::Isometry3d m_matTransformationIMULAST;
     double m_dTimestampLASTSeconds;
 
     //ds feature related
@@ -87,7 +88,6 @@ private:
     uint64_t m_uTimingToken;
     uint32_t m_uFramesCurrentCycle;
     double m_dPreviousFrameRate;
-    uint64_t m_uTotalMeasurementPoints;
 
     //ds debug logging
     std::FILE* m_pFileLandmarkCreation;
@@ -99,7 +99,8 @@ public:
 
     void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
                          const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
-                         const txt_io::CIMUMessage& p_cIMU );
+                         const txt_io::CIMUMessage& p_cIMU,
+                         const Eigen::Isometry3d& p_matTransformationIMU );
 
     const uint64_t getFrameCount( ) const { return m_uFrameCount; }
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }

@@ -13,7 +13,7 @@
 #include "utility/CStack.h"
 #include "core/CTrackerStereoMotionModel.h"
 #include "utility/CMiniTimer.h"
-#include "vision/CMiniVisionToolbox.h"
+#include "types/CIMUInterpolator.h"
 
 //ds data vectors
 CStack< txt_io::CIMUMessage > g_vecMessagesIMU;
@@ -25,6 +25,9 @@ uint64_t g_uFrameIDIMU      = 0;
 uint64_t g_uFrameIDCamera_0 = 0;
 uint64_t g_uFrameIDCamera_1 = 0;
 
+//ds interpolator
+CIMUInterpolator g_cInterpolator;
+
 //ds initialize statics
 std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::vec_tmStart;
 
@@ -35,8 +38,7 @@ void setParametersNaive( const int& p_iArgc,
                          char** const p_pArgv,
                          std::string& p_strMode,
                          std::string& p_strInfileCameraIMUMessages,
-                         std::string& p_strImageFolder,
-                         std::string& p_strInfileMockedLandmarks );
+                         std::string& p_strImageFolder );
 
 int main( int argc, char **argv )
 {
@@ -50,10 +52,9 @@ int main( int argc, char **argv )
     std::string strMode              = "interactive";
     std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
     std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
-    std::string strMockedLandmarks   = "/home/dominik/workspace_catkin/src/vi_mapper/mocking/landmarks_noise.txt";
 
     //ds get params
-    setParametersNaive( argc, argv, strMode, strInfileMessageDump, strImageFolder, strMockedLandmarks );
+    setParametersNaive( argc, argv, strMode, strInfileMessageDump, strImageFolder );
 
     //ds get playback mode to enum
     EPlaybackMode eMode( ePlaybackInteractive );
@@ -122,7 +123,6 @@ int main( int argc, char **argv )
     std::printf( "(main) uSleepMicroseconds   := '%u'\n", uSleepMicroseconds );
     std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
     std::printf( "(main) strImageFolder       := '%s'\n", strImageFolder.c_str( ) );
-    std::printf( "(main) strMockedLandmarks   := '%s'\n", strMockedLandmarks.c_str( ) );
     std::fflush( stdout );
     CLogger::closeBox( );
 
@@ -183,7 +183,7 @@ int main( int argc, char **argv )
                 if( 0 == g_pActiveMessageCamera_0 && 0 == g_pActiveMessageCamera_1 )
                 {
                     //ds callback with triplet
-                    cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU );
+                    cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU, g_cInterpolator.getTransformation( cMessageIMU.timestamp( ) ) );
                 }
                 else
                 {
@@ -276,15 +276,14 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
-        //ds IMU messages are published with wrong sign
+        //ds IMU messages are published with wrong signs
         vecLinearAcceleration.y( ) = -vecLinearAcceleration.y( );
         vecLinearAcceleration.z( ) = -vecLinearAcceleration.z( );
         vecAngularVelocity.y( )    = -vecAngularVelocity.y( );
         vecAngularVelocity.z( )    = -vecAngularVelocity.z( );
 
-        //ds swap y and z
-        //std::swap( vecLinearAcceleration[1], vecLinearAcceleration[2] );
-        //std::swap( vecAngularVelocity[1], vecAngularVelocity[2] );
+        //ds add to interpolator
+        g_cInterpolator.addMeasurement( vecLinearAcceleration, vecAngularVelocity, dTimeSeconds );
 
         //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
         //vecLinearAcceleration[1] += 9.80665;
@@ -348,18 +347,16 @@ void setParametersNaive( const int& p_iArgc,
                          char** const p_pArgv,
                          std::string& p_strMode,
                          std::string& p_strInfileCameraIMUMessages,
-                         std::string& p_strImageFolder,
-                         std::string& p_strInfileMockedLandmarks )
+                         std::string& p_strImageFolder )
 {
     //ds attribute names (C style for printf)
     const char* arrParameter1( "-mode" );
     const char* arrParameter2( "-messages" );
     const char* arrParameter3( "-images" );
-    const char* arrParameter4( "-landmarks" );
 
     try
     {
-        //ds parse optional command line arguments: -mode=interactive -messages="/asdasd/" -images="/asdasdgfa/" -landmarks="/asdasddsd/"
+        //ds parse optional command line arguments: -mode=interactive -messages="/asdasd/" -images="/asdasdgfa/"
         std::vector< std::string > vecCommandLineArguments;
         for( uint32_t u = 1; u < static_cast< uint32_t >( p_iArgc ); ++u )
         {
@@ -377,24 +374,22 @@ void setParametersNaive( const int& p_iArgc,
         const std::vector< std::string >::const_iterator itParameter1( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter1 ) );
         const std::vector< std::string >::const_iterator itParameter2( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter2 ) );
         const std::vector< std::string >::const_iterator itParameter3( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter3 ) );
-        const std::vector< std::string >::const_iterator itParameter4( std::find( vecCommandLineArguments.begin( ), vecCommandLineArguments.end( ), arrParameter4 ) );
 
         //ds set parameters if found
         if( vecCommandLineArguments.end( ) != itParameter1 ){ p_strMode                    = *( itParameter1+1 ); }
         if( vecCommandLineArguments.end( ) != itParameter2 ){ p_strInfileCameraIMUMessages = *( itParameter2+1 ); }
         if( vecCommandLineArguments.end( ) != itParameter3 ){ p_strImageFolder             = *( itParameter3+1 ); }
-        if( vecCommandLineArguments.end( ) != itParameter4 ){ p_strInfileMockedLandmarks   = *( itParameter4+1 ); }
     }
     catch( const std::invalid_argument& p_cException )
     {
-        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s %s\n", arrParameter1, arrParameter2, arrParameter3, arrParameter4 );
+        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s\n", arrParameter1, arrParameter2, arrParameter3 );
         std::printf( "(setParametersNaive) terminated: %s\n", p_pArgv[0] );
         std::fflush( stdout );
         exit( -1 );
     }
     catch( const std::out_of_range& p_cException )
     {
-        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s %s\n", arrParameter1, arrParameter2, arrParameter3, arrParameter4 );
+        std::printf( "(setParametersNaive) malformed command line syntax, usage: stereo_detector_mocked %s %s %s\n", arrParameter1, arrParameter2, arrParameter3 );
         std::printf( "(setParametersNaive) terminated: %s\n", p_pArgv[0] );
         std::fflush( stdout );
         exit( -1 );
