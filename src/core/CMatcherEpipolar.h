@@ -15,21 +15,37 @@ class CMatcherEpipolar
 //ds private structs
 private:
 
-    struct CKeyFrame
+    struct CDetectionPoint
     {
-        const UIDKeyFrame uID;
+        const UIDDetectionPoint uID;
         const Eigen::Isometry3d matTransformationLEFTtoWORLD;
         const std::shared_ptr< std::vector< CLandmark* > > vecLandmarks;
 
-        CKeyFrame( const UIDKeyFrame& p_uID,
-                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                   const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): uID( p_uID ),
-                                                                                        matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
-                                                                                        vecLandmarks( p_vecLandmarks )
+        CDetectionPoint( const UIDDetectionPoint& p_uID,
+                         const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                         const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): uID( p_uID ),
+                                                                                              matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
+                                                                                              vecLandmarks( p_vecLandmarks )
         {
             //ds nothing to do
         }
-        ~CKeyFrame( )
+        ~CDetectionPoint( )
+        {
+            //ds nothing to do
+        }
+    };
+
+    struct CMatchPoseOptimization
+    {
+        CLandmark* pLandmark;
+        const cv::KeyPoint cKeyPoint;
+        const CDescriptor matDescriptor;
+
+        CMatchPoseOptimization( CLandmark* p_pLandmark, const cv::KeyPoint& p_cKeyPoint, const CDescriptor& p_matDescriptor ): pLandmark( p_pLandmark ), cKeyPoint( p_cKeyPoint ), matDescriptor( p_matDescriptor )
+        {
+            //ds nothing to do
+        }
+        ~CMatchPoseOptimization( )
         {
             //ds nothing to do
         }
@@ -43,7 +59,8 @@ public:
                       const std::shared_ptr< cv::FeatureDetector > p_pDetectorSingle,
                       const double& p_dMinimumDepthMeters,
                       const double& p_dMaximumDepthMeters,
-                      const float& p_fMatchingDistanceCutoff,
+                      const double& p_dMatchingDistanceCutoffPoseOptimization,
+                      const double& p_dMatchingDistanceCutoffEssential,
                       const uint8_t& p_uMaximumFailedSubsequentTrackingsPerLandmark );
     ~CMatcherEpipolar( );
 
@@ -64,12 +81,13 @@ private:
     const std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
     const double m_dMinimumDepthMeters;
     const double m_dMaximumDepthMeters;
-    const double m_dMatchingDistanceCutoff;
+    const double m_dMatchingDistanceCutoffPoseOptimization;
+    const double m_dMatchingDistanceCutoffEssential;
     const double m_dMatchingDistanceCutoffOriginal;
 
     //ds measurement point storage (we use the ID counter instead of accessing the vector size every time for speed)
-    UIDKeyFrame m_uAvailableKeyFrameID;
-    std::vector< CKeyFrame > m_vecKeyFramesActive;
+    UIDDetectionPoint m_uAvailableDetectionPointID;
+    std::vector< CDetectionPoint > m_vecDetectionPointsActive;
 
     //ds internal
     const int32_t m_iSearchUMin;
@@ -77,7 +95,7 @@ private:
     const int32_t m_iSearchVMin;
     const int32_t m_iSearchVMax;
     const cv::Rect m_cSearchROI;
-    const cv::Rect m_cSearchROIPoseOptimization;
+    const int32_t m_iSearchBlockSizePoseOptimization;
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uRecursionLimitEpipolarLines;
     const uint8_t m_uMinimumPointsForPoseOptimization;
@@ -92,16 +110,16 @@ private:
 //ds api
 public:
 
-    void addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks )
-    {
-        m_vecKeyFramesActive.push_back( CKeyFrame( m_uAvailableKeyFrameID, p_matTransformationLEFTtoWORLD, p_vecLandmarks ) );
+    //ds add current detected landmarks to the matcher
+    void addDetectionPoint( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks );
 
-        ++m_uAvailableKeyFrameID;
-    }
+    //ds routine that resets the visibility of all active landmarks
+    void resetVisibilityActiveLandmarks( );
 
     const Eigen::Isometry3d getPoseOptimizedLEFT( const uint64_t p_uFrame,
                                               cv::Mat& p_matDisplayLEFT,
                                               const cv::Mat& p_matImageLEFT,
+                                              const cv::Mat& p_matImageRIGHT,
                                               const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT );
 
     const Eigen::Isometry3d getPoseOptimizedSTEREO( const uint64_t p_uFrame,
@@ -130,7 +148,7 @@ public:
                                                                                      const Eigen::Matrix3d& p_matEssential,
                                                                                      const int32_t& p_iHalfLineLengthBase ) const;*/
 
-    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( const uint64_t p_uFrame,
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssentialOptimized( const uint64_t p_uFrame,
                                                                                                       cv::Mat& p_matDisplayLEFT,
                                                                                                       cv::Mat& p_matDisplayRIGHT,
                                                                                                       const cv::Mat& p_matImageLEFT,
@@ -139,21 +157,23 @@ public:
                                                                                                       const int32_t& p_iHalfLineLengthBase,
                                                                                                       cv::Mat& p_matDisplayTrajectory );
 
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplayLEFT,
+                                                                                                      cv::Mat& p_matDisplayRIGHT,
+                                                                                                      const uint64_t p_uFrame,
+                                                                                                      const cv::Mat& p_matImageLEFT,
+                                                                                                      const cv::Mat& p_matImageRIGHT,
+                                                                                                      const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
+                                                                                                      const int32_t& p_iHalfLineLengthBase );
+
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( const uint64_t p_uFrame,
                                                                                                       const cv::Mat& p_matImageLEFT,
                                                                                                       const cv::Mat& p_matImageRIGHT,
                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
                                                                                                       const int32_t& p_iHalfLineLengthBase );
 
-    const std::vector< CKeyFrame >::size_type getNumberOfActiveMeasurementPoints( ) const
-    {
-        return m_vecKeyFramesActive.size( );
-    }
+    const std::vector< CDetectionPoint >::size_type getNumberOfActiveMeasurementPoints( ) const{ return m_vecDetectionPointsActive.size( ); }
 
-    const uint64_t getNumberOfKeyFrames( ) const
-    {
-        return m_uAvailableKeyFrameID;
-    }
+    const uint64_t getNumberOfKeyFrames( ) const{ return m_uAvailableDetectionPointID; }
 
 private:
 
@@ -215,6 +235,14 @@ private:
                                      std::vector< cv::KeyPoint >& p_vecPoolKeyPoints,
                                      const CDescriptor& p_matDescriptorReference,
                                      const CDescriptor& p_matDescriptorOriginal ) const;
+
+    void _addMeasurementToLandmark( const uint64_t p_uFrame,
+                                   CLandmark* p_pLandmark,
+                                   const cv::Mat& p_matImageRIGHT,
+                                   const cv::KeyPoint& p_cKeyPoint,
+                                   const CDescriptor& p_matDescriptorNew,
+                                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                   const MatrixProjection& p_matProjectionWORLDtoLEFT );
 
     inline const double _getCurveX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const;
     inline const double _getCurveY( const Eigen::Vector3d& p_vecCoefficients, const double& p_dX ) const;

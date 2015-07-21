@@ -153,7 +153,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
                 //ds update landmark
                 pLandmarkReference->matDescriptorLastLEFT          = CDescriptor( );
                 pLandmarkReference->uFailedSubsequentTrackings = 0;
-                pLandmarkReference->addPosition( p_uFrame, cDetection.ptUVLEFT, ptUVRIGHT, vecPointTriangulatedLEFT, static_cast< CPoint3DInWorldFrame >( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT ), vecCameraPosition, matKRotation, vecKTranslation, matProjectionWORLDtoLEFT );
+                pLandmarkReference->addPosition( p_uFrame, cDetection.ptUVLEFT, ptUVRIGHT, vecPointTriangulatedLEFT, static_cast< CPoint3DInWorldFrame >( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT ), vecCameraPosition, matProjectionWORLDtoLEFT );
 
                 vecVisibleLandmarksPerMeasurementPoint.push_back( pLandmarkReference->getLastMeasurement( ) );
 

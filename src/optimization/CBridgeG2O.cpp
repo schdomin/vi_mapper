@@ -11,7 +11,7 @@
 void CBridgeG2O::saveXYZAndDisparity( const std::string& p_strOutfile,
                                           const CStereoCamera& p_cStereoCamera,
                                           const std::vector< CLandmark* >& p_vecLandmarks,
-                                          const std::vector< CMeasurementPose >& p_vecMeasurements )
+                                          const std::vector< CKeyFrame >& p_vecMeasurements )
 {
     //ds validate input
     if( p_vecLandmarks.empty( ) )
@@ -100,7 +100,7 @@ void CBridgeG2O::saveXYZAndDisparity( const std::string& p_strOutfile,
     uint64_t uMeasurementsStoredDisparity = 0;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< CMeasurementPose >::const_iterator pMeasurementPoint = p_vecMeasurements.begin( )+1; pMeasurementPoint != p_vecMeasurements.end( ); ++pMeasurementPoint )
+    for( std::vector< CKeyFrame >::const_iterator pMeasurementPoint = p_vecMeasurements.begin( )+1; pMeasurementPoint != p_vecMeasurements.end( ); ++pMeasurementPoint )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );
@@ -228,7 +228,7 @@ void CBridgeG2O::saveXYZAndDisparity( const std::string& p_strOutfile,
 void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
                                           const CStereoCamera& p_cStereoCamera,
                                           const std::vector< CLandmark* >& p_vecLandmarks,
-                                          const std::vector< CMeasurementPose >& p_vecMeasurements )
+                                          const std::vector< CKeyFrame >& p_vecMeasurements )
 {
     //ds validate input
     if( p_vecLandmarks.empty( ) )
@@ -320,7 +320,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
     uint64_t uMeasurementsStoredDisparity = 0;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< CMeasurementPose >::const_iterator pMeasurementPoint = p_vecMeasurements.begin( )+1; pMeasurementPoint != p_vecMeasurements.end( ); ++pMeasurementPoint )
+    for( std::vector< CKeyFrame >::const_iterator pMeasurementPoint = p_vecMeasurements.begin( )+1; pMeasurementPoint != p_vecMeasurements.end( ); ++pMeasurementPoint )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );

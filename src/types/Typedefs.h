@@ -25,7 +25,7 @@ typedef cv::Scalar      CColorCodeBGR;
 typedef cv::Mat         CDescriptor;
 typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
-typedef uint64_t        UIDKeyFrame;
+typedef uint64_t        UIDDetectionPoint;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
 typedef Eigen::Vector3d CLinearAccelerationInIMUFrame;
@@ -38,8 +38,8 @@ struct CMeasurementLandmark
     const CPoint3DInCameraFrame vecPointXYZLEFT;
     const CPoint3DInWorldFrame  vecPointXYZWORLD;
     const Eigen::Vector3d vecCameraPosition;
-    const Eigen::Matrix3d matPRotationWORLDtoLEFT;
-    const Eigen::Vector3d vecPTranslationWORLDtoLEFT;
+    //const Eigen::Matrix3d matPRotationWORLDtoLEFT;
+    //const Eigen::Vector3d vecPTranslationWORLDtoLEFT;
     const MatrixProjection matProjectionWORLDtoLEFT;
 
     CMeasurementLandmark( const UIDLandmark& p_uID,
@@ -48,16 +48,16 @@ struct CMeasurementLandmark
                           const CPoint3DInCameraFrame& p_vecPointXYZ,
                           const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
                           const Eigen::Vector3d& p_vecCameraPosition,
-                          const Eigen::Matrix3d& p_matKRotation,
-                          const Eigen::Vector3d& p_vecKTranslation,
+                          //const Eigen::Matrix3d& p_matKRotation,
+                          //const Eigen::Vector3d& p_vecKTranslation,
                           const MatrixProjection& p_matProjectionWORLDtoLEFT ): uID( p_uID ),
                                                                       ptUVLEFT( p_ptUVLEFT ),
                                                                       ptUVRIGHT( p_ptUVRIGHT ),
                                                                       vecPointXYZLEFT( p_vecPointXYZ ),
                                                                       vecPointXYZWORLD( p_vecPointXYZWORLD ),
                                                                       vecCameraPosition( p_vecCameraPosition ),
-                                                                      matPRotationWORLDtoLEFT( p_matKRotation ),
-                                                                      vecPTranslationWORLDtoLEFT( p_vecKTranslation ),
+                                                                      //matPRotationWORLDtoLEFT( p_matKRotation ),
+                                                                      //vecPTranslationWORLDtoLEFT( p_vecKTranslation ),
                                                                       matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT )
     {
         //ds nothing to do
@@ -65,13 +65,13 @@ struct CMeasurementLandmark
 
 };
 
-struct CMeasurementPose
+struct CKeyFrame
 {
     const Eigen::Isometry3d matTransformationLEFTtoWORLD;
     const CLinearAccelerationInIMUFrame vecLinearAccelerationNormalized;
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecLandmarks;
 
-    CMeasurementPose( const Eigen::Isometry3d p_matTransformationLEFTtoWORLD,
+    CKeyFrame( const Eigen::Isometry3d p_matTransformationLEFTtoWORLD,
                       const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration,
                       const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_vecLandmarks ): matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
                                                                                                             vecLinearAccelerationNormalized( p_vecLinearAcceleration ),

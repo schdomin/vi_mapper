@@ -14,7 +14,7 @@ public:
 
     CIMUInterpolator( const double& p_dMaximumDeltaTimeSeconds = 0.1 ): m_vecLastVelocityLinear( 0.0, 0.0, 0.0 ),
                                                                         m_vecLastVelocityAngular( 0.0, 0.0, 0.0 ),
-                                                                        m_vecOffsetAccelerationLinear( 0.0, 9.80665, 0.0 ),
+                                                                        m_vecOffsetAccelerationLinear( 0.2, 9.80665, 0.5 ),
                                                                         m_vecOffsetVelocityAngular( 0.0, 0.0, 0.0 ),
                                                                         m_dLastTimestamp( 0.0 ),
                                                                         m_dMaximumDeltaTimeSeconds( p_dMaximumDeltaTimeSeconds )
@@ -63,17 +63,18 @@ public:
         //ds compute means
         m_vecOffsetAccelerationLinear /= m_vecCalibration.size( );
         m_vecOffsetVelocityAngular    /= m_vecCalibration.size( );
+
+        std::printf( "<CIMUInterpolator>(calibrateOffsets) calibrated offsets for linear acceleration: %5.2f %5.2f %5.2f\n", m_vecOffsetAccelerationLinear.x( ), m_vecOffsetAccelerationLinear.y( ), m_vecOffsetAccelerationLinear.z( ) );
+        std::printf( "<CIMUInterpolator>(calibrateOffsets) calibrated offsets for angular velocity: %5.2f %5.2f %5.2f\n", m_vecOffsetVelocityAngular.x( ), m_vecOffsetVelocityAngular.y( ), m_vecOffsetVelocityAngular.z( ) );
     }
 
     void addMeasurement( Eigen::Vector3d& p_vecAccelerationLinear, const Eigen::Vector3d& p_vecVelocityAngular, const double& p_dTimestampSeconds )
     {
-        p_vecAccelerationLinear.x( ) *= 0.05;
-        p_vecAccelerationLinear.z( ) *= 0.15;
         //std::cout << p_vecAccelerationLinear.transpose( ) << std::endl;
 
         //ds calibrated measurements
-        const Eigen::Vector3d& vecAccelerationLinearClean( p_vecAccelerationLinear-m_vecOffsetAccelerationLinear );
-        const Eigen::Vector3d& vecVelocityAngularClean( p_vecVelocityAngular-m_vecOffsetVelocityAngular );
+        const Eigen::Vector3d vecAccelerationLinearClean( p_vecAccelerationLinear-m_vecOffsetAccelerationLinear );
+        const Eigen::Vector3d vecVelocityAngularClean( p_vecVelocityAngular-m_vecOffsetVelocityAngular );
 
         //ds compute time delta
         const double dTimespanSeconds = p_dTimestampSeconds-m_dLastTimestamp;

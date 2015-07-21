@@ -33,10 +33,11 @@ CTrackerStereo::CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
 
                                                                            //ds BRIEF (calibrated 2015-05-31)
                                                                            // m_uKeyPointSize( 7 ),
-                                                                           m_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 20, 0.01, 20, 7, true ) ),
+                                                                           m_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 10, 0.01, 20, 7, true ) ),
                                                                            m_pExtractor( std::make_shared< cv::BriefDescriptorExtractor >( 64 ) ),
                                                                            m_pMatcher( std::make_shared< cv::BFMatcher >( cv::NORM_HAMMING ) ),
                                                                            m_dMatchingDistanceCutoffTriangulation( 40.0 ),
+                                                                           m_dMatchingDistanceCutoffPoseOptimization( 30.0 ),
                                                                            m_dMatchingDistanceCutoffTracking( 20.0 ),
 
                                                                            /*//ds BRISK (calibrated 2015-06-09)
@@ -70,7 +71,7 @@ CTrackerStereo::CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
 
                                                                            //m_cDetector( m_pCameraLEFT, m_pDetector ),
                                                                            m_pTriangulator( std::make_shared< CTriangulator >( m_pCameraSTEREO, m_pExtractor, m_pMatcher, m_dMatchingDistanceCutoffTriangulation ) ),
-                                                                           m_cMatcherEpipolar( m_pTriangulator, 0, m_dMinimumDepthMeters, m_dMaximumDepthMeters, m_dMatchingDistanceCutoffTracking, m_uMaximumFailedSubsequentTrackingsPerLandmark ),
+                                                                           m_cMatcherEpipolar( m_pTriangulator, 0, m_dMinimumDepthMeters, m_dMaximumDepthMeters, m_dMatchingDistanceCutoffPoseOptimization, m_dMatchingDistanceCutoffTracking, m_uMaximumFailedSubsequentTrackingsPerLandmark ),
 
                                                                            m_uAvailableLandmarkID( 0 ),
                                                                            m_vecLandmarks( std::make_shared< std::vector< CLandmark* > >( ) ),
@@ -157,7 +158,7 @@ CTrackerStereo::~CTrackerStereo( )
                                                                               dErrorY,
                                                                               dErrorZ,
                                                                               dErrorTotal,
-                                                                              pLandmark->m_vecMeasurements.size( ),
+                                                                              pLandmark->getNumberOfMeasurements( ),
                                                                               pLandmark->uCalibrations,
                                                                               pLandmark->vecMeanMeasurement.x( ),
                                                                               pLandmark->vecMeanMeasurement.y( ),
@@ -240,14 +241,14 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
 
 
     //ds get currently visible landmarks
-    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( m_cMatcherEpipolar.getVisibleLandmarksEssential( m_uFrameCount, matDisplayLEFT, matDisplayRIGHT, p_matImageLEFT, p_matImageRIGHT, p_matTransformationLEFTtoWORLD, uEpipolarBaseLineLength, m_matTrajectoryXY ) );
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( m_cMatcherEpipolar.getVisibleLandmarksEssentialOptimized( m_uFrameCount, matDisplayLEFT, matDisplayRIGHT, p_matImageLEFT, p_matImageRIGHT, p_matTransformationLEFTtoWORLD, uEpipolarBaseLineLength, m_matTrajectoryXY ) );
     m_uNumberofLastVisibleLandmarks = vecVisibleLandmarks->size( );
 
     //ds add to data structure if delta is sufficiently high
     if( m_dTranslationDeltaForMAPMeters < ( vecTranslationCurrent-m_vecTranslationLast ).squaredNorm( ) && m_uVisibleLandmarksMinimum <= m_uNumberofLastVisibleLandmarks )
     {
         m_vecTranslationLast = vecTranslationCurrent;
-        m_vecLogMeasurementPoints.push_back( CMeasurementPose( p_matTransformationLEFTtoWORLD, p_vecLinearAcceleration.normalized( ), vecVisibleLandmarks ) );
+        m_vecLogMeasurementPoints.push_back( CKeyFrame( p_matTransformationLEFTtoWORLD, p_vecLinearAcceleration.normalized( ), vecVisibleLandmarks ) );
         //std::printf( "<CTrackerStereo>(_trackLandmarks) stashed measurement %lu with landmarks (%lu)\n", m_vecLogMeasurementPoints.size( ), vecVisibleLandmarks->size( ) );
     }
 
@@ -273,7 +274,7 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         m_vecLandmarks->insert( m_vecLandmarks->end( ), vecNewLandmarks->begin( ), vecNewLandmarks->end( ) );
 
         //ds add this measurement point to the epipolar matcher
-        m_cMatcherEpipolar.addKeyFrame( p_matTransformationLEFTtoWORLD, vecNewLandmarks );
+        m_cMatcherEpipolar.addDetectionPoint( p_matTransformationLEFTtoWORLD, vecNewLandmarks );
 
         cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+ptPositionXY.x*10, m_uOffsetTrajectoryV-ptPositionXY.y*10 ), 20, CColorCodeBGR( 0, 255, 0 ), 1 );
     }
@@ -426,8 +427,6 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                                                      ptLandmarkRIGHT,
                                                      vecPointTriangulatedLEFT,
                                                      vecCameraPosition,
-                                                     matKRotation,
-                                                     vecKTranslation,
                                                      matProjectionWORLDtoLEFT,
                                                      p_uFrame ) );
 

@@ -56,7 +56,7 @@ private:
     uint64_t m_uNumberofLastVisibleLandmarks;
 
     //ds g2o data
-    std::vector< CMeasurementPose > m_vecLogG2OMeasurementPoints;
+    std::vector< CKeyFrame > m_vecLogG2OMeasurementPoints;
 
     //ds control
     const EPlaybackMode m_eMode;

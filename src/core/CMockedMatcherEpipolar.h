@@ -15,11 +15,11 @@ private:
 
     struct CLandmarkCreationPoint
     {
-        const UIDKeyFrame uID;
+        const UIDDetectionPoint uID;
         const Eigen::Isometry3d matTransformationLEFTtoWORLD;
         const std::shared_ptr< std::vector< CLandmark* > > vecLandmarks;
 
-        CLandmarkCreationPoint( const UIDKeyFrame& p_uID,
+        CLandmarkCreationPoint( const UIDDetectionPoint& p_uID,
                            const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                            const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): uID( p_uID ),
                                                                                                 matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
@@ -52,7 +52,7 @@ private:
     const std::shared_ptr< CMockedStereoCamera > m_pCameraSTEREO;
 
     //ds measurement point storage (we use the ID counter instead of accessing the vector size every time for speed)
-    UIDKeyFrame m_uAvailableMeasurementPointID;
+    UIDDetectionPoint m_uAvailableMeasurementPointID;
     std::vector< CLandmarkCreationPoint > m_vecLandmarkCreationPointsActive;
 
     //ds internal

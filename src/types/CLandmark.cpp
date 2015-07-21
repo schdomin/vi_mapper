@@ -11,8 +11,8 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
            const cv::Point2d& p_ptUVRIGHT,
            const CPoint3DInCameraFrame& p_vecPointXYZCamera,
            const Eigen::Vector3d& p_vecCameraPosition,
-           const Eigen::Matrix3d& p_matKRotation,
-           const Eigen::Vector3d& p_vecKTranslation,
+           //const Eigen::Matrix3d& p_matKRotation,
+           //const Eigen::Vector3d& p_vecKTranslation,
            const MatrixProjection& p_matProjectionWORLDtoLEFT,
            const uint64_t& p_uFrame ): uID( p_uID ),
                                                        matDescriptorReference( p_matDescriptorLEFT ),
@@ -26,6 +26,7 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
                                                        uCalibrations( 0 ),
                                                        dCurrentAverageSquaredError( 0.0 ),
                                                        vecMeanMeasurement( p_vecPointXYZ ),
+                                                       bIsCurrentlyVisible( false ),
                                                        m_vecLastCameraPosition( p_vecCameraPosition )
 {
     //ds construct filestring and open dump file
@@ -37,7 +38,7 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
     //std::fprintf( m_pFilePosition, "FRAME LANDMARK ITERATION MEASUREMENTS INLIERS ERROR\n" );
 
     //ds add this position
-    addPosition( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCamera, vecPointXYZInitial, p_vecCameraPosition, p_matKRotation, p_vecKTranslation, p_matProjectionWORLDtoLEFT );
+    addPosition( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCamera, vecPointXYZInitial, p_vecCameraPosition, p_matProjectionWORLDtoLEFT );
 }
 
 CLandmark::~CLandmark( )
@@ -58,11 +59,11 @@ void CLandmark::addPosition( const uint64_t& p_uFrame,
                              const CPoint3DInCameraFrame& p_vecPointXYZLEFT,
                              const CPoint3DInWorldFrame& p_vecPointXYZ,
                              const Eigen::Vector3d& p_vecCameraPosition,
-                             const Eigen::Matrix3d& p_matKRotation,
-                             const Eigen::Vector3d& p_vecKTranslation,
+                             //const Eigen::Matrix3d& p_matKRotation,
+                             //const Eigen::Vector3d& p_vecKTranslation,
                              const MatrixProjection& p_matProjectionWORLDtoLEFT )
 {
-    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZLEFT, p_vecPointXYZ, p_vecCameraPosition, p_matKRotation, p_vecKTranslation, p_matProjectionWORLDtoLEFT ) );
+    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZLEFT, p_vecPointXYZ, p_vecCameraPosition, p_matProjectionWORLDtoLEFT ) );
 
     //ds epipolar constraint
     assert( p_ptUVLEFT.y == p_ptUVRIGHT.y );
@@ -86,6 +87,10 @@ void CLandmark::addPosition( const uint64_t& p_uFrame,
 const cv::Point2d CLandmark::getLastDetectionLEFT( ) const
 {
     return m_vecMeasurements.back( )->ptUVLEFT;
+}
+const cv::Point2d CLandmark::getLastDetectionRIGHT( ) const
+{
+    return m_vecMeasurements.back( )->ptUVRIGHT;
 }
 
 const CMeasurementLandmark* CLandmark::getLastMeasurement( ) const

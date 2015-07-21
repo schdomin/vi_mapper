@@ -89,9 +89,9 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedFull( const cv::M
 const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimited( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
 {
     //ds left references
-    const int32_t& iUReference( p_cKeyPointLEFT.pt.x );
-    const int32_t& iVReference( p_cKeyPointLEFT.pt.y );
-    const double& dKeyPointSize( p_cKeyPointLEFT.size );
+    const int32_t iUReference( p_cKeyPointLEFT.pt.x );
+    const int32_t iVReference( p_cKeyPointLEFT.pt.y );
+    const double dKeyPointSize( p_cKeyPointLEFT.size );
 
     assert( 0 < iUReference );
 

@@ -44,8 +44,9 @@ private:
     std::shared_ptr< cv::FeatureDetector > m_pDetector;
     std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
     std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
-    const float m_dMatchingDistanceCutoffTriangulation;
-    const float m_dMatchingDistanceCutoffTracking;
+    const double m_dMatchingDistanceCutoffTriangulation;
+    const double m_dMatchingDistanceCutoffPoseOptimization;
+    const double m_dMatchingDistanceCutoffTracking;
 
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uVisibleLandmarksMinimum;
@@ -63,7 +64,7 @@ private:
     uint64_t m_uNumberofLastVisibleLandmarks;
 
     //ds g2o data
-    std::vector< CMeasurementPose > m_vecLogMeasurementPoints;
+    std::vector< CKeyFrame > m_vecLogMeasurementPoints;
 
     //ds control
     const EPlaybackMode m_eMode;

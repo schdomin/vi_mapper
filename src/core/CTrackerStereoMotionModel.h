@@ -37,23 +37,21 @@ private:
     //ds reference information
     uint64_t m_uFrameCount;
     CPoint3DInWorldFrame m_vecTranslationLast;
-    double m_dTranslationDeltaForMAPMeters;
+    double m_dTranslationDeltaForKeyFrame;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
     Eigen::Isometry3d m_matTransformationMotionWORLDtoIMU;
-    //Eigen::Vector3d m_vecLinearAccelerationLAST;
-    //Eigen::Vector3d m_vecLinearVelocityLAST;
-    //Eigen::Vector3d m_vecAngularVelocityLAST;
     Eigen::Isometry3d m_matTransformationIMULAST;
-    double m_dTimestampLASTSeconds;
+    //double m_dTimestampLASTSeconds;
 
     //ds feature related
     //const uint32_t m_uKeyPointSize;
     std::shared_ptr< cv::FeatureDetector > m_pDetector;
     std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
     std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
-    const float m_dMatchingDistanceCutoffTriangulation;
-    const float m_dMatchingDistanceCutoffTracking;
+    const double m_dMatchingDistanceCutoffTriangulation;
+    const double m_dMatchingDistanceCutoffPoseOptimization;
+    const double m_dMatchingDistanceCutoffTracking;
 
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uVisibleLandmarksMinimum;
@@ -71,7 +69,7 @@ private:
     uint64_t m_uNumberofLastVisibleLandmarks;
 
     //ds g2o data
-    std::vector< CMeasurementPose > m_vecLogMeasurementPoints;
+    std::vector< CKeyFrame > m_vecKeyFrames;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -110,7 +108,7 @@ public:
     void saveToG2O( const std::string& p_strOutfile ) const
     {
         //CBridgeG2O::saveXYZAndDisparity( p_strOutfile, *m_pStereoCamera, *m_vecLandmarks, m_vecLogMeasurementPoints );
-        CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogMeasurementPoints );
+        CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
     }
 
 //ds helpers

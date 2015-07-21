@@ -19,8 +19,8 @@ public:
                const cv::Point2d& p_ptUVRIGHT,
                const CPoint3DInCameraFrame& p_vecPointXYZCamera,
                const Eigen::Vector3d& p_vecCameraPosition,
-               const Eigen::Matrix3d& p_matKRotation,
-               const Eigen::Vector3d& p_vecKTranslation,
+               //const Eigen::Matrix3d& p_matKRotation,
+               //const Eigen::Vector3d& p_vecKTranslation,
                const MatrixProjection& p_matProjectionWORLDtoLEFT,
                const uint64_t& p_uFrame );
 
@@ -44,10 +44,12 @@ public:
     double dCurrentAverageSquaredError;
     CPoint3DInWorldFrame vecMeanMeasurement;
 
-    //ds temporary public
-    std::vector< CMeasurementLandmark* > m_vecMeasurements;
+    bool bIsCurrentlyVisible;
 
 private:
+
+    //ds all measurements of this landmark
+    std::vector< CMeasurementLandmark* > m_vecMeasurements;
 
     //ds last camera position for calibration
     Eigen::Vector3d m_vecLastCameraPosition;
@@ -72,13 +74,15 @@ public:
                       const CPoint3DInCameraFrame& p_vecPointXYZ,
                       const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
                       const Eigen::Vector3d& p_vecCameraPosition,
-                      const Eigen::Matrix3d& p_matKRotation,
-                      const Eigen::Vector3d& p_vecKTranslation,
+                      //const Eigen::Matrix3d& p_matKRotation,
+                      //const Eigen::Vector3d& p_vecKTranslation,
                       const MatrixProjection& p_matProjectionWORLDtoLEFT );
 
     const cv::Point2d getLastDetectionLEFT( ) const;
+    const cv::Point2d getLastDetectionRIGHT( ) const;
 
     const CMeasurementLandmark* getLastMeasurement( ) const;
+    const std::vector< CMeasurementLandmark* >::size_type getNumberOfMeasurements( ) const { return m_vecMeasurements.size( ); }
 
 private:
 

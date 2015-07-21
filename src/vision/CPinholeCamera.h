@@ -75,6 +75,8 @@ public:
                                                       m_uHeightPixel( p_uHeightPixel ),
                                                       m_iWidthPixel( m_uWidthPixel ),
                                                       m_iHeightPixel( m_uHeightPixel ),
+                                                      m_dWidthPixel( m_uWidthPixel ),
+                                                      m_dHeightPixel( m_uHeightPixel ),
                                                       m_prRangeWidthNormalized( std::pair< double, double >( getNormalizedX( 0 ), getNormalizedX( p_uWidthPixel ) ) ),
                                                       m_prRangeHeightNormalized( std::pair< double, double >( getNormalizedY( 0 ), getNormalizedY( p_uHeightPixel ) ) )
     {
@@ -126,6 +128,8 @@ public:
     const uint32_t m_uHeightPixel;
     const int32_t m_iWidthPixel;
     const int32_t m_iHeightPixel;
+    const double m_dWidthPixel;
+    const double m_dHeightPixel;
     const std::pair< double, double > m_prRangeWidthNormalized;
     const std::pair< double, double > m_prRangeHeightNormalized;
 

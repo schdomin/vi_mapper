@@ -26,11 +26,11 @@ public:
     static void saveXYZAndDisparity( const std::string& p_strOutfile,
                                      const CStereoCamera& p_cStereoCamera,
                                      const std::vector< CLandmark* >& p_vecLandmarks,
-                                     const std::vector< CMeasurementPose >& p_vecMeasurements );
+                                     const std::vector< CKeyFrame >& p_vecMeasurements );
     static void saveUVDepthOrDisparity( const std::string& p_strOutfile,
                                         const CStereoCamera& p_cStereoCamera,
                                         const std::vector< CLandmark* >& p_vecLandmarks,
-                                        const std::vector< CMeasurementPose >& p_vecMeasurements );
+                                        const std::vector< CKeyFrame >& p_vecMeasurements );
 
 };
 

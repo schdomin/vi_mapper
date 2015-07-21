@@ -104,7 +104,7 @@ CMockedTrackerStereo::~CMockedTrackerStereo( )
                                                                               dErrorY,
                                                                               dErrorZ,
                                                                               dErrorTotal,
-                                                                              pLandmark->m_vecMeasurements.size( ),
+                                                                              pLandmark->getNumberOfMeasurements( ),
                                                                               pLandmark->uCalibrations,
                                                                               pLandmark->vecMeanMeasurement.x( ),
                                                                               pLandmark->vecMeanMeasurement.y( ),
@@ -191,7 +191,7 @@ void CMockedTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     if( m_dTranslationDeltaForMAPMeters < ( vecTranslationCurrent-m_vecTranslationLast ).squaredNorm( ) && m_uVisibleLandmarksMinimum < m_uNumberofLastVisibleLandmarks )
     {
         m_vecTranslationLast = vecTranslationCurrent;
-        m_vecLogG2OMeasurementPoints.push_back( CMeasurementPose( p_matTransformationLEFTtoWORLD, vecLinearAccelerationNormalized, vecVisibleLandmarks ) );
+        m_vecLogG2OMeasurementPoints.push_back( CKeyFrame( p_matTransformationLEFTtoWORLD, vecLinearAccelerationNormalized, vecVisibleLandmarks ) );
         //std::printf( "<CTrackerStereo>(_trackLandmarks) stashed measurement %lu with landmarks (%lu)\n", m_vecLogMeasurementPoints.size( ), vecVisibleLandmarks->size( ) );
 
         ++m_uMAPPoints;
@@ -341,8 +341,6 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
                                                  ptLandmarkRIGHT,
                                                  vecPointTriangulatedLEFT,
                                                  vecCameraPosition,
-                                                 matKRotation,
-                                                 vecKTranslation,
                                                  matProjectionWORLDtoLEFT,
                                                  p_uFrame ) );
 

@@ -334,6 +334,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
 
         //ds set image to message
         g_pActiveMessageCamera_0->setImage( matImage );
+        g_pActiveMessageCamera_0->untaint( );
     }
     else if( "IMAGE1" == strMessageType )
     {
@@ -354,6 +355,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
 
         //ds set image to message
         g_pActiveMessageCamera_1->setImage( matImage );
+        g_pActiveMessageCamera_1->untaint( );
     }
     else
     {
