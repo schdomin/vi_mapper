@@ -4,6 +4,7 @@
 #include "vision/CStereoCamera.h"
 #include "types/CLandmark.h"
 
+#include "g2o/types/slam3d/types_slam3d.h"
 
 class CBridgeG2O
 {
@@ -17,20 +18,57 @@ class CBridgeG2O
 
 private:
 
-    static constexpr double m_dMaximumReliableDepth       = 7.5;
-    static const uint8_t m_uMinimumCalibrationsForDump    = 1;
-    static constexpr double m_dMaximumErrorPerCalibration = 10.0; //ds e.g after 3 calibrations an error of 30.0 is allowed
+    static constexpr double m_dMaximumReliableDepthForPointXYZ = 2.5;
+    static constexpr double m_dMaximumReliableDepthForUVDepth  = 7.5;
+    static const uint8_t m_uMinimumCalibrationsForDump         = 0;
+    static constexpr double m_dMaximumErrorPerOptimization     = 10.0; //ds e.g after 3 optimizations an error of 30.0 is allowed
 
 public:
 
-    static void saveXYZAndDisparity( const std::string& p_strOutfile,
-                                     const CStereoCamera& p_cStereoCamera,
-                                     const std::vector< CLandmark* >& p_vecLandmarks,
-                                     const std::vector< CKeyFrame >& p_vecMeasurements );
+    static void saveXYZ( const std::string& p_strOutfile,
+                         const CStereoCamera& p_cStereoCamera,
+                         const std::vector< CLandmark* >& p_vecLandmarks,
+                         const std::vector< CKeyFrame >& p_vecMeasurements );
+
+    static void saveUVDepth( const std::string& p_strOutfile,
+                             const CStereoCamera& p_cStereoCamera,
+                             const std::vector< CLandmark* >& p_vecLandmarks,
+                             const std::vector< CKeyFrame >& p_vecMeasurements );
+
+    static void saveUVDisparity( const std::string& p_strOutfile,
+                                 const CStereoCamera& p_cStereoCamera,
+                                 const std::vector< CLandmark* >& p_vecLandmarks,
+                                 const std::vector< CKeyFrame >& p_vecMeasurements );
+
     static void saveUVDepthOrDisparity( const std::string& p_strOutfile,
                                         const CStereoCamera& p_cStereoCamera,
                                         const std::vector< CLandmark* >& p_vecLandmarks,
                                         const std::vector< CKeyFrame >& p_vecMeasurements );
+
+    static void saveCOMBO( const std::string& p_strOutfile,
+                           const CStereoCamera& p_cStereoCamera,
+                           const std::vector< CLandmark* >& p_vecLandmarks,
+                           const std::vector< CKeyFrame >& p_vecMeasurements );
+
+    static const bool isOptimized( const CLandmark* p_pLandmark );
+
+private:
+
+    static g2o::EdgeSE3PointXYZ* _getEdgePointXYZ( g2o::VertexSE3* p_pVertexPose,
+                                                   g2o::VertexPointXYZ* p_pVertexLandmark,
+                                                   const EG2OParameterID& p_eParameterIDOriginWORLD,
+                                                   const CPoint3DInWorldFrame& p_vecPointXYZ );
+    static g2o::EdgeSE3PointXYZDepth* _getEdgeUVDepth( g2o::VertexSE3* p_pVertexPose,
+                                                       g2o::VertexPointXYZ* p_pVertexLandmark,
+                                                       const EG2OParameterID& p_eParameterIDCamera,
+                                                       const CMeasurementLandmark* p_pMeasurement );
+    static g2o::EdgeSE3PointXYZDisparity* _getEdgeUVDisparity( g2o::VertexSE3* p_pVertexPose,
+                                                               g2o::VertexPointXYZ* p_pVertexLandmark,
+                                                               const EG2OParameterID& p_eParameterIDCamera,
+                                                               const double& p_dDisparityPixels,
+                                                               const CMeasurementLandmark* p_pMeasurement,
+                                                               const double& p_dFxPixels,
+                                                               const double& p_dBaselineMeters );
 
 };
 

@@ -30,6 +30,10 @@ uint64_t g_uFrameIDPose     = 0;
 //ds initialize statics
 std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::vec_tmStart;
 
+const double dAngularVelocityNoise = 0.01;
+
+//ds nasty ghastly hacky function
+inline int8_t sign( const float& p_fNumber );
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
 
 //ds command line parsing (setting params IN/OUT)
@@ -52,7 +56,7 @@ int main( int argc, char **argv )
     std::string strMode              = "interactive";
     std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
     std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
-    std::string strMockedLandmarks   = "/home/dominik/workspace_catkin/src/vi_mapper/mocking/landmarks_noise.txt";
+    std::string strMockedLandmarks   = "/home/dominik/workspace_catkin/src/vi_mapper/mocking/landmarks_clean_level2.txt";
 
     //ds get params
     setParametersNaive( argc, argv, strMode, strInfileMessageDump, strImageFolder, strMockedLandmarks );
@@ -245,13 +249,25 @@ int main( int argc, char **argv )
 
     if( 1 < uFrameCount )
     {
-        //ds generate full file name
-        const std::string strG2ODump( "/home/dominik/libs/g2o/bin/graphs/graph_" + CMiniTimer::getTimestamp( ) + ".g2o" );
+        //ds generate full file names
+        const std::string strG2ODumpComplete( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_uvdepthdisparity.g2o" );
+        const std::string strG2ODumpXYZ( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_xyz.g2o" );
+        const std::string strG2ODumpUVDepth( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_uvdepth.g2o" );
+        const std::string strG2ODumpUVDisparity( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_uvdisparity.g2o" );
+        const std::string strG2ODumpCOMBO( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_combo.g2o" );
 
         //ds dump file
-        cDetector.saveToG2O( strG2ODump );
+        cDetector.saveUVDepthOrDisparity( strG2ODumpComplete );
+        cDetector.saveXYZ( strG2ODumpXYZ );
+        cDetector.saveUVDepth( strG2ODumpUVDepth );
+        cDetector.saveUVDisparity( strG2ODumpUVDisparity );
+        cDetector.saveCOMBO( strG2ODumpCOMBO );
 
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODump.c_str( ) );
+        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpComplete.c_str( ) );
+        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpXYZ.c_str( ) );
+        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpUVDepth.c_str( ) );
+        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpUVDisparity.c_str( ) );
+        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpCOMBO.c_str( ) );
     }
 
     //ds if detector was not manually shut down
@@ -264,6 +280,18 @@ int main( int argc, char **argv )
     //ds exit
     std::printf( "(main) terminated: %s\n", argv[0] );
     std::fflush( stdout);
+    return 0;
+}
+
+inline int8_t sign( const float& p_fNumber )
+{
+    assert( 0.0 != p_fNumber );
+
+    if( 0.0 < p_fNumber ){ return 1; }
+    if( 0.0 > p_fNumber ){ return -1; }
+
+    //ds never gets called, just pleasing the compiler
+    assert( false );
     return 0;
 }
 
@@ -302,15 +330,36 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
-        //ds flip the z and y value for consistency with the world frame
-        vecLinearAcceleration[1] = -vecLinearAcceleration[1];
-        vecLinearAcceleration[2] = -vecLinearAcceleration[2];
+        //ds IMU messages are published with wrong signs (unsure about rotation)
+        vecLinearAcceleration.y( ) = -vecLinearAcceleration.y( );
+        vecLinearAcceleration.z( ) = -vecLinearAcceleration.z( );
+        //vecAngularVelocity.y( )    = -vecAngularVelocity.y( );
+        //vecAngularVelocity.z( )    = -vecAngularVelocity.z( );
+
+        //ds filter rotational noise
+        const double dAlpha = vecAngularVelocity.x( );
+        const double dBeta  = vecAngularVelocity.y( );
+        const double dGamma = vecAngularVelocity.z( );
+        const double dAbsoluteAlpha = std::fabs( dAlpha )-dAngularVelocityNoise;
+        const double dAbsoluteBeta  = std::fabs( dBeta )-dAngularVelocityNoise;
+        const double dAbsoluteGamma = std::fabs( dGamma )-dAngularVelocityNoise;
+
+        //ds noise free vector
+        Eigen::Vector3d vecAngularVelocityFiltered( Eigen::Vector3d::Zero( ) );
+
+        //ds update only if above zero
+        if( 0 < dAbsoluteAlpha ){ vecAngularVelocityFiltered.x( ) = sign( dAlpha )*dAbsoluteAlpha; }
+        if( 0 < dAbsoluteBeta ){ vecAngularVelocityFiltered.y( ) = sign( dBeta )*dAbsoluteBeta; }
+        if( 0 < dAbsoluteGamma ){ vecAngularVelocityFiltered.z( ) = sign( dGamma )*dAbsoluteGamma; }
+
+        //ds add to interpolator
+        //g_cInterpolator.addMeasurement( vecLinearAcceleration, vecAngularVelocity, dTimeSeconds );
 
         //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
         //vecLinearAcceleration[1] += 9.80665;
 
         //ds set message fields
-        msgIMU.setAngularVelocity( vecAngularVelocity );
+        msgIMU.setAngularVelocity( vecAngularVelocityFiltered );
         msgIMU.setLinearAcceleration( vecLinearAcceleration );
 
         //ds pump it into the synchronizer
@@ -335,6 +384,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
 
         //ds set image to message
         g_pActiveMessageCamera_0->setImage( matImage );
+        g_pActiveMessageCamera_0->untaint( );
     }
     else if( "IMAGE1" == strMessageType )
     {
@@ -355,6 +405,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
 
         //ds set image to message
         g_pActiveMessageCamera_1->setImage( matImage );
+        g_pActiveMessageCamera_1->untaint( );
     }
     else
     {

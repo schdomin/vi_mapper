@@ -27,8 +27,8 @@ private:
     const float m_fMatchingDistanceCutoff;
 
     //ds triangulation
-    const uint32_t m_uLimitedSearchRangeToLeft;
-    const uint32_t m_uLimitedSearchRangeToRight;
+    const uint32_t m_uLimitedSearchRangeToLEFT;
+    const uint32_t m_uLimitedSearchRangeToRIGHT;
     const uint32_t m_uLimitedSearchRange;
     const uint32_t m_uAdaptiveSteps;
 
@@ -39,6 +39,9 @@ public:
     const CPoint3DInCameraFrame getPointTriangulatedFull( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const;
     const CPoint3DInCameraFrame getPointTriangulatedLimited( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const;
     const CPoint3DInCameraFrame getPointTriangulatedAdaptive( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const;
+
+    const CMatchTriangulation getPointTriangulatedCompactInLEFT( const cv::Mat& p_matImageLEFT, const cv::KeyPoint& p_cKeyPointRIGHT, const CDescriptor& p_matReferenceDescriptorRIGHT ) const;
+    const CMatchTriangulation getPointTriangulatedCompactInRIGHT( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const;
 
     //ds testing
     const CPoint3DInCameraFrame getPointTriangulatedLimitedSVDLS( cv::Mat& p_matDisplayRIGHT, const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const;

@@ -73,7 +73,7 @@ src/optimization/CBridgeG2O.cpp)
 add_executable(stereo_detector_alberto_node src/runnable/stereo_detector_alberto_node.cpp src/core/CTrackerStereo.cpp ${SOURCEFILES})
 add_executable(stereo_detector_mocked src/runnable/stereo_detector_mocked.cpp src/core/CMockedTrackerStereo.cpp ${SOURCEFILES_MOCKED})
 #add_executable(test_depth src/runnable/test_depth.cpp ${SOURCEFILES})
-add_executable(stereo_detector_free src/runnable/stereo_detector_free.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
+add_executable(stereo_free src/runnable/stereo_free.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 #add_executable(republisher_node src/runnable/republisher_node.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
@@ -103,7 +103,7 @@ target_link_libraries(stereo_detector_mocked
 #                      ${catkin_LIBRARIES} 
 #                      ${OpenCV_LIBRARIES}
 #                      -fopenmp)
-target_link_libraries(stereo_detector_free 
+target_link_libraries(stereo_free 
                       ${catkin_LIBRARIES} 
                       ${OpenCV_LIBRARIES}     
                       ${G2O_OPENGL_HELPER_LIBRARY}

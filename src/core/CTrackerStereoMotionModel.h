@@ -36,13 +36,17 @@ private:
 
     //ds reference information
     uint64_t m_uFrameCount;
-    CPoint3DInWorldFrame m_vecTranslationLast;
-    double m_dTranslationDeltaForKeyFrame;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
     Eigen::Isometry3d m_matTransformationMotionWORLDtoIMU;
     Eigen::Isometry3d m_matTransformationIMULAST;
-    //double m_dTimestampLASTSeconds;
+    Eigen::Vector3d m_vecVelocityAngularLAST;
+    const double m_dMinimumDeltaTimestampSeconds;
+    double m_dTimestampLASTSeconds;
+    CPoint3DInWorldFrame m_vecTranslationLastKeyFrame;
+    double m_dTranslationDeltaForKeyFrameMetersSquaredNorm;
+    CPoint3DInWorldFrame m_vecPositionCurrent;
+    double m_dTranslationDeltaSquaredNormCurrent;
 
     //ds feature related
     //const uint32_t m_uKeyPointSize;
@@ -59,7 +63,6 @@ private:
     const double m_dMinimumDepthMeters;
     const double m_dMaximumDepthMeters;
 
-    //const CDetectorMonoTilewise m_cDetector;
     std::shared_ptr< CTriangulator > m_pTriangulator;
     CMatcherEpipolar m_cMatcherEpipolar;
 
@@ -97,6 +100,10 @@ public:
 
     void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
                          const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
+                         const txt_io::CIMUMessage& p_cIMU );
+
+    void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
+                         const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
                          const txt_io::CIMUMessage& p_cIMU,
                          const Eigen::Isometry3d& p_matTransformationIMU );
 
@@ -105,10 +112,25 @@ public:
     const uint32_t getPlaybackFrequencyHz( ) const { return std::lround( m_dFrequencyPlaybackHz ); }
 
     //ds postprocessing
-    void saveToG2O( const std::string& p_strOutfile ) const
+    void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
     {
-        //CBridgeG2O::saveXYZAndDisparity( p_strOutfile, *m_pStereoCamera, *m_vecLandmarks, m_vecLogMeasurementPoints );
         CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
+    }
+    void saveXYZ( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveXYZ( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
+    }
+    void saveUVDepth( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveUVDepth( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
+    }
+    void saveUVDisparity( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveUVDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
+    }
+    void saveCOMBO( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveCOMBO( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
     }
 
 //ds helpers
@@ -120,7 +142,7 @@ private:
                           const Eigen::Vector3d& p_vecAngularVelocity,
                           const Eigen::Vector3d& p_vecLinearAcceleration );
 
-    const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarksTriangulated( const uint64_t& p_uFrame,
+    const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const uint64_t& p_uFrame,
                                                       cv::Mat& p_matDisplay,
                                                       const cv::Mat& p_matImageLEFT,
                                                       const cv::Mat& p_matImageRIGHT,

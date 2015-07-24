@@ -5,7 +5,8 @@
 
 #include "vision/CMockedStereoCamera.h"
 #include "types/CLandmark.h"
-#include "optimization/CPositSolver.h"
+#include "optimization/CPositSolverProjection.h"
+#include "optimization/CPositSolverStereo.h"
 
 class CMockedMatcherEpipolar
 {
@@ -57,9 +58,14 @@ private:
 
     //ds internal
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
+    const uint8_t m_uMinimumPointsForPoseOptimization  = 5;
+    const uint8_t m_uMinimumInliersForPoseOptimization = 2;
+    const uint8_t m_uCapIterationsPoseOptimization     = 10;
+    const double m_dConvergenceDeltaPoseOptimization   = 1e-5;
 
     //ds debug logging
-    gtools::CPositSolver m_cSolverPose;
+    gtools::CPositSolverProjection m_cSolverPose;
+    gtools::CPositSolverStereo m_cSolverPoseSTEREO;
     std::FILE* m_pFileOdometryError;
     std::FILE* m_pFileEpipolarDetection;
 

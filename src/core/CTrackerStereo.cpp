@@ -141,9 +141,9 @@ CTrackerStereo::~CTrackerStereo( )
     for( const CLandmark* pLandmark: *m_vecLandmarks )
     {
         //ds compute errors
-        const double dErrorX = std::fabs( ( pLandmark->vecPointXYZCalibrated.x( )-pLandmark->vecPointXYZInitial.x( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.x( ) ) ) );
-        const double dErrorY = std::fabs( ( pLandmark->vecPointXYZCalibrated.y( )-pLandmark->vecPointXYZInitial.y( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.y( ) ) ) );
-        const double dErrorZ = std::fabs( ( pLandmark->vecPointXYZCalibrated.z( )-pLandmark->vecPointXYZInitial.z( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.z( ) ) ) );
+        const double dErrorX = std::fabs( ( pLandmark->vecPointXYZOptimized.x( )-pLandmark->vecPointXYZInitial.x( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.x( ) ) ) );
+        const double dErrorY = std::fabs( ( pLandmark->vecPointXYZOptimized.y( )-pLandmark->vecPointXYZInitial.y( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.y( ) ) ) );
+        const double dErrorZ = std::fabs( ( pLandmark->vecPointXYZOptimized.z( )-pLandmark->vecPointXYZInitial.z( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.z( ) ) ) );
         const double dErrorTotal = dErrorX + dErrorY + dErrorZ;
 
         //ds write final state to file before deleting
@@ -151,18 +151,18 @@ CTrackerStereo::~CTrackerStereo( )
                                                                               pLandmark->vecPointXYZInitial.x( ),
                                                                               pLandmark->vecPointXYZInitial.y( ),
                                                                               pLandmark->vecPointXYZInitial.z( ),
-                                                                              pLandmark->vecPointXYZCalibrated.x( ),
-                                                                              pLandmark->vecPointXYZCalibrated.y( ),
-                                                                              pLandmark->vecPointXYZCalibrated.z( ),
+                                                                              pLandmark->vecPointXYZOptimized.x( ),
+                                                                              pLandmark->vecPointXYZOptimized.y( ),
+                                                                              pLandmark->vecPointXYZOptimized.z( ),
                                                                               dErrorX,
                                                                               dErrorY,
                                                                               dErrorZ,
                                                                               dErrorTotal,
                                                                               pLandmark->getNumberOfMeasurements( ),
-                                                                              pLandmark->uCalibrations,
-                                                                              pLandmark->vecMeanMeasurement.x( ),
-                                                                              pLandmark->vecMeanMeasurement.y( ),
-                                                                              pLandmark->vecMeanMeasurement.z( ) );
+                                                                              pLandmark->uOptimizationsSuccessful,
+                                                                              pLandmark->vecPointXYZMean.x( ),
+                                                                              pLandmark->vecPointXYZMean.y( ),
+                                                                              pLandmark->vecPointXYZMean.z( ) );
 
         delete pLandmark;
     }
@@ -433,9 +433,9 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                 //ds log creation
                 std::fprintf( m_pFileLandmarkCreation, " %04lu |      %06lu | %6.2f %6.2f %6.2f : %6.2f | %6.2f %6.2f |  %6.2f  %6.2f |        %6.2f\n", p_uFrame,
                                                                                               cLandmark->uID,
-                                                                                              cLandmark->vecPointXYZCalibrated.x( ),
-                                                                                              cLandmark->vecPointXYZCalibrated.y( ),
-                                                                                              cLandmark->vecPointXYZCalibrated.z( ),
+                                                                                              cLandmark->vecPointXYZOptimized.x( ),
+                                                                                              cLandmark->vecPointXYZOptimized.y( ),
+                                                                                              cLandmark->vecPointXYZOptimized.z( ),
                                                                                               dDepthMeters,
                                                                                               ptLandmarkLEFT.x,
                                                                                               ptLandmarkLEFT.y,
@@ -548,17 +548,17 @@ void CTrackerStereo::_drawInfoBox( cv::Mat& p_matDisplay ) const
     {
         case ePlaybackStepwise:
         {
-            std::snprintf( chBuffer, 100, "[%04lu] STEPWISE | LANDMARKS: %2lu(%4lu) | KEYFRAMES: %1lu(%2lu) | POSES: %2lu", m_uFrameCount, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfActiveMeasurementPoints( ), m_cMatcherEpipolar.getNumberOfKeyFrames( ), m_vecLogMeasurementPoints.size( ) );
+            std::snprintf( chBuffer, 100, "[%04lu] STEPWISE | LANDMARKS: %2lu(%4lu) | KEYFRAMES: %1lu(%2lu) | POSES: %2lu", m_uFrameCount, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfDetectionPointsActive( ), m_cMatcherEpipolar.getNumberOfDetectionPointsTotal( ), m_vecLogMeasurementPoints.size( ) );
             break;
         }
         case ePlaybackBenchmark:
         {
-            std::snprintf( chBuffer, 100, "[%04lu] FPS %4.1f(BENCHMARK) | LANDMARKS: %2lu(%4lu) | KEYFRAMES: %1lu(%2lu) | POSES: %2lu", m_uFrameCount, m_dPreviousFrameRate, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfActiveMeasurementPoints( ), m_cMatcherEpipolar.getNumberOfKeyFrames( ), m_vecLogMeasurementPoints.size( ) );
+            std::snprintf( chBuffer, 100, "[%04lu] FPS %4.1f(BENCHMARK) | LANDMARKS: %2lu(%4lu) | KEYFRAMES: %1lu(%2lu) | POSES: %2lu", m_uFrameCount, m_dPreviousFrameRate, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfDetectionPointsActive( ), m_cMatcherEpipolar.getNumberOfDetectionPointsTotal( ), m_vecLogMeasurementPoints.size( ) );
             break;
         }
         case ePlaybackInteractive:
         {
-            std::snprintf( chBuffer, 100, "[%04lu] FPS %4.1f(%4.2f Hz) | LANDMARKS: %0lu(%4lu) | KEYFRAMES: %1lu(%2lu) | POSES: %2lu", m_uFrameCount, m_dPreviousFrameRate, m_dFrequencyPlaybackHz, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfActiveMeasurementPoints( ), m_cMatcherEpipolar.getNumberOfKeyFrames( ), m_vecLogMeasurementPoints.size( ) );
+            std::snprintf( chBuffer, 100, "[%04lu] FPS %4.1f(%4.2f Hz) | LANDMARKS: %0lu(%4lu) | KEYFRAMES: %1lu(%2lu) | POSES: %2lu", m_uFrameCount, m_dPreviousFrameRate, m_dFrequencyPlaybackHz, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfDetectionPointsActive( ), m_cMatcherEpipolar.getNumberOfDetectionPointsTotal( ), m_vecLogMeasurementPoints.size( ) );
             break;
         }
         default:

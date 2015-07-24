@@ -94,10 +94,25 @@ public:
     const uint32_t getPlaybackFrequencyHz( ) const { return std::lround( m_dFrequencyPlaybackHz ); }
 
     //ds postprocessing
-    void saveToG2O( const std::string& p_strOutfile ) const
+    void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
     {
-        //CBridgeG2O::saveXYZAndDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
         CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+    }
+    void saveXYZ( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveXYZ( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+    }
+    void saveUVDepth( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveUVDepth( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+    }
+    void saveUVDisparity( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveUVDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+    }
+    void saveCOMBO( const std::string& p_strOutfile ) const
+    {
+        CBridgeG2O::saveCOMBO( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
     }
 
 //ds helpers
@@ -109,7 +124,7 @@ private:
                           const Eigen::Vector3d& p_vecAngularVelocity,
                           const Eigen::Vector3d& p_vecLinearAcceleration );
 
-    const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarksTriangulated( const uint64_t& p_uFrame,
+    const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const uint64_t& p_uFrame,
                                                                                      cv::Mat& p_matDisplay,
                                                                                      cv::Mat& p_matDisplayTrajectory,
                                                                                      const cv::Point2d& p_ptPositionXY,

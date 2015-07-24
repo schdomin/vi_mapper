@@ -37,6 +37,7 @@ struct CMeasurementLandmark
     const cv::Point2d ptUVRIGHT;
     const CPoint3DInCameraFrame vecPointXYZLEFT;
     const CPoint3DInWorldFrame  vecPointXYZWORLD;
+    const CPoint3DInWorldFrame  vecPointXYZWORLDOptimized;
     const Eigen::Vector3d vecCameraPosition;
     //const Eigen::Matrix3d matPRotationWORLDtoLEFT;
     //const Eigen::Vector3d vecPTranslationWORLDtoLEFT;
@@ -47,6 +48,7 @@ struct CMeasurementLandmark
                           const cv::Point2d& p_ptUVRIGHT,
                           const CPoint3DInCameraFrame& p_vecPointXYZ,
                           const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
+                          const CPoint3DInWorldFrame& p_vecPointXYZWORLDOptimized,
                           const Eigen::Vector3d& p_vecCameraPosition,
                           //const Eigen::Matrix3d& p_matKRotation,
                           //const Eigen::Vector3d& p_vecKTranslation,
@@ -55,6 +57,7 @@ struct CMeasurementLandmark
                                                                       ptUVRIGHT( p_ptUVRIGHT ),
                                                                       vecPointXYZLEFT( p_vecPointXYZ ),
                                                                       vecPointXYZWORLD( p_vecPointXYZWORLD ),
+                                                                      vecPointXYZWORLDOptimized( p_vecPointXYZWORLDOptimized ),
                                                                       vecCameraPosition( p_vecCameraPosition ),
                                                                       //matPRotationWORLDtoLEFT( p_matKRotation ),
                                                                       //vecPTranslationWORLDtoLEFT( p_vecKTranslation ),
@@ -91,6 +94,26 @@ struct CMatchTracking
         //ds nothing to do
     }
     ~CMatchTracking( )
+    {
+        //ds nothing to do
+    }
+};
+
+struct CMatchTriangulation
+{
+    const CPoint3DInCameraFrame vecPointXYZCAMERA;
+    const cv::Point2f ptUVCAMERA;
+    const CDescriptor matDescriptorCAMERA;
+
+    CMatchTriangulation( const CPoint3DInCameraFrame& p_vecPointXYZCAMERA,
+                         const cv::Point2f& p_ptUVCAMERA,
+                         const CDescriptor& p_matDescriptorCAMERA ): vecPointXYZCAMERA( p_vecPointXYZCAMERA ),
+                                                                     ptUVCAMERA( p_ptUVCAMERA ),
+                                                                     matDescriptorCAMERA( p_matDescriptorCAMERA )
+    {
+        //ds nothing to do
+    }
+    ~CMatchTriangulation( )
     {
         //ds nothing to do
     }

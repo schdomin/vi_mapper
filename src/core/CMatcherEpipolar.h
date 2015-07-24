@@ -12,8 +12,19 @@
 class CMatcherEpipolar
 {
 
-//ds private structs
+//ds eigen memory alignment
+public:
+
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+//ds custom types
 private:
+
+    enum EImageSource
+    {
+        eImageLEFT,
+        eImageRIGHT
+    };
 
     struct CDetectionPoint
     {
@@ -35,17 +46,46 @@ private:
         }
     };
 
-    struct CMatchPoseOptimization
+    struct CMatchPoseOptimizationLEFT
     {
         CLandmark* pLandmark;
         const cv::KeyPoint cKeyPoint;
         const CDescriptor matDescriptor;
 
-        CMatchPoseOptimization( CLandmark* p_pLandmark, const cv::KeyPoint& p_cKeyPoint, const CDescriptor& p_matDescriptor ): pLandmark( p_pLandmark ), cKeyPoint( p_cKeyPoint ), matDescriptor( p_matDescriptor )
+        CMatchPoseOptimizationLEFT( CLandmark* p_pLandmark, const cv::KeyPoint& p_cKeyPoint, const CDescriptor& p_matDescriptor ): pLandmark( p_pLandmark ), cKeyPoint( p_cKeyPoint ), matDescriptor( p_matDescriptor )
         {
             //ds nothing to do
         }
-        ~CMatchPoseOptimization( )
+        ~CMatchPoseOptimizationLEFT( )
+        {
+            //ds nothing to do
+        }
+    };
+
+    struct CMatchPoseOptimizationSTEREO
+    {
+        CLandmark* pLandmark;
+        const CPoint3DInCameraFrame vecPointXYZLEFT;
+        const cv::Point2f ptUVLEFT;
+        const cv::Point2f ptUVRIGHT;
+        const CDescriptor matDescriptorLEFT;
+        const CDescriptor matDescriptorRIGHT;
+
+        CMatchPoseOptimizationSTEREO( CLandmark* p_pLandmark,
+                                      const CPoint3DInCameraFrame& p_vecPointXYZLEFT,
+                                      const cv::Point2f& p_ptUVLEFT,
+                                      const cv::Point2f& p_ptUVRIGHT,
+                                      const CDescriptor& p_matDescriptorLEFT,
+                                      const CDescriptor& p_matDescriptorRIGHT ): pLandmark( p_pLandmark ),
+                                                                                 vecPointXYZLEFT( p_vecPointXYZLEFT ),
+                                                                                 ptUVLEFT( p_ptUVLEFT ),
+                                                                                 ptUVRIGHT( p_ptUVRIGHT ),
+                                                                                 matDescriptorLEFT( p_matDescriptorLEFT ),
+                                                                                 matDescriptorRIGHT( p_matDescriptorRIGHT )
+        {
+            //ds nothing to do
+        }
+        ~CMatchPoseOptimizationSTEREO( )
         {
             //ds nothing to do
         }
@@ -54,7 +94,6 @@ private:
 //ds ctor/dtor
 public:
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTriangulator,
                       const std::shared_ptr< cv::FeatureDetector > p_pDetectorSingle,
                       const double& p_dMinimumDepthMeters,
@@ -95,10 +134,16 @@ private:
     const int32_t m_iSearchVMin;
     const int32_t m_iSearchVMax;
     const cv::Rect m_cSearchROI;
-    const int32_t m_iSearchBlockSizePoseOptimization;
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uRecursionLimitEpipolarLines;
-    const uint8_t m_uMinimumPointsForPoseOptimization;
+    UIDLandmark m_uNumberOfInvalidLandmarks;
+
+    //ds posit solving
+    const int32_t m_iSearchBlockSizePoseOptimization   = 20;
+    const uint8_t m_uMinimumPointsForPoseOptimization  = 25;
+    const uint8_t m_uMinimumInliersForPoseOptimization = 10;
+    const uint8_t m_uCapIterationsPoseOptimization     = 10;
+    const double m_dConvergenceDeltaPoseOptimization   = 1e-5;
 
     //ds debug logging
     //gtools::CPositSolver m_cSolverPose;
@@ -165,15 +210,11 @@ public:
                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
                                                                                                       const int32_t& p_iHalfLineLengthBase );
 
-    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksEssential( const uint64_t p_uFrame,
-                                                                                                      const cv::Mat& p_matImageLEFT,
-                                                                                                      const cv::Mat& p_matImageRIGHT,
-                                                                                                      const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
-                                                                                                      const int32_t& p_iHalfLineLengthBase );
+    const std::vector< CDetectionPoint >::size_type getNumberOfDetectionPointsActive( ) const{ return m_vecDetectionPointsActive.size( ); }
 
-    const std::vector< CDetectionPoint >::size_type getNumberOfActiveMeasurementPoints( ) const{ return m_vecDetectionPointsActive.size( ); }
+    const UIDDetectionPoint getNumberOfDetectionPointsTotal( ) const { return m_uAvailableDetectionPointID; }
 
-    const uint64_t getNumberOfKeyFrames( ) const{ return m_uAvailableDetectionPointID; }
+    const UIDLandmark getNumberOfInvalidLandmarks( ) const { return m_uNumberOfInvalidLandmarks; }
 
 private:
 
@@ -243,6 +284,10 @@ private:
                                    const CDescriptor& p_matDescriptorNew,
                                    const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                                    const MatrixProjection& p_matProjectionWORLDtoLEFT );
+    void _addMeasurementToLandmark( const uint64_t p_uFrame,
+                                    CMatchPoseOptimizationSTEREO& p_cMatchSTEREO,
+                                    const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                    const MatrixProjection& p_matProjectionWORLDtoLEFT );
 
     inline const double _getCurveX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const;
     inline const double _getCurveY( const Eigen::Vector3d& p_vecCoefficients, const double& p_dX ) const;

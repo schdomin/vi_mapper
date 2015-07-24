@@ -20,13 +20,17 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const uint32_t& p_uFrequen
                                                                            m_pCameraSTEREO( std::make_shared< CStereoCamera >( m_pCameraLEFT, m_pCameraRIGHT ) ),
 
                                                                            m_uFrameCount( 0 ),
-                                                                           m_vecTranslationLast( 1.0, 1.0, 1.0 ),
-                                                                           m_dTranslationDeltaForKeyFrame( 0.5 ),
-                                                                           m_matTransformationWORLDtoLEFTLAST( Eigen::Matrix4d( CConfigurationCamera::matTransformationIntialAlberto ).transpose( ) ),
+                                                                           m_matTransformationWORLDtoLEFTLAST( Eigen::Matrix4d( CConfigurationCamera::matTransformationIntialStandard ).transpose( ) ),
                                                                            m_matTransformationLEFTLASTtoLEFTNOW( Eigen::Matrix4d::Identity( ) ),
                                                                            m_matTransformationMotionWORLDtoIMU( m_pCameraLEFT->m_matTransformationToIMU*m_matTransformationWORLDtoLEFTLAST ),
                                                                            m_matTransformationIMULAST( Eigen::Matrix4d::Identity( ) ),
-                                                                           //m_dTimestampLASTSeconds( 0.0 ),
+                                                                           m_vecVelocityAngularLAST( Eigen::Vector3d::Zero( ) ),
+                                                                           m_dMinimumDeltaTimestampSeconds( 0.075 ),
+                                                                           m_dTimestampLASTSeconds( 0.0 ),
+                                                                           m_vecTranslationLastKeyFrame( m_matTransformationWORLDtoLEFTLAST.inverse( ).translation( ) ),
+                                                                           m_dTranslationDeltaForKeyFrameMetersSquaredNorm( 0.25 ),
+                                                                           m_vecPositionCurrent( 0.0, 0.0, 0.0 ),
+                                                                           m_dTranslationDeltaSquaredNormCurrent( 0.0 ),
 
                                                                            /*//ds ORB
                                                                            m_pDetector( std::make_shared< cv::OrbFeatureDetector >( 100, 1.2, 8, 25, 0, 2, cv::ORB::FAST_SCORE, 25 ) ),
@@ -37,19 +41,18 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const uint32_t& p_uFrequen
 
                                                                            //ds BRIEF (calibrated 2015-05-31)
                                                                            // m_uKeyPointSize( 7 ),
-                                                                           m_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 20.0, 7, true ) ),
+                                                                           m_pDetector( std::make_shared< cv::GoodFeaturesToTrackDetector >( 100, 0.01, 7.0, 7, true ) ),
                                                                            m_pExtractor( std::make_shared< cv::BriefDescriptorExtractor >( 64 ) ),
                                                                            m_pMatcher( std::make_shared< cv::BFMatcher >( cv::NORM_HAMMING ) ),
                                                                            m_dMatchingDistanceCutoffTriangulation( 100.0 ),
-                                                                           m_dMatchingDistanceCutoffPoseOptimization( 50.0 ),
+                                                                           m_dMatchingDistanceCutoffPoseOptimization( 60.0 ),
                                                                            m_dMatchingDistanceCutoffTracking( 40.0 ),
 
                                                                            m_uMaximumFailedSubsequentTrackingsPerLandmark( 5 ),
-                                                                           m_uVisibleLandmarksMinimum( 10 ),
+                                                                           m_uVisibleLandmarksMinimum( 50 ),
                                                                            m_dMinimumDepthMeters( 0.05 ),
                                                                            m_dMaximumDepthMeters( 100.0 ),
 
-                                                                           //m_cDetector( m_pCameraLEFT, m_pDetector ),
                                                                            m_pTriangulator( std::make_shared< CTriangulator >( m_pCameraSTEREO, m_pExtractor, m_pMatcher, m_dMatchingDistanceCutoffTriangulation ) ),
                                                                            m_cMatcherEpipolar( m_pTriangulator, m_pDetector, m_dMinimumDepthMeters, m_dMaximumDepthMeters, m_dMatchingDistanceCutoffPoseOptimization, m_dMatchingDistanceCutoffTracking, m_uMaximumFailedSubsequentTrackingsPerLandmark ),
 
@@ -76,8 +79,8 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const uint32_t& p_uFrequen
     m_pFileTrajectory       = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/trajectory.txt", "w" );
 
     //ds dump file format
-    std::fprintf( m_pFileLandmarkCreation, "FRAME | ID_LANDMARK |      X      Y      Z :  DEPTH | U_LEFT V_LEFT | U_RIGHT V_RIGHT | KEYPOINT_SIZE\n" );
-    std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | MEASUREMENTS | CALIBRATIONS | MEAN_X MEAN_Y MEAN_Z\n" );
+    std::fprintf( m_pFileLandmarkCreation, "ID_FRAME | ID_LANDMARK |      X      Y      Z :  DEPTH | U_LEFT V_LEFT | U_RIGHT V_RIGHT | KEYPOINT_SIZE\n" );
+    std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | MEASUREMENTS | OPTIMIZATIONS | MEAN_X MEAN_Y MEAN_Z\n" );
     std::fprintf( m_pFileTrajectory, "ID_FRAME |      X      Y      Z | QUAT_X QUAT_Y QUAT_Z QUAT_W\n" );
 
     //ds initialize reference frames with black images
@@ -103,7 +106,8 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const uint32_t& p_uFrequen
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) descriptor size: %i bytes\n", m_pExtractor->descriptorSize( ) );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) initial position: \n\n" );
     std::cout << m_matTransformationWORLDtoLEFTLAST.inverse( ).matrix( ) << std::endl;
-    std::printf( "\n<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) instance allocated\n" );
+    std::printf( "\n<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) minimum timestamp delta (IMU): %f\n", m_dMinimumDeltaTimestampSeconds );
+    std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) instance allocated\n" );
     CLogger::closeBox( );
 }
 
@@ -113,28 +117,28 @@ CTrackerStereoMotionModel::~CTrackerStereoMotionModel( )
     for( const CLandmark* pLandmark: *m_vecLandmarks )
     {
         //ds compute errors
-        const double dErrorX = std::fabs( ( pLandmark->vecPointXYZCalibrated.x( )-pLandmark->vecPointXYZInitial.x( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.x( ) ) ) );
-        const double dErrorY = std::fabs( ( pLandmark->vecPointXYZCalibrated.y( )-pLandmark->vecPointXYZInitial.y( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.y( ) ) ) );
-        const double dErrorZ = std::fabs( ( pLandmark->vecPointXYZCalibrated.z( )-pLandmark->vecPointXYZInitial.z( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.z( ) ) ) );
+        const double dErrorX = std::fabs( ( pLandmark->vecPointXYZOptimized.x( )-pLandmark->vecPointXYZInitial.x( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.x( ) ) ) );
+        const double dErrorY = std::fabs( ( pLandmark->vecPointXYZOptimized.y( )-pLandmark->vecPointXYZInitial.y( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.y( ) ) ) );
+        const double dErrorZ = std::fabs( ( pLandmark->vecPointXYZOptimized.z( )-pLandmark->vecPointXYZInitial.z( ) )/( 1.0+std::fabs( pLandmark->vecPointXYZInitial.z( ) ) ) );
         const double dErrorTotal = dErrorX + dErrorY + dErrorZ;
 
         //ds write final state to file before deleting
-        std::fprintf( m_pFileLandmarkFinal, "     %06lu |    %6.2f    %6.2f    %6.2f |  %6.2f  %6.2f  %6.2f |   %5.2f   %5.2f   %5.2f       %5.2f |       %06lu |       %06u | %6.2f %6.2f %6.2f\n", pLandmark->uID,
+        std::fprintf( m_pFileLandmarkFinal, "     %06lu |    %6.2f    %6.2f    %6.2f |  %6.2f  %6.2f  %6.2f |   %5.2f   %5.2f   %5.2f       %5.2f |       %06lu |        %06u | %6.2f %6.2f %6.2f\n", pLandmark->uID,
                                                                               pLandmark->vecPointXYZInitial.x( ),
                                                                               pLandmark->vecPointXYZInitial.y( ),
                                                                               pLandmark->vecPointXYZInitial.z( ),
-                                                                              pLandmark->vecPointXYZCalibrated.x( ),
-                                                                              pLandmark->vecPointXYZCalibrated.y( ),
-                                                                              pLandmark->vecPointXYZCalibrated.z( ),
+                                                                              pLandmark->vecPointXYZOptimized.x( ),
+                                                                              pLandmark->vecPointXYZOptimized.y( ),
+                                                                              pLandmark->vecPointXYZOptimized.z( ),
                                                                               dErrorX,
                                                                               dErrorY,
                                                                               dErrorZ,
                                                                               dErrorTotal,
                                                                               pLandmark->getNumberOfMeasurements( ),
-                                                                              pLandmark->uCalibrations,
-                                                                              pLandmark->vecMeanMeasurement.x( ),
-                                                                              pLandmark->vecMeanMeasurement.y( ),
-                                                                              pLandmark->vecMeanMeasurement.z( ) );
+                                                                              pLandmark->uOptimizationsSuccessful,
+                                                                              pLandmark->vecPointXYZMean.x( ),
+                                                                              pLandmark->vecPointXYZMean.y( ),
+                                                                              pLandmark->vecPointXYZMean.z( ) );
 
         delete pLandmark;
     }
@@ -145,6 +149,52 @@ CTrackerStereoMotionModel::~CTrackerStereoMotionModel( )
     std::fclose( m_pFileTrajectory );
 
     std::printf( "<CTrackerStereoMotionModel>(~CTrackerStereoMotionModel) instance deallocated\n" );
+}
+
+void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
+                                                const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
+                                                const txt_io::CIMUMessage& p_cIMU )
+{
+    //ds flush all output
+    std::fflush( stdout );
+
+    //ds preprocessed images
+    cv::Mat matPreprocessedLEFT( p_pImageLEFT->image( ) );
+    cv::Mat matPreprocessedRIGHT( p_pImageRIGHT->image( ) );
+
+    //ds preprocess images
+    cv::equalizeHist( p_pImageLEFT->image( ), matPreprocessedLEFT );
+    cv::equalizeHist( p_pImageRIGHT->image( ), matPreprocessedRIGHT );
+    m_pCameraSTEREO->undistortAndrectify( matPreprocessedLEFT, matPreprocessedRIGHT );
+
+    //ds current timestamp
+    const double dTimestampSeconds      = p_cIMU.timestamp( );
+    const double dDeltaTimestampSeconds = dTimestampSeconds - m_dTimestampLASTSeconds;
+
+    assert( 0 < dDeltaTimestampSeconds );
+
+    const Eigen::Vector3d vecAngularVelocity( p_cIMU.getAngularVelocity( ) );
+
+    //ds if the delta is acceptable
+    if( m_dMinimumDeltaTimestampSeconds > dDeltaTimestampSeconds )
+    {
+        //ds integrate imu input for rotation only
+        m_matTransformationLEFTLASTtoLEFTNOW.linear( ) = m_pCameraLEFT->m_matTransformationFromIMU.linear( )*CMiniVisionToolbox::fromOrientationRodrigues( static_cast< Eigen::Vector3d >( dDeltaTimestampSeconds*m_vecVelocityAngularLAST ) );
+    }
+    else
+    {
+        std::printf( "<CTrackerStereoMotionModel>(receivevDataVI) unable to use IMU input, timestamp delta: %4.2fs > %4.2fs \n", dDeltaTimestampSeconds, m_dMinimumDeltaTimestampSeconds );
+    }
+
+    //ds process images (fed with IMU prior pose)
+    _trackLandmarks( matPreprocessedLEFT, matPreprocessedRIGHT, m_matTransformationLEFTLASTtoLEFTNOW*m_matTransformationWORLDtoLEFTLAST, vecAngularVelocity, p_cIMU.getLinearAcceleration( ) );
+
+    //ds update reference
+    m_dTimestampLASTSeconds  = dTimestampSeconds;
+    m_vecVelocityAngularLAST = vecAngularVelocity;
+
+    //ds flush all output
+    std::fflush( stdout );
 }
 
 void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
@@ -207,23 +257,23 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     m_cMatcherEpipolar.resetVisibilityActiveLandmarks( );
 
     //ds get the optimized pose
-    const Eigen::Isometry3d matTransformationWORLDtoLEFT( m_cMatcherEpipolar.getPoseOptimizedLEFT( m_uFrameCount, matDisplayLEFT, p_matImageLEFT, p_matImageRIGHT, p_matTransformationEstimateWORLDtoLEFT ) );
+    //const Eigen::Isometry3d matTransformationWORLDtoLEFT( m_cMatcherEpipolar.getPoseOptimizedLEFT( m_uFrameCount, matDisplayLEFT, p_matImageLEFT, p_matImageRIGHT, p_matTransformationEstimateWORLDtoLEFT ) );
+    const Eigen::Isometry3d matTransformationWORLDtoLEFT( m_cMatcherEpipolar.getPoseOptimizedSTEREO( m_uFrameCount, matDisplayLEFT, matDisplayRIGHT, p_matImageLEFT, p_matImageRIGHT, p_matTransformationEstimateWORLDtoLEFT ) );
     const Eigen::Isometry3d matTransformationLEFTtoWORLD( matTransformationWORLDtoLEFT.inverse( ) );
 
 
 
     //ds current translation
-    const Eigen::Vector3d vecTranslationCurrent( matTransformationLEFTtoWORLD.translation( ) );
+    m_vecPositionCurrent = matTransformationLEFTtoWORLD.translation( );
     const Eigen::Quaterniond quatOrientation( matTransformationLEFTtoWORLD.linear( ) );
-    const cv::Point2d ptPosition( vecTranslationCurrent.x( ), vecTranslationCurrent.y( ) );
-    const Eigen::Vector3d vecTranslationMotionIMU( m_matTransformationMotionWORLDtoIMU.inverse( ).translation( ) );
-    const cv::Point2d ptPositionMotionIMU( vecTranslationMotionIMU.x( ), vecTranslationMotionIMU.y( ) );
+    //const Eigen::Vector3d vecTranslationMotionIMU( m_matTransformationMotionWORLDtoIMU.inverse( ).translation( ) );
+    //const cv::Point2d ptPositionMotionIMU( vecTranslationMotionIMU.x( ), vecTranslationMotionIMU.y( ) );
 
-    std::fprintf( m_pFileTrajectory, "    %04lu | %6.2f %6.2f %6.2f | %6.3f %6.3f %6.3f %6.3f\n", m_uFrameCount, vecTranslationCurrent.x( ), vecTranslationCurrent.y( ), vecTranslationCurrent.z( ), quatOrientation.x( ), quatOrientation.y( ), quatOrientation.z( ), quatOrientation.w( ) );
+    std::fprintf( m_pFileTrajectory, "    %04lu | %6.2f %6.2f %6.2f | %6.3f %6.3f %6.3f %6.3f\n", m_uFrameCount, m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), quatOrientation.x( ), quatOrientation.y( ), quatOrientation.z( ), quatOrientation.w( ) );
 
     //ds draw position on trajectory mat
-    cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+ptPosition.x*10, m_uOffsetTrajectoryV-ptPosition.y*10 ), 2, CColorCodeBGR( 175, 175, 175 ), -1 );
-    cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+ptPositionMotionIMU.x*10, m_uOffsetTrajectoryV-ptPositionMotionIMU.y*10 ), 2, CColorCodeBGR( 175, 175, 255 ), -1 );
+    cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+m_vecPositionCurrent.x( )*10, m_uOffsetTrajectoryV-m_vecPositionCurrent.y( )*10 ), 2, CColorCodeBGR( 175, 175, 175 ), -1 );
+    //cv::circle( m_matTrajectoryXY, cv::Point2d( m_uOffsetTrajectoryU+ptPositionMotionIMU.x*10, m_uOffsetTrajectoryV-ptPositionMotionIMU.y*10 ), 2, CColorCodeBGR( 175, 175, 255 ), -1 );
 
 
 
@@ -240,17 +290,27 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     for( const CMeasurementLandmark* pMeasurement: *vecVisibleLandmarks )
     {
         //ds compute green brightness based on depth (further away -> darker)
-        uint8_t uGreenValue = 255-std::sqrt( pMeasurement->vecPointXYZLEFT.z( ) )*15;
+        uint8_t uGreenValue = 255-std::sqrt( pMeasurement->vecPointXYZLEFT.z( ) )*20;
         cv::circle( matDisplayLEFT, pMeasurement->ptUVLEFT, 2, CColorCodeBGR( 0, uGreenValue, 0 ), -1 );
         cv::circle( matDisplayRIGHT, pMeasurement->ptUVRIGHT, 2, CColorCodeBGR( 0, uGreenValue, 0 ), -1 );
+
+        //ds get 3d position in current camera frame
+        const CPoint3DInCameraFrame vecXYZLEFT( matTransformationWORLDtoLEFT*pMeasurement->vecPointXYZWORLDOptimized );
+
+        //ds also draw reprojections
+        cv::circle( matDisplayLEFT, m_pCameraLEFT->getProjection( vecXYZLEFT ), 6, CColorCodeBGR( 0, uGreenValue, 0 ), 1 );
+        cv::circle( matDisplayRIGHT, m_pCameraRIGHT->getProjection( vecXYZLEFT ), 6, CColorCodeBGR( 0, uGreenValue, 0 ), 1 );
     }
 
 
 
+    //ds compute delta
+    m_dTranslationDeltaSquaredNormCurrent = ( m_vecPositionCurrent-m_vecTranslationLastKeyFrame ).squaredNorm( );
+
     //ds add to data structure if delta is sufficiently high
-    if( m_dTranslationDeltaForKeyFrame < ( vecTranslationCurrent-m_vecTranslationLast ).squaredNorm( ) && m_uVisibleLandmarksMinimum <= m_uNumberofLastVisibleLandmarks )
+    if( m_dTranslationDeltaForKeyFrameMetersSquaredNorm < m_dTranslationDeltaSquaredNormCurrent && m_uVisibleLandmarksMinimum <= m_uNumberofLastVisibleLandmarks )
     {
-        m_vecTranslationLast = vecTranslationCurrent;
+        m_vecTranslationLastKeyFrame = m_vecPositionCurrent;
         m_vecKeyFrames.push_back( CKeyFrame( matTransformationLEFTtoWORLD, p_vecLinearAcceleration.normalized( ), vecVisibleLandmarks ) );
         //std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) stashed measurement %lu with landmarks (%lu)\n", m_vecLogMeasurementPoints.size( ), vecVisibleLandmarks->size( ) );
     }
@@ -273,7 +333,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         }
 
         //ds detect landmarks
-        const std::shared_ptr< std::vector< CLandmark* > > vecNewLandmarks( _getNewLandmarksTriangulated( m_uFrameCount, m_matDisplayLowerReference, p_matImageLEFT, p_matImageRIGHT, matTransformationLEFTtoWORLD, matMaskDetection ) );
+        const std::shared_ptr< std::vector< CLandmark* > > vecNewLandmarks( _getNewLandmarks( m_uFrameCount, m_matDisplayLowerReference, p_matImageLEFT, p_matImageRIGHT, matTransformationLEFTtoWORLD, matMaskDetection ) );
 
         //ds add to permanent reference holder
         m_vecLandmarks->insert( m_vecLandmarks->end( ), vecNewLandmarks->begin( ), vecNewLandmarks->end( ) );
@@ -287,13 +347,13 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
 
 
     cv::Mat matTrajectoryXYTemporary( m_matTrajectoryXY.clone( ) );
-    cv::circle( matTrajectoryXYTemporary, cv::Point2d( m_uOffsetTrajectoryU+ptPosition.x*10, m_uOffsetTrajectoryV-ptPosition.y*10 ), 2, CColorCodeBGR( 255, 0, 0 ), -1 );
-    cv::circle( matTrajectoryXYTemporary, cv::Point2d( m_uOffsetTrajectoryU+ptPositionMotionIMU.x*10, m_uOffsetTrajectoryV-ptPositionMotionIMU.y*10 ), 10, CColorCodeBGR( 0, 0, 255 ), 1 );
+    cv::circle( matTrajectoryXYTemporary, cv::Point2d( m_uOffsetTrajectoryU+m_vecPositionCurrent.x( )*10, m_uOffsetTrajectoryV-m_vecPositionCurrent.y( )*10 ), 2, CColorCodeBGR( 255, 0, 0 ), -1 );
+    //cv::circle( matTrajectoryXYTemporary, cv::Point2d( m_uOffsetTrajectoryU+ptPositionMotionIMU.x*10, m_uOffsetTrajectoryV-ptPositionMotionIMU.y*10 ), 10, CColorCodeBGR( 0, 0, 255 ), 1 );
 
     //ds build display mat
-    _drawInfoBox( matDisplayLEFT );
     cv::Mat matDisplayUpper = cv::Mat( m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
     cv::hconcat( matDisplayLEFT, matDisplayRIGHT, matDisplayUpper );
+    _drawInfoBox( matDisplayUpper );
     cv::Mat matDisplayComplete = cv::Mat( 2*m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
     cv::vconcat( matDisplayUpper, m_matDisplayLowerReference, matDisplayComplete );
 
@@ -344,7 +404,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     m_matTransformationWORLDtoLEFTLAST   = matTransformationWORLDtoLEFT;
 }
 
-const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereoMotionModel::_getNewLandmarksTriangulated( const uint64_t& p_uFrame,
+const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereoMotionModel::_getNewLandmarks( const uint64_t& p_uFrame,
                                                                                      cv::Mat& p_matDisplay,
                                                                                      const cv::Mat& p_matImageLEFT,
                                                                                      const cv::Mat& p_matImageRIGHT,
@@ -424,11 +484,11 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereoMotionModel::_g
                                                      p_uFrame ) );
 
                 //ds log creation
-                std::fprintf( m_pFileLandmarkCreation, " %04lu |      %06lu | %6.2f %6.2f %6.2f : %6.2f | %6.2f %6.2f |  %6.2f  %6.2f |        %6.2f\n", p_uFrame,
+                std::fprintf( m_pFileLandmarkCreation, "    %04lu |      %06lu | %6.2f %6.2f %6.2f : %6.2f | %6.2f %6.2f |  %6.2f  %6.2f |        %6.2f\n", p_uFrame,
                                                                                               cLandmark->uID,
-                                                                                              cLandmark->vecPointXYZCalibrated.x( ),
-                                                                                              cLandmark->vecPointXYZCalibrated.y( ),
-                                                                                              cLandmark->vecPointXYZCalibrated.z( ),
+                                                                                              cLandmark->vecPointXYZOptimized.x( ),
+                                                                                              cLandmark->vecPointXYZOptimized.y( ),
+                                                                                              cLandmark->vecPointXYZOptimized.z( ),
                                                                                               dDepthMeters,
                                                                                               ptLandmarkLEFT.x,
                                                                                               ptLandmarkLEFT.y,
@@ -535,23 +595,38 @@ void CTrackerStereoMotionModel::_updateFrameRateForInfoBox( const uint32_t& p_uF
 
 void CTrackerStereoMotionModel::_drawInfoBox( cv::Mat& p_matDisplay ) const
 {
-    char chBuffer[100];
+    char chBuffer[512];
 
     switch( m_eMode )
     {
         case ePlaybackStepwise:
         {
-            std::snprintf( chBuffer, 100, "[%04lu] STEPWISE | LANDMARKS: %2lu(%4lu) | DETECTIONS: %1lu(%2lu) | KEYFRAMES: %2lu", m_uFrameCount, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfActiveMeasurementPoints( ), m_cMatcherEpipolar.getNumberOfKeyFrames( ), m_vecKeyFrames.size( ) );
+            std::snprintf( chBuffer, 512, "[%04lu] STEPWISE | X: %5.1f Y: %5.1f Z: %5.1f DELTA: %4.2f | LANDMARKS: %3lu(%4lu) INVALID: %3lu | DETECTIONS: %1lu(%2lu) | KEYFRAMES: %2lu(%2lu)",
+                           m_uFrameCount,
+                           m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), m_dTranslationDeltaSquaredNormCurrent,
+                           m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfInvalidLandmarks( ),
+                           m_cMatcherEpipolar.getNumberOfDetectionPointsActive( ), m_cMatcherEpipolar.getNumberOfDetectionPointsTotal( ),
+                           m_vecKeyFrames.size( ), m_vecKeyFrames.size( ) );
             break;
         }
         case ePlaybackBenchmark:
         {
-            std::snprintf( chBuffer, 100, "[%04lu] FPS %4.1f(BENCHMARK) | LANDMARKS: %2lu(%4lu) | DETECTIONS: %1lu(%2lu) | KEYFRAMES: %2lu", m_uFrameCount, m_dPreviousFrameRate, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfActiveMeasurementPoints( ), m_cMatcherEpipolar.getNumberOfKeyFrames( ), m_vecKeyFrames.size( ) );
+            std::snprintf( chBuffer, 512, "[%04lu] FPS %4.1f(BENCHMARK) | X: %5.1f Y: %5.1f Z: %5.1f DELTA: %4.2f | LANDMARKS: %3lu(%4lu) INVALID: %3lu | DETECTIONS: %1lu(%2lu) | KEYFRAMES: %2lu(%2lu)",
+                           m_uFrameCount, m_dPreviousFrameRate,
+                           m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), m_dTranslationDeltaSquaredNormCurrent,
+                           m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfInvalidLandmarks( ),
+                           m_cMatcherEpipolar.getNumberOfDetectionPointsActive( ), m_cMatcherEpipolar.getNumberOfDetectionPointsTotal( ),
+                           m_vecKeyFrames.size( ), m_vecKeyFrames.size( ) );
             break;
         }
         case ePlaybackInteractive:
         {
-            std::snprintf( chBuffer, 100, "[%04lu] FPS %4.1f(%4.2f Hz) | LANDMARKS: %0lu(%4lu) | DETECTIONS: %1lu(%2lu) | KEYFRAMES: %2lu", m_uFrameCount, m_dPreviousFrameRate, m_dFrequencyPlaybackHz, m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfActiveMeasurementPoints( ), m_cMatcherEpipolar.getNumberOfKeyFrames( ), m_vecKeyFrames.size( ) );
+            std::snprintf( chBuffer, 512, "[%04lu] FPS %4.1f(%4.2f Hz) | X: %5.1f Y: %5.1f Z: %5.1f DELTA: %4.2f | LANDMARKS: %3lu(%4lu) INVALID: %3lu | DETECTIONS: %1lu(%2lu) | KEYFRAMES: %2lu(%2lu)",
+                           m_uFrameCount, m_dPreviousFrameRate, m_dFrequencyPlaybackHz,
+                           m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), m_dTranslationDeltaSquaredNormCurrent,
+                           m_uNumberofLastVisibleLandmarks, m_vecLandmarks->size( ), m_cMatcherEpipolar.getNumberOfInvalidLandmarks( ),
+                           m_cMatcherEpipolar.getNumberOfDetectionPointsActive( ), m_cMatcherEpipolar.getNumberOfDetectionPointsTotal( ),
+                           m_vecKeyFrames.size( ), m_vecKeyFrames.size( ) );
             break;
         }
         default:
@@ -562,6 +637,6 @@ void CTrackerStereoMotionModel::_drawInfoBox( cv::Mat& p_matDisplay ) const
     }
 
 
-    p_matDisplay( cv::Rect( 0, 0, m_pCameraLEFT->m_iWidthPixel, 17 ) ).setTo( CColorCodeBGR( 0, 0, 0 ) );
+    p_matDisplay( cv::Rect( 0, 0, 2*m_pCameraSTEREO->m_uPixelWidth, 17 ) ).setTo( CColorCodeBGR( 0, 0, 0 ) );
     cv::putText( p_matDisplay, chBuffer , cv::Point2i( 2, 12 ), cv::FONT_HERSHEY_PLAIN, 0.8, CColorCodeBGR( 0, 0, 255 ) );
 }

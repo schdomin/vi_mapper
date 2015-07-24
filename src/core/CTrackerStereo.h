@@ -16,10 +16,14 @@
 class CTrackerStereo
 {
 
-//ds ctor/dtor
+//ds eigen memory alignment
 public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+//ds ctor/dtor
+public:
+
     CTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
                     const EPlaybackMode& p_eMode,
                     const uint32_t& p_uWaitKeyTimeout = 1 );
