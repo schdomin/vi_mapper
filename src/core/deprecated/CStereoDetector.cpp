@@ -525,7 +525,7 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
         const Eigen::Matrix3d matEssential( CMiniVisionToolbox::getEssential( std::get< 4 >( *vecReferencePoint ), p_matCurrentTransformation ) );
 
         //ds get normalized reference point
-        const Eigen::Vector3d vecReference( m_cCameraLEFT.getHomogenized( std::get< 0 >( *vecReferencePoint ) ) );
+        const Eigen::Vector3d vecReference( m_cCameraLEFT.getNormalHomogenized( std::get< 0 >( *vecReferencePoint ) ) );
 
         //ds compute the projection of the point (line) in the current frame (working in normalized coordinates)
         const Eigen::Vector3d vecCoefficients( matEssential*vecReference );
@@ -533,7 +533,7 @@ void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry
         //std::printf( "<CSimpleFeatureDetector>(_drawEpisubsequentLine) curve equation: f(x) = %fx + %f\n", -vecCoefficients(0)/vecCoefficients(1), -vecCoefficients(2)/vecCoefficients(1) );
 
         //ds compute maximum and minimum points (from top to bottom line)
-        const Eigen::Vector3d vecReferenceLastDetection( m_cCameraLEFT.getHomogenized( std::get< 6 >( *vecReferencePoint ) ) );
+        const Eigen::Vector3d vecReferenceLastDetection( m_cCameraLEFT.getNormalHomogenized( std::get< 6 >( *vecReferencePoint ) ) );
         const double dLimitXMinimum( vecReferenceLastDetection(0)-p_dLineLength );
         const double dLimitXMaximum( vecReferenceLastDetection(0)+p_dLineLength );
         double dYMinimum( vecReferenceLastDetection(1)-p_dLineLength );//m_cCameraLEFT.m_prRangeHeightNormalized.first );

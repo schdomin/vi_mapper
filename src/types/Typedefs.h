@@ -29,6 +29,9 @@ typedef uint64_t        UIDDetectionPoint;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
 typedef Eigen::Vector3d CLinearAccelerationInIMUFrame;
+typedef Eigen::Vector3d CLinearAccelerationInCameraFrame;
+typedef Eigen::Vector3d CAngularVelocityInIMUFrame;
+typedef Eigen::Vector3d CAngularVelocityInCameraFrame;
 
 struct CMeasurementLandmark
 {

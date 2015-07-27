@@ -13,6 +13,7 @@
 #include "utility/CStack.h"
 #include "core/CTrackerStereoMotionModel.h"
 #include "utility/CMiniTimer.h"
+#include "exceptions/CExceptionEndOfFile.h"
 //#include "types/CIMUInterpolator.h"
 
 //ds data vectors
@@ -31,11 +32,7 @@ uint64_t g_uFrameIDCamera_1 = 0;
 //ds initialize statics
 std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::vec_tmStart;
 
-const double dAngularVelocityNoise = 0.01;
-
-//ds nasty ghastly hacky function
-inline int8_t sign( const float& p_fNumber );
-inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
+inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder );
 
 //ds command line parsing (setting params IN/OUT)
 void setParametersNaive( const int& p_iArgc,
@@ -93,8 +90,6 @@ int main( int argc, char **argv )
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
 
     //ds internals
-    uint32_t uFrequencyPlaybackHz( 100 );
-    uint32_t uSleepMicroseconds( ( 1.0/uFrequencyPlaybackHz )*1e6 );
     uint32_t uWaitKeyTimeout( 1 );
 
     //ds adjust depending on mode
@@ -102,19 +97,21 @@ int main( int argc, char **argv )
     {
         case ePlaybackStepwise:
         {
-            uSleepMicroseconds = 0;
             uWaitKeyTimeout    = 0;
             break;
         }
         case ePlaybackBenchmark:
         {
-            uSleepMicroseconds = 0;
             uWaitKeyTimeout    = 1;
             break;
         }
         default:
         {
-            break;
+            //ds exit
+            std::printf( "(main) interactive mode not supported, aborting\n" );
+            std::printf( "(main) terminated: %s\n", argv[0] );
+            std::fflush( stdout);
+            return 0;
         }
     }
 
@@ -123,101 +120,102 @@ int main( int argc, char **argv )
     std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
     std::printf( "(main) uImageCols (width)   := '%u'\n", uImageCols );
     std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
-    std::printf( "(main) uFrequencyPlaybackHz := '%u'\n", uFrequencyPlaybackHz );
-    std::printf( "(main) uSleepMicroseconds   := '%u'\n", uSleepMicroseconds );
     std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
     std::printf( "(main) strImageFolder       := '%s'\n", strImageFolder.c_str( ) );
     std::fflush( stdout );
     CLogger::closeBox( );
 
     //ds feature detector
-    CTrackerStereoMotionModel cDetector( uFrequencyPlaybackHz, eMode, uWaitKeyTimeout );
+    CTrackerStereoMotionModel cDetector( eMode, uWaitKeyTimeout );
 
     //ds get start time
     const uint64_t uToken( CMiniTimer::tic( ) );
 
-    //ds playback the dump
-    while( ifMessages.good( ) && ros::ok( ) && !cDetector.isShutdownRequested( ) )
+
+    try
     {
-        //ds update the frequency
-        const uint32_t uSleepMicroseconds = ( 1.0/cDetector.getPlaybackFrequencyHz( ) )*1e6;
-
-        //ds read a message
-        readNextMessageFromFile( ifMessages, strImageFolder, uSleepMicroseconds );
-
-        //ds as long as we have data in all the stacks - process
-        if( 0 != g_pActiveMessageCamera_0 && 0 != g_pActiveMessageCamera_1 && !g_vecMessagesIMU.isEmpty( ) )
+        //ds playback the dump
+        while( ifMessages.good( ) && ros::ok( ) && !cDetector.isShutdownRequested( ) )
         {
-            //ds pop the camera images
-            std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_0( g_pActiveMessageCamera_0 );
-            std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_1( g_pActiveMessageCamera_1 );
+            //ds read a message
+            readNextMessageFromFile( ifMessages, strImageFolder );
 
-            //ds current triplet timestamp
-            double dTimestamp_0( cImageCamera_0->timestamp( ) );
-            double dTimestamp_1( cImageCamera_1->timestamp( ) );
-
-            //ds sequence numbers have to match
-            if( dTimestamp_0 == dTimestamp_1 )
+            //ds as long as we have data in all the stacks - process
+            if( 0 != g_pActiveMessageCamera_0 && 0 != g_pActiveMessageCamera_1 && !g_vecMessagesIMU.isEmpty( ) )
             {
-                //ds reset holders
-                g_pActiveMessageCamera_0 = 0;
-                g_pActiveMessageCamera_1 = 0;
+                //ds pop the camera images
+                std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_0( g_pActiveMessageCamera_0 );
+                std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_1( g_pActiveMessageCamera_1 );
 
-                //ds get the most recent imu measurement
-                txt_io::CIMUMessage cMessageIMU( g_vecMessagesIMU.pop( ) );
+                //ds current triplet timestamp
+                double dTimestamp_0( cImageCamera_0->timestamp( ) );
+                double dTimestamp_1( cImageCamera_1->timestamp( ) );
 
-                //ds look for the matching timestamp in the stack (assuming that IMU messages have arrived in chronological order)
-                while( dTimestamp_0 < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.isEmpty( ) )
+                //ds sequence numbers have to match
+                if( dTimestamp_0 == dTimestamp_1 )
                 {
-                    cMessageIMU = g_vecMessagesIMU.pop( );
-                }
+                    //ds reset holders
+                    g_pActiveMessageCamera_0 = 0;
+                    g_pActiveMessageCamera_1 = 0;
 
-                //ds in case we have not received the matching timestamp yet - TODO this blocks indefinitely if there is no matching IMU data arriving
-                while( dTimestamp_0 > cMessageIMU.timestamp( ) )
-                {
-                    //ds pop the most recent imu measurement
-                    readNextMessageFromFile( ifMessages, strImageFolder, uSleepMicroseconds );
+                    //ds get the most recent imu measurement
+                    txt_io::CIMUMessage cMessageIMU( g_vecMessagesIMU.pop( ) );
 
-                    //ds check if we got a new imu measurement
-                    if( !g_vecMessagesIMU.isEmpty( ) )
+                    //ds look for the matching timestamp in the stack (assuming that IMU messages have arrived in chronological order)
+                    while( dTimestamp_0 < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.isEmpty( ) )
                     {
                         cMessageIMU = g_vecMessagesIMU.pop( );
                     }
-                }
 
-                assert( dTimestamp_0 == cMessageIMU.timestamp( ) );
+                    //ds in case we have not received the matching timestamp yet - TODO this blocks indefinitely if there is no matching IMU data arriving
+                    while( dTimestamp_0 > cMessageIMU.timestamp( ) )
+                    {
+                        //ds pop the most recent imu measurement
+                        readNextMessageFromFile( ifMessages, strImageFolder );
 
-                //ds check if we can call the detector
-                if( 0 == g_pActiveMessageCamera_0 && 0 == g_pActiveMessageCamera_1 )
-                {
-                    assert( 0 != cImageCamera_1 );
-                    assert( 0 != cImageCamera_0 );
+                        //ds check if we got a new imu measurement
+                        if( !g_vecMessagesIMU.isEmpty( ) )
+                        {
+                            cMessageIMU = g_vecMessagesIMU.pop( );
+                        }
+                    }
 
-                    //ds callback with triplet
-                    //cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU, g_cInterpolatorAngular.getTransformation( dTimestamp_0 ) );
-                    cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU );
+                    //ds check if we can call the detector (no other camera images arrived in the meantime)
+                    if( 0 == g_pActiveMessageCamera_0 && 0 == g_pActiveMessageCamera_1 && dTimestamp_0 == cMessageIMU.timestamp( ) )
+                    {
+                        assert( 0 != cImageCamera_1 );
+                        assert( 0 != cImageCamera_0 );
+
+                        //ds callback with triplet
+                        //cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU, g_cInterpolatorAngular.getTransformation( dTimestamp_0 ) );
+                        cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU );
+                    }
+                    else
+                    {
+                        //ds log skipped frame
+                        std::printf( "(main) WARNING: skipped frame - timestamp [LEFT|RIGHT|IMU]: [%f|%f|%f]\n", dTimestamp_1, dTimestamp_0, cMessageIMU.timestamp( ) );
+                    }
                 }
                 else
                 {
-                    //ds log skipped frame
-                    std::printf( "(main) WARNING: skipped single frame (no pose information) - timestamp camera_right: %.5lf s\n", dTimestamp_0 );
-                }
-            }
-            else
-            {
-                std::printf( "(main) WARNING: could not find matching frames - timestamp camera_right: %.5lf s\n", dTimestamp_0 );
+                    std::printf( "(main) WARNING: could not find matching frames - timestamp [LEFT|RIGHT]: [%f|%f]\n", dTimestamp_1, dTimestamp_0 );
 
-                //ds reset the respectively elder one
-                if( dTimestamp_0 > dTimestamp_1 )
-                {
-                    g_pActiveMessageCamera_1 = 0;
-                }
-                if( dTimestamp_0 < dTimestamp_1 )
-                {
-                    g_pActiveMessageCamera_0 = 0;
+                    //ds reset the respectively elder one
+                    if( dTimestamp_0 > dTimestamp_1 )
+                    {
+                        g_pActiveMessageCamera_1 = 0;
+                    }
+                    if( dTimestamp_0 < dTimestamp_1 )
+                    {
+                        g_pActiveMessageCamera_0 = 0;
+                    }
                 }
             }
         }
+    }
+    catch( const CExceptionEndOfFile& p_cException )
+    {
+        std::printf( "(main) caught exception: %s\n", p_cException.what( ) );
     }
 
     //ds get end time
@@ -265,25 +263,15 @@ int main( int argc, char **argv )
     return 0;
 }
 
-inline int8_t sign( const float& p_fNumber )
-{
-    assert( 0.0 != p_fNumber );
-
-    if( 0.0 < p_fNumber ){ return 1; }
-    if( 0.0 > p_fNumber ){ return -1; }
-
-    //ds never gets called, just pleasing the compiler
-    assert( false );
-    return 0;
-}
-
-inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds )
+inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder )
 {
     //ds line buffer
     std::string strLineBuffer;
 
     //ds read one line
     std::getline( p_ifMessages, strLineBuffer );
+
+    if( strLineBuffer.empty( ) ){ throw CExceptionEndOfFile( "received empty string - file end reached" ); }
 
     //ds get it to a stringstream
     std::istringstream issLine( strLineBuffer );
@@ -312,36 +300,17 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
-        //ds IMU messages are published with wrong signs (unsure about rotation)
+        //ds rotate around X axis by 180 degrees
         vecLinearAcceleration.y( ) = -vecLinearAcceleration.y( );
         vecLinearAcceleration.z( ) = -vecLinearAcceleration.z( );
         vecAngularVelocity.y( )    = -vecAngularVelocity.y( );
         vecAngularVelocity.z( )    = -vecAngularVelocity.z( );
 
-        //ds filter rotational noise
-        const double dAlpha = vecAngularVelocity.x( );
-        const double dBeta  = vecAngularVelocity.y( );
-        const double dGamma = vecAngularVelocity.z( );
-        const double dAbsoluteAlpha = std::fabs( dAlpha )-dAngularVelocityNoise;
-        const double dAbsoluteBeta  = std::fabs( dBeta )-dAngularVelocityNoise;
-        const double dAbsoluteGamma = std::fabs( dGamma )-dAngularVelocityNoise;
-
-        //ds noise free vector
-        Eigen::Vector3d vecAngularVelocityFiltered( Eigen::Vector3d::Zero( ) );
-
-        //ds update only if above zero
-        if( 0 < dAbsoluteAlpha ){ vecAngularVelocityFiltered.x( ) = sign( dAlpha )*dAbsoluteAlpha; }
-        if( 0 < dAbsoluteBeta ){ vecAngularVelocityFiltered.y( ) = sign( dBeta )*dAbsoluteBeta; }
-        if( 0 < dAbsoluteGamma ){ vecAngularVelocityFiltered.z( ) = sign( dGamma )*dAbsoluteGamma; }
-
         //ds add to interpolator
         //g_cInterpolator.addMeasurement( vecLinearAcceleration, vecAngularVelocity, dTimeSeconds );
 
-        //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
-        //vecLinearAcceleration[1] += 9.80665;
-
         //ds set message fields
-        msgIMU.setAngularVelocity( vecAngularVelocityFiltered );
+        msgIMU.setAngularVelocity( vecAngularVelocity );
         msgIMU.setLinearAcceleration( vecLinearAcceleration );
 
         //ds pump it into the synchronizer
@@ -393,8 +362,6 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
     {
         //std::printf( "(main) unknown message type: %s\n", strMessageType.c_str( ) );
     }
-
-    usleep( p_uSleepMicroseconds );
 }
 
 void setParametersNaive( const int& p_iArgc,

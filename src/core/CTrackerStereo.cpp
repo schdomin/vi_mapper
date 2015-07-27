@@ -422,7 +422,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
                                                      matDescriptorRIGHT,
                                                      cKeyPointLEFT.size,
                                                      vecPointTriangulatedWORLD,
-                                                     m_pCameraLEFT->getHomogenized( ptLandmarkLEFT ),
+                                                     m_pCameraLEFT->getNormalHomogenized( ptLandmarkLEFT ),
                                                      ptLandmarkLEFT,
                                                      ptLandmarkRIGHT,
                                                      vecPointTriangulatedLEFT,

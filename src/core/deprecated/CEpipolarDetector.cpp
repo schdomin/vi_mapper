@@ -221,7 +221,7 @@ void CEpipolarDetector::_localizeAutoBRIEF( const cv::Mat& p_matImageLeft, const
             //ds get the keypoint
             const cv::KeyPoint& cKeyPoint( vecKeyPoints[u] );
 
-            const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getHomogenized( cKeyPoint ) );
+            const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getNormalHomogenized( cKeyPoint ) );
 
             //ds set current reference point
             vecReferencePoints.push_back( std::tuple< cv::KeyPoint, CDescriptor, CPoint2DNormalized, CPoint2DNormalized >( cKeyPoint, matReferenceDescriptors.row( u ), vecPointNormalized, vecPointNormalized ) );
@@ -440,7 +440,7 @@ void CEpipolarDetector::_localizeAutoSURF( const cv::Mat& p_matImageLeft, const 
             //ds check size
             if( m_uKeyPointSizeLimit > cKeyPoint.size )
             {
-                const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getHomogenized( cKeyPoint ) );
+                const Eigen::Vector3d vecPointNormalized( m_cCameraLEFT.getNormalHomogenized( cKeyPoint ) );
 
                 //ds set current reference point
                 vecReferencePoints.push_back( std::tuple< cv::KeyPoint, CDescriptor, CPoint2DNormalized, CPoint2DNormalized >( cKeyPoint, matReferenceDescriptors.row( u ), vecPointNormalized, vecPointNormalized ) );
@@ -647,7 +647,7 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialBRIEF( const Eigen::I
                 else
                 {
                     //ds update reference
-                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getHomogenized( ptMatch ) );
+                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getNormalHomogenized( ptMatch ) );
 
                     //ds draw the match
                     cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );
@@ -818,7 +818,7 @@ void CEpipolarDetector::_drawProjectedEpipolarLineEssentialSURF( const Eigen::Is
                     ptMatch.y += iVMinimum;
 
                     //ds update reference
-                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getHomogenized( ptMatch ) );
+                    std::get< 3 >( *pReferencePoint ) = CPoint2DNormalized( m_cCameraLEFT.getNormalHomogenized( ptMatch ) );
 
                     //ds draw the match
                     cv::circle( p_matDisplay, ptMatch, 2, CColorCodeBGR( 0, 255, 0 ), -1 );

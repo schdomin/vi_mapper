@@ -121,7 +121,7 @@ private:
     const double m_dMinimumDepthMeters;
     const double m_dMaximumDepthMeters;
     const double m_dMatchingDistanceCutoffPoseOptimization;
-    const double m_dMatchingDistanceCutoffEssential;
+    const double m_dMatchingDistanceCutoffTrackingEssential;
     const double m_dMatchingDistanceCutoffOriginal;
 
     //ds measurement point storage (we use the ID counter instead of accessing the vector size every time for speed)
@@ -139,8 +139,8 @@ private:
     UIDLandmark m_uNumberOfInvalidLandmarks;
 
     //ds posit solving
-    const int32_t m_iSearchBlockSizePoseOptimization   = 20;
-    const uint8_t m_uMinimumPointsForPoseOptimization  = 25;
+    const uint8_t m_uSearchBlockSizePoseOptimization   = 15;
+    const uint8_t m_uMinimumPointsForPoseOptimization  = 50;
     const uint8_t m_uMinimumInliersForPoseOptimization = 10;
     const uint8_t m_uCapIterationsPoseOptimization     = 10;
     const double m_dConvergenceDeltaPoseOptimization   = 1e-5;
@@ -149,7 +149,7 @@ private:
     //gtools::CPositSolver m_cSolverPose;
     gtools::CPositSolverProjection m_cSolverPoseProjection;
     gtools::CPositSolverStereo m_cSolverPoseSTEREO;
-    std::FILE* m_pFileOdometryError;
+    std::FILE* m_pFileOdometryOptimization;
     std::FILE* m_pFileEpipolarDetection;
 
 //ds api
@@ -172,7 +172,8 @@ public:
                                                     cv::Mat& p_matDisplayRIGHT,
                                                     const cv::Mat& p_matImageLEFT,
                                                     const cv::Mat& p_matImageRIGHT,
-                                                    const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT );
+                                                    const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
+                                                    const double& p_dSquaredNormAngularVelocityFiltered );
 
     /*const std::shared_ptr< std::vector< CLandmark* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplay,
                                                                                                  const Eigen::Isometry3d& p_matCurrentTransformation,
@@ -210,6 +211,22 @@ public:
                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
                                                                                                       const int32_t& p_iHalfLineLengthBase );
 
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksMocked( cv::Mat& p_matDisplayLEFT,
+                                                                                                   cv::Mat& p_matDisplayRIGHT,
+                                                                                                   const uint64_t p_uFrame,
+                                                                                                   const cv::Mat& p_matImageLEFT,
+                                                                                                   const cv::Mat& p_matImageRIGHT,
+                                                                                                   const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
+                                                                                                   const int32_t& p_iHalfLineLengthBase );
+
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksFundamental( cv::Mat& p_matDisplayLEFT,
+                                                                                                        cv::Mat& p_matDisplayRIGHT,
+                                                                                                        const uint64_t p_uFrame,
+                                                                                                        const cv::Mat& p_matImageLEFT,
+                                                                                                        const cv::Mat& p_matImageRIGHT,
+                                                                                                        const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
+                                                                                                        const double& p_dSquaredNormAngularVelocityFiltered );
+
     const std::vector< CDetectionPoint >::size_type getNumberOfDetectionPointsActive( ) const{ return m_vecDetectionPointsActive.size( ); }
 
     const UIDDetectionPoint getNumberOfDetectionPointsTotal( ) const { return m_uAvailableDetectionPointID; }
@@ -217,22 +234,6 @@ public:
     const UIDLandmark getNumberOfInvalidLandmarks( ) const { return m_uNumberOfInvalidLandmarks; }
 
 private:
-
-    /*const std::pair< cv::Point2f, CDescriptor >  _getMatchSampleU( cv::Mat& p_matDisplay,
-                                                       const cv::Mat& p_matImage,
-                                                       const int32_t& p_iUMinimum,
-                                                       const int32_t& p_iDeltaU,
-                                                       const Eigen::Vector3d& p_vecCoefficients,
-                                                       const cv::Mat& p_matReferenceDescriptor,
-                                                       const float& p_fKeyPointSize ) const;
-
-    const std::pair< cv::Point2f, CDescriptor >  _getMatchSampleV( cv::Mat& p_matDisplay,
-                                                       const cv::Mat& p_matImage,
-                                                       const int32_t& p_iVMinimum,
-                                                       const int32_t& p_iDeltaV,
-                                                       const Eigen::Vector3d& p_vecCoefficients,
-                                                       const cv::Mat& p_matReferenceDescriptor,
-                                                       const float& p_fKeyPointSize ) const;*/
 
     const CMatchTracking* _getMatchSampleRecursiveU( cv::Mat& p_matDisplay,
                                                        const cv::Mat& p_matImage,
@@ -253,6 +254,26 @@ private:
                                                        const CDescriptor& p_matOriginalDescriptor,
                                                        const double& p_dKeyPointSize,
                                                        const uint8_t& p_uRecursionDepth ) const;
+
+    const CMatchTracking* _getMatchSampleRecursiveFundamentalU( cv::Mat& p_matDisplay,
+                                                                const cv::Mat& p_matImage,
+                                                                const double& p_dUMinimum,
+                                                                const uint32_t& p_uDeltaU,
+                                                                const Eigen::Vector3d& p_vecCoefficients,
+                                                                const CDescriptor& p_matReferenceDescriptor,
+                                                                const CDescriptor& p_matOriginalDescriptor,
+                                                                const double& p_dKeyPointSize,
+                                                                const uint8_t& p_uRecursionDepth ) const;
+
+    const CMatchTracking* _getMatchSampleRecursiveFundamentalV( cv::Mat& p_matDisplay,
+                                                                const cv::Mat& p_matImage,
+                                                                const double& p_dVMinimum,
+                                                                const uint32_t& p_uDeltaV,
+                                                                const Eigen::Vector3d& p_vecCoefficients,
+                                                                const CDescriptor& p_matReferenceDescriptor,
+                                                                const CDescriptor& p_matOriginalDescriptor,
+                                                                const double& p_dKeyPointSize,
+                                                                const uint8_t& p_uRecursionDepth ) const;
 
     const CMatchTracking* _getMatchSampleRecursiveU( const cv::Mat& p_matImage,
                                                      const int32_t& p_iUMinimum,
@@ -277,24 +298,27 @@ private:
                                      const CDescriptor& p_matDescriptorReference,
                                      const CDescriptor& p_matDescriptorOriginal ) const;
 
-    void _addMeasurementToLandmark( const uint64_t p_uFrame,
+    void _addMeasurementToLandmarkLEFT( const uint64_t p_uFrame,
                                    CLandmark* p_pLandmark,
                                    const cv::Mat& p_matImageRIGHT,
                                    const cv::KeyPoint& p_cKeyPoint,
                                    const CDescriptor& p_matDescriptorNew,
                                    const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                                    const MatrixProjection& p_matProjectionWORLDtoLEFT );
-    void _addMeasurementToLandmark( const uint64_t p_uFrame,
+    void _addMeasurementToLandmarkSTEREO( const uint64_t p_uFrame,
                                     CMatchPoseOptimizationSTEREO& p_cMatchSTEREO,
                                     const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                                     const MatrixProjection& p_matProjectionWORLDtoLEFT );
 
-    inline const double _getCurveX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const;
-    inline const double _getCurveY( const Eigen::Vector3d& p_vecCoefficients, const double& p_dX ) const;
-    inline const int32_t _getCurveU( const Eigen::Vector3d& p_vecCoefficients, const int32_t& p_uV ) const;
-    inline const int32_t _getCurveV( const Eigen::Vector3d& p_vecCoefficients, const int32_t& p_uU ) const;
-    inline const int32_t _getCurveU( const Eigen::Vector3d& p_vecCoefficients, const double& p_uV ) const;
-    inline const int32_t _getCurveV( const Eigen::Vector3d& p_vecCoefficients, const double& p_uU ) const;
+    inline const double _getCurveEssentialX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const;
+    inline const double _getCurveEssentialY( const Eigen::Vector3d& p_vecCoefficients, const double& p_dX ) const;
+    inline const int32_t _getCurveEssentialU( const Eigen::Vector3d& p_vecCoefficients, const int32_t& p_uV ) const;
+    inline const int32_t _getCurveEssentialV( const Eigen::Vector3d& p_vecCoefficients, const int32_t& p_uU ) const;
+    inline const int32_t _getCurveEssentialU( const Eigen::Vector3d& p_vecCoefficients, const double& p_uV ) const;
+    inline const int32_t _getCurveEssentialV( const Eigen::Vector3d& p_vecCoefficients, const double& p_uU ) const;
+
+    inline const double _getCurveFundamentalU( const Eigen::Vector3d& p_vecCoefficients, const double& p_dV ) const;
+    inline const double _getCurveFundamentalV( const Eigen::Vector3d& p_vecCoefficients, const double& p_dU ) const;
 
 };
 

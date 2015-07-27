@@ -20,8 +20,7 @@ class CTrackerStereoMotionModel
 public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    CTrackerStereoMotionModel( const uint32_t& p_uFrequencyPlaybackHz,
-                    const EPlaybackMode& p_eMode,
+    CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
                     const uint32_t& p_uWaitKeyTimeout = 1 );
     ~CTrackerStereoMotionModel( );
 
@@ -40,19 +39,19 @@ private:
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
     Eigen::Isometry3d m_matTransformationMotionWORLDtoIMU;
     Eigen::Isometry3d m_matTransformationIMULAST;
-    Eigen::Vector3d m_vecVelocityAngularLAST;
-    const double m_dMinimumDeltaTimestampSeconds;
+    CAngularVelocityInCameraFrame m_vecVelocityAngularFilteredLAST;
+    const double m_dMaximumDeltaTimestampSeconds;
     double m_dTimestampLASTSeconds;
     CPoint3DInWorldFrame m_vecTranslationLastKeyFrame;
-    double m_dTranslationDeltaForKeyFrameMetersSquaredNorm;
+    const double m_dTranslationDeltaForKeyFrameMetersSquaredNorm;
     CPoint3DInWorldFrame m_vecPositionCurrent;
     double m_dTranslationDeltaSquaredNormCurrent;
 
     //ds feature related
     //const uint32_t m_uKeyPointSize;
-    std::shared_ptr< cv::FeatureDetector > m_pDetector;
-    std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
-    std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
+    const std::shared_ptr< cv::FeatureDetector > m_pDetector;
+    const std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
+    const std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
     const double m_dMatchingDistanceCutoffTriangulation;
     const double m_dMatchingDistanceCutoffPoseOptimization;
     const double m_dMatchingDistanceCutoffTracking;
@@ -77,10 +76,6 @@ private:
     //ds control
     const EPlaybackMode m_eMode;
     bool m_bIsShutdownRequested;
-    double m_dFrequencyPlaybackHz;
-    uint32_t m_uFrequencyPlaybackDeltaHz;
-    int32_t m_iPlaybackSpeedupCounter;
-    cv::RNG_MT19937 m_cRandomGenerator;
 
     //ds info display
     cv::Mat m_matTrajectoryXY;
@@ -109,7 +104,6 @@ public:
 
     const uint64_t getFrameCount( ) const { return m_uFrameCount; }
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
-    const uint32_t getPlaybackFrequencyHz( ) const { return std::lround( m_dFrequencyPlaybackHz ); }
 
     //ds postprocessing
     void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
@@ -139,8 +133,9 @@ private:
     void _trackLandmarks( const cv::Mat& p_matImageLEFT,
                           const cv::Mat& p_matImageRIGHT,
                           const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
-                          const Eigen::Vector3d& p_vecAngularVelocity,
-                          const Eigen::Vector3d& p_vecLinearAcceleration );
+                          const Eigen::Isometry3d& p_matTransformationEstimateDampedWORLDtoLEFT,
+                          const CAngularVelocityInIMUFrame& p_vecAngularVelocity,
+                          const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const uint64_t& p_uFrame,
                                                       cv::Mat& p_matDisplay,
@@ -151,8 +146,6 @@ private:
 
     //ds control
     void _shutDown( );
-    void _speedUp( );
-    void _slowDown( );
     void _updateFrameRateForInfoBox( const uint32_t& p_uFrameProbeRange = 10 );
     void _drawInfoBox( cv::Mat& p_matDisplay ) const;
 };

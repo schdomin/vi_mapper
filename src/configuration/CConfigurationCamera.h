@@ -12,48 +12,48 @@ public:
     static struct LEFT
     {
         //ds camera_1 (left)
-        const static uint32_t uWidth;
-        const static uint32_t uHeight;
-        const static double dFx;
-        const static double dFy;
-        const static double dCx;
-        const static double dCy;
-        const static double dFocalLengthMeters;
-        const static double matIntrinsic[9];
-        const static double vecDistortionCoefficients[4];
-        const static double matQuaternionFromIMU[4];
-        const static double vecTranslationFromIMU[3];
-        const static double matRectification[9];
-        const static double matProjection[12];
+        static const uint32_t uWidth;
+        static const uint32_t uHeight;
+        static const double dFx;
+        static const double dFy;
+        static const double dCx;
+        static const double dCy;
+        static const double dFocalLengthMeters;
+        static const double matIntrinsic[9];
+        static const double vecDistortionCoefficients[4];
+        static const double matQuaternionFromIMU[4];
+        static const double vecTranslationFromIMU[3];
+        static const double matRectification[9];
+        static const double matProjection[12];
 
-        const static CPinholeCamera cPinholeCamera;
+        static const CPinholeCamera cPinholeCamera;
 
     } LEFT;
 
     static struct RIGHT
     {
         //ds camera_0 (right)
-        const static uint32_t uWidth;
-        const static uint32_t uHeight;
-        const static double dFx;
-        const static double dFy;
-        const static double dCx;
-        const static double dCy;
-        const static double dFocalLengthMeters;
-        const static double matIntrinsic[9];
-        const static double vecDistortionCoefficients[4];
-        const static double matQuaternionFromIMU[4];
-        const static double vecTranslationFromIMU[3];
-        const static double matRectification[9];
-        const static double matProjection[12];
+        static const uint32_t uWidth;
+        static const uint32_t uHeight;
+        static const double dFx;
+        static const double dFy;
+        static const double dCx;
+        static const double dCy;
+        static const double dFocalLengthMeters;
+        static const double matIntrinsic[9];
+        static const double vecDistortionCoefficients[4];
+        static const double matQuaternionFromIMU[4];
+        static const double vecTranslationFromIMU[3];
+        static const double matRectification[9];
+        static const double matProjection[12];
 
-        const static CPinholeCamera cPinholeCamera;
+        static const CPinholeCamera cPinholeCamera;
 
     } RIGHT;
 
-    const static double matTransformationIntialAlberto[16];
-    const static double matTransformationIntialStandard[16];
-    const static double matRotationIMU[9];
+    static const double matTransformationIntialAlberto[16];
+    static const double matTransformationIntialStandard[16];
+    static const double matRotationIMU[9];
 
 };
 

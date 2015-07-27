@@ -770,7 +770,7 @@ const std::vector< CLandmark > CEpipolarDetectorBRIEF::_getLandmarksGFTT( cv::Ma
                         if( 0 < vecPointTriangulated(2) && m_dMaximumDepthMeters > vecPointTriangulated(2) )
                         {
                             //ds normalize coordinates for tracking
-                            const CPoint2DInCameraFrameHomogenized vecPointNormalized( m_cCameraLEFT.getHomogenized( vecKeyPoint[0] ) );
+                            const CPoint2DInCameraFrameHomogenized vecPointNormalized( m_cCameraLEFT.getNormalHomogenized( vecKeyPoint[0] ) );
 
                             //ds set current reference point
                             vecLandmarksTracking.push_back( CLandmark( m_uAvailableLandmarkID, vecKeyPoint[0], matReferenceDescriptor, vecPointNormalized ) );
@@ -985,7 +985,7 @@ CPoint2DInCameraFrameHomogenized CEpipolarDetectorBRIEF::_getMatchBRIEF( cv::Mat
         cv::circle( p_matDisplay, p_vecPoolKeyPoints[cBestMatch.trainIdx].pt, 1, CColorCodeBGR( 0, 255, 0 ), -1 );
 
         //ds return the match
-        return CPoint2DInCameraFrameHomogenized( m_cCameraLEFT.getHomogenized( p_vecPoolKeyPoints[cBestMatch.trainIdx].pt ) );
+        return CPoint2DInCameraFrameHomogenized( m_cCameraLEFT.getNormalHomogenized( p_vecPoolKeyPoints[cBestMatch.trainIdx].pt ) );
     }
     else
     {

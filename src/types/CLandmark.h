@@ -42,6 +42,7 @@ public:
     const CPoint3DInWorldFrame vecPointXYZInitial;
     CPoint3DInWorldFrame vecPointXYZOptimized;
     const CPoint2DInCameraFrameHomogenized vecUVLEFTReference;
+    const CPoint2DHomogenized vecUVReferenceLEFT;
 
     uint8_t uFailedSubsequentTrackings;
     uint32_t uOptimizationsSuccessful;

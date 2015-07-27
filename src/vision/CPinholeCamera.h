@@ -11,38 +11,6 @@ class CPinholeCamera
 
 public:
 
-    /*CPinholeCamera( const std::string& p_strCameraLabel,
-                    const Eigen::Matrix3d& p_matIntrinsic,
-                    const Eigen::Vector4d& p_vecDistortionCoefficients,
-                    const Eigen::Matrix3d& p_matRectification,
-                    const Eigen::Matrix< double, 3, 4 >& p_matProjection,
-                    const uint32_t p_uWidthPixel,
-                    const uint32_t p_uHeightPixel ): m_strCameraLabel( p_strCameraLabel ),
-                                                     m_matIntrinsic( p_matIntrinsic ),
-                                                     m_dFx( m_matIntrinsic(0,0) ),
-                                                     m_dFy( m_matIntrinsic(1,1) ),
-                                                     m_dFxNormalized( m_dFx/p_uWidthPixel ),
-                                                     m_dFyNormalized( m_dFy/p_uHeightPixel ),
-                                                     m_dCx( m_matIntrinsic(0,2) ),
-                                                     m_dCy( m_matIntrinsic(1,2) ),
-                                                     m_dCxNormalized( m_dCx/p_uWidthPixel ),
-                                                     m_dCyNormalized( m_dCy/p_uHeightPixel ),
-                                                     m_vecDistortionCoefficients( p_vecDistortionCoefficients ),
-                                                     m_matRectification( p_matRectification ),
-                                                     m_matProjection( p_matProjection ),
-                                                     m_vecPrincipalPoint( Eigen::Vector2d( m_dCx, m_dCy ) ),
-                                                     m_vecPrincipalPointNormalized( Eigen::Vector3d( m_dCxNormalized, m_dCyNormalized, 1.0 ) ),
-                                                     m_uWidthPixel( p_uWidthPixel ),
-                                                     m_uHeightPixel( p_uHeightPixel ),
-                                                     m_iWidthPixel( m_uWidthPixel ),
-                                                     m_iHeightPixel( m_uHeightPixel ),
-                                                     m_prRangeWidthNormalized( std::pair< double, double >( getNormalizedX( 0 ), getNormalizedX( p_uWidthPixel ) ) ),
-                                                     m_prRangeHeightNormalized( std::pair< double, double >( getNormalizedY( 0 ), getNormalizedY( p_uHeightPixel ) ) )
-    {
-        //ds log complete configuration
-        _logConfiguration( );
-    }*/
-
     CPinholeCamera( const std::string& p_strCameraLabel,
                     const double p_matIntrinsic[9],
                     const double p_vecDistortionCoefficients[4],
@@ -54,6 +22,9 @@ public:
                     const uint32_t& p_uHeightPixel,
                     const double& p_dFocalLengthMeters ): m_strCameraLabel( p_strCameraLabel ),
                                                       m_matIntrinsic( Eigen::Matrix3d( p_matIntrinsic ).transpose( ) ),
+                                                      m_matIntrinsicInverse( m_matIntrinsic.inverse( ) ),
+                                                      m_matIntrinsicInverseTransposed( m_matIntrinsicInverse.transpose( ) ),
+                                                      m_matIntrinsicTransposed( m_matIntrinsic.transpose( ) ),
                                                       m_dFx( m_matIntrinsic(0,0) ),
                                                       m_dFy( m_matIntrinsic(1,1) ),
                                                       m_dFxNormalized( m_dFx/p_uWidthPixel ),
@@ -102,6 +73,9 @@ public:
 
     //ds intrinsics
     const Eigen::Matrix3d m_matIntrinsic;
+    const Eigen::Matrix3d m_matIntrinsicInverse;
+    const Eigen::Matrix3d m_matIntrinsicInverseTransposed;
+    const Eigen::Matrix3d m_matIntrinsicTransposed;
     const double m_dFx;
     const double m_dFy;
     const double m_dFxNormalized;
@@ -136,23 +110,23 @@ public:
 //ds access
 public:
 
-    const Eigen::Vector3d getHomogenized( const Eigen::Vector2d& p_vecPoint ) const
+    const Eigen::Vector3d getNormalHomogenized( const Eigen::Vector2d& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint(0)-m_dCx )/m_dFx, ( p_vecPoint(1)-m_dCy )/m_dFy, 1.0 );
     }
-    const Eigen::Vector3d getHomogenized( const cv::KeyPoint& p_vecPoint ) const
+    const Eigen::Vector3d getNormalHomogenized( const cv::KeyPoint& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint.pt.x-m_dCx )/m_dFx, ( p_vecPoint.pt.y-m_dCy )/m_dFy, 1.0 );
     }
-    const Eigen::Vector3d getHomogenized( const cv::Point2d& p_vecPoint ) const
+    const Eigen::Vector3d getNormalHomogenized( const cv::Point2d& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy, 1.0 );
     }
-    const Eigen::Vector3d getHomogenized( const cv::Point2f& p_vecPoint ) const
+    const Eigen::Vector3d getNormalHomogenized( const cv::Point2f& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy, 1.0 );
     }
-    const Eigen::Vector3d getHomogenized( const cv::Point2i& p_vecPoint ) const
+    const Eigen::Vector3d getNormalHomogenized( const cv::Point2i& p_vecPoint ) const
     {
         return Eigen::Vector3d( ( p_vecPoint.x-m_dCx )/m_dFx, ( p_vecPoint.y-m_dCy )/m_dFy, 1.0 );
     }
@@ -227,6 +201,15 @@ public:
 
         //ds return uv point
         return CPoint2DInCameraFrame( vecProjectionInhomogeneous(0)/vecProjectionInhomogeneous(2), vecProjectionInhomogeneous(1)/vecProjectionInhomogeneous(2) );
+    }
+
+    const double getPrincipalWeightU( const cv::Point2d& p_ptUV ) const
+    {
+        return std::fabs( p_ptUV.x-m_dCx )/100.0;
+    }
+    const double getPrincipalWeightV( const cv::Point2d& p_ptUV ) const
+    {
+        return std::fabs( p_ptUV.y-m_dCy )/100.0;
     }
 
 //ds helpers
