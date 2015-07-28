@@ -135,8 +135,11 @@ private:
     const int32_t m_iSearchVMax;
     const cv::Rect m_cSearchROI;
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
-    const uint8_t m_uRecursionLimitEpipolarLines;
-    UIDLandmark m_uNumberOfInvalidLandmarks;
+    const uint8_t m_uRecursionLimitEpipolarLines      = 3;
+    const uint8_t m_uRecursionStepSize                = 2;
+    UIDLandmark m_uNumberOfInvalidLandmarksTotal      = 0;
+    UIDLandmark m_uNumberOfDetectionsPoseOptimization = 0;
+    UIDLandmark m_uNumberOfDetectionsEpipolar         = 0;
 
     //ds posit solving
     const uint8_t m_uSearchBlockSizePoseOptimization   = 15;
@@ -165,7 +168,8 @@ public:
                                               cv::Mat& p_matDisplayLEFT,
                                               const cv::Mat& p_matImageLEFT,
                                               const cv::Mat& p_matImageRIGHT,
-                                              const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT );
+                                              const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
+                                              const Eigen::Vector3d& p_vecCameraOrientation );
 
     const Eigen::Isometry3d getPoseOptimizedSTEREO( const uint64_t p_uFrame,
                                                     cv::Mat& p_matDisplayLEFT,
@@ -173,7 +177,8 @@ public:
                                                     const cv::Mat& p_matImageLEFT,
                                                     const cv::Mat& p_matImageRIGHT,
                                                     const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
-                                                    const double& p_dSquaredNormAngularVelocityFiltered );
+                                                    const Eigen::Vector3d& p_vecCameraOrientation,
+                                                    const double& p_dMotionScaling );
 
     /*const std::shared_ptr< std::vector< CLandmark* > > getVisibleLandmarksEssential( cv::Mat& p_matDisplay,
                                                                                                  const Eigen::Isometry3d& p_matCurrentTransformation,
@@ -200,6 +205,7 @@ public:
                                                                                                       const cv::Mat& p_matImageLEFT,
                                                                                                       const cv::Mat& p_matImageRIGHT,
                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
+                                                                                                      const Eigen::Vector3d& p_vecCameraOrientation,
                                                                                                       const int32_t& p_iHalfLineLengthBase,
                                                                                                       cv::Mat& p_matDisplayTrajectory );
 
@@ -209,6 +215,7 @@ public:
                                                                                                       const cv::Mat& p_matImageLEFT,
                                                                                                       const cv::Mat& p_matImageRIGHT,
                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
+                                                                                                      const Eigen::Vector3d& p_vecCameraOrientation,
                                                                                                       const int32_t& p_iHalfLineLengthBase );
 
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksMocked( cv::Mat& p_matDisplayLEFT,
@@ -216,8 +223,7 @@ public:
                                                                                                    const uint64_t p_uFrame,
                                                                                                    const cv::Mat& p_matImageLEFT,
                                                                                                    const cv::Mat& p_matImageRIGHT,
-                                                                                                   const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
-                                                                                                   const int32_t& p_iHalfLineLengthBase );
+                                                                                                   const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow );
 
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksFundamental( cv::Mat& p_matDisplayLEFT,
                                                                                                         cv::Mat& p_matDisplayRIGHT,
@@ -225,13 +231,16 @@ public:
                                                                                                         const cv::Mat& p_matImageLEFT,
                                                                                                         const cv::Mat& p_matImageRIGHT,
                                                                                                         const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
-                                                                                                        const double& p_dSquaredNormAngularVelocityFiltered );
+                                                                                                        const Eigen::Vector3d& p_vecCameraOrientation,
+                                                                                                        const double& p_dMotionScaling );
 
     const std::vector< CDetectionPoint >::size_type getNumberOfDetectionPointsActive( ) const{ return m_vecDetectionPointsActive.size( ); }
 
     const UIDDetectionPoint getNumberOfDetectionPointsTotal( ) const { return m_uAvailableDetectionPointID; }
 
-    const UIDLandmark getNumberOfInvalidLandmarks( ) const { return m_uNumberOfInvalidLandmarks; }
+    const UIDLandmark getNumberOfInvalidLandmarksTotal( ) const { return m_uNumberOfInvalidLandmarksTotal; }
+    const UIDLandmark getNumberOfDetectionsPoseOptimization( ) const { return m_uNumberOfDetectionsPoseOptimization; }
+    const UIDLandmark getNumberOfDetectionsEpipolar( ) const { return m_uNumberOfDetectionsEpipolar; }
 
 private:
 
@@ -255,7 +264,7 @@ private:
                                                        const double& p_dKeyPointSize,
                                                        const uint8_t& p_uRecursionDepth ) const;
 
-    const CMatchTracking* _getMatchSampleRecursiveFundamentalU( cv::Mat& p_matDisplay,
+    const std::shared_ptr< CMatchTracking > _getMatchSampleRecursiveFundamentalU( cv::Mat& p_matDisplay,
                                                                 const cv::Mat& p_matImage,
                                                                 const double& p_dUMinimum,
                                                                 const uint32_t& p_uDeltaU,
@@ -265,7 +274,7 @@ private:
                                                                 const double& p_dKeyPointSize,
                                                                 const uint8_t& p_uRecursionDepth ) const;
 
-    const CMatchTracking* _getMatchSampleRecursiveFundamentalV( cv::Mat& p_matDisplay,
+    const std::shared_ptr< CMatchTracking > _getMatchSampleRecursiveFundamentalV( cv::Mat& p_matDisplay,
                                                                 const cv::Mat& p_matImage,
                                                                 const double& p_dVMinimum,
                                                                 const uint32_t& p_uDeltaV,
@@ -293,7 +302,12 @@ private:
                                                      const double& p_dKeyPointSize,
                                                      const uint8_t& p_uRecursionDepth ) const;
 
-    const CMatchTracking* _getMatch( const cv::Mat& p_matImage,
+    const CMatchTracking* _getMatchCStyle( const cv::Mat& p_matImage,
+                                     std::vector< cv::KeyPoint >& p_vecPoolKeyPoints,
+                                     const CDescriptor& p_matDescriptorReference,
+                                     const CDescriptor& p_matDescriptorOriginal ) const;
+
+    const std::shared_ptr< CMatchTracking > _getMatch( const cv::Mat& p_matImage,
                                      std::vector< cv::KeyPoint >& p_vecPoolKeyPoints,
                                      const CDescriptor& p_matDescriptorReference,
                                      const CDescriptor& p_matDescriptorOriginal ) const;
@@ -304,10 +318,12 @@ private:
                                    const cv::KeyPoint& p_cKeyPoint,
                                    const CDescriptor& p_matDescriptorNew,
                                    const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                   const Eigen::Vector3d& p_vecCameraOrientation,
                                    const MatrixProjection& p_matProjectionWORLDtoLEFT );
     void _addMeasurementToLandmarkSTEREO( const uint64_t p_uFrame,
                                     CMatchPoseOptimizationSTEREO& p_cMatchSTEREO,
                                     const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                    const Eigen::Vector3d& p_vecCameraOrientation,
                                     const MatrixProjection& p_matProjectionWORLDtoLEFT );
 
     inline const double _getCurveEssentialX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const;

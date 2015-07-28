@@ -11,6 +11,7 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
            const cv::Point2d& p_ptUVRIGHT,
            const CPoint3DInCameraFrame& p_vecPointXYZCAMERA,
            const CPoint3DInWorldFrame& p_vecCameraPosition,
+           const Eigen::Vector3d& p_vecCameraOrientation,
            //const Eigen::Matrix3d& p_matKRotation,
            //const Eigen::Vector3d& p_vecKTranslation,
            const MatrixProjection& p_matProjectionWORLDtoLEFT,
@@ -30,7 +31,8 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
                                                        vecPointXYZMean( p_vecPointXYZ ),
                                                        bIsCurrentlyVisible( false ),
                                                        m_dDepthLastOptimizationMeters( p_vecPointXYZCAMERA.z( ) ),
-                                                       m_vecLastCameraPosition( p_vecCameraPosition )
+                                                       m_vecCameraPositionLAST( p_vecCameraPosition ),
+                                                       m_vecCameraOrientationAccumulated( 0.0, 0.0, 0.0 )
 {
     //ds construct filestring and open dump file
     //char chBuffer[256];
@@ -43,7 +45,7 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
     //std::fprintf( m_pFilePositionOptimization, "ID_FRAME | ID_LANDMARK | ITERATION MEASUREMENTS INLIERS | ERROR_ARSS | DELTA_XYZ |      X      Y      Z\n" );
 
     //ds add this position
-    addMeasurement( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCAMERA, vecPointXYZInitial, p_vecCameraPosition, p_matProjectionWORLDtoLEFT );
+    addMeasurement( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCAMERA, vecPointXYZInitial, p_vecCameraPosition, p_vecCameraOrientation, p_matProjectionWORLDtoLEFT );
 }
 
 CLandmark::~CLandmark( )
@@ -64,6 +66,7 @@ void CLandmark::addMeasurement( const uint64_t& p_uFrame,
                                 const CPoint3DInCameraFrame& p_vecXYZLEFT,
                                 const CPoint3DInWorldFrame& p_vecXYZWORLD,
                                 const CPoint3DInWorldFrame& p_vecCameraPosition,
+                                const Eigen::Vector3d& p_vecCameraOrientation,
                                 //const Eigen::Matrix3d& p_matKRotation,
                                 //const Eigen::Vector3d& p_vecKTranslation,
                                 const MatrixProjection& p_matProjectionWORLDtoLEFT )
@@ -73,13 +76,18 @@ void CLandmark::addMeasurement( const uint64_t& p_uFrame,
     assert( 0 < p_vecXYZLEFT.z( ) );
 
     //ds update mean
-    vecPointXYZMean = ( vecPointXYZMean + p_vecXYZWORLD )/2.0;
+    vecPointXYZMean = ( vecPointXYZMean+p_vecXYZWORLD )/2.0;
+
+    //ds accumulate position
+    m_vecCameraOrientationAccumulated += p_vecCameraOrientation;
 
     //ds check if we can recalibrate the 3d position
-    if( CLandmark::m_dDistanceDeltaForOptimization < ( m_vecLastCameraPosition-p_vecCameraPosition ).squaredNorm( ) )
+    if( CLandmark::m_dDistanceDeltaForOptimizationMeters < ( m_vecCameraPositionLAST-p_vecCameraPosition ).squaredNorm( ) ||
+        CLandmark::m_dAngleDeltaForOptimizationRadians < m_vecCameraOrientationAccumulated.squaredNorm( ) )
     {
         //ds update last
-        m_vecLastCameraPosition = p_vecCameraPosition;
+        m_vecCameraPositionLAST           = p_vecCameraPosition;
+        m_vecCameraOrientationAccumulated = Eigen::Vector3d( 0.0, 0.0, 0.0 );
 
         //ds get calibrated point
         //vecPointXYZCalibrated = _getOptimizedLandmarkKLMA( p_uFrame, vecPointXYZCalibrated );

@@ -22,7 +22,8 @@ public:
                const cv::Point2d& p_ptUVLEFT,
                const cv::Point2d& p_ptUVRIGHT,
                const CPoint3DInCameraFrame& p_vecPointXYZCamera,
-               const Eigen::Vector3d& p_vecCameraPosition,
+               const CPoint3DInWorldFrame& p_vecCameraPosition,
+               const Eigen::Vector3d& p_vecCameraOrientation,
                //const Eigen::Matrix3d& p_matKRotation,
                //const Eigen::Vector3d& p_vecKTranslation,
                const MatrixProjection& p_matProjectionWORLDtoLEFT,
@@ -60,15 +61,22 @@ private:
     double m_dDepthLastOptimizationMeters;
 
     //ds last camera position for calibration
-    Eigen::Vector3d m_vecLastCameraPosition;
+    CPoint3DInWorldFrame m_vecCameraPositionLAST;
+    Eigen::Vector3d m_vecCameraOrientationAccumulated;
+
+//ds public for logging purposes
+public:
 
     //ds optimization configuration (shared among all landmarks)
-    static constexpr double m_dDistanceDeltaForOptimization = 0.25;
-    static constexpr uint32_t m_uCapIterations              = 500;
-    static constexpr double m_dLevenbergDamping             = 5.0;
+    static constexpr double m_dDistanceDeltaForOptimizationMeters = 0.25; //ds squared measurement
+    static constexpr double m_dAngleDeltaForOptimizationRadians   = 0.5; //ds squared measurement
+    static constexpr uint32_t m_uCapIterations                    = 500;
+    static constexpr double m_dLevenbergDamping                   = 5.0;
     //const double m_dFactorDynamicDamping        = 1.05;
-    static constexpr double m_dConvergenceDelta             = 1e-5;
-    static constexpr double m_dKernelMaximumError           = 25.0;
+    static constexpr double m_dConvergenceDelta                   = 1e-5;
+    static constexpr double m_dKernelMaximumError                 = 25.0;
+
+private:
 
     //ds debug logging
     std::FILE* m_pFilePositionOptimization;
@@ -81,7 +89,8 @@ public:
                       const cv::Point2d& p_ptUVRIGHT,
                       const CPoint3DInCameraFrame& p_vecPointXYZ,
                       const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
-                      const Eigen::Vector3d& p_vecCameraPosition,
+                      const CPoint3DInWorldFrame& p_vecCameraPosition,
+                      const Eigen::Vector3d& p_vecCameraOrientation,
                       //const Eigen::Matrix3d& p_matKRotation,
                       //const Eigen::Vector3d& p_vecKTranslation,
                       const MatrixProjection& p_matProjectionWORLDtoLEFT );

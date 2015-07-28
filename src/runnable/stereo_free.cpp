@@ -2,6 +2,7 @@
 #include <fstream>
 #include <cmath>
 #include <opencv/highgui.h>
+#include <qapplication.h>
 
 //ds ROS
 #include <ros/ros.h>
@@ -14,6 +15,7 @@
 #include "core/CTrackerStereoMotionModel.h"
 #include "utility/CMiniTimer.h"
 #include "exceptions/CExceptionEndOfFile.h"
+#include "gui/CViewerScene.h"
 //#include "types/CIMUInterpolator.h"
 
 //ds data vectors
@@ -115,6 +117,14 @@ int main( int argc, char **argv )
         }
     }
 
+    //ds start qt application
+    std::shared_ptr< QApplication > pQT( std::make_shared< QApplication >( argc, argv ) );
+
+    //ds instantiate the viewer
+    std::shared_ptr< CViewerScene > pViewer( std::make_shared< CViewerScene >( ) );
+    pViewer->setWindowTitle( "CViewerScene: WORLD" );
+    pViewer->show( );
+
     //ds log configuration
     std::printf( "(main) ROS Node namespace   := '%s'\n", pNode->getNamespace( ).c_str( ) );
     std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
@@ -126,11 +136,10 @@ int main( int argc, char **argv )
     CLogger::closeBox( );
 
     //ds feature detector
-    CTrackerStereoMotionModel cDetector( eMode, uWaitKeyTimeout );
+    CTrackerStereoMotionModel cDetector( eMode, pViewer, uWaitKeyTimeout );
 
     //ds get start time
     const uint64_t uToken( CMiniTimer::tic( ) );
-
 
     try
     {

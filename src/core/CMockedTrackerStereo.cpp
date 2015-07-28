@@ -337,6 +337,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
                                                  ptLandmarkRIGHT,
                                                  vecPointTriangulatedLEFT,
                                                  vecCameraPosition,
+                                                 Eigen::Vector3d( 0.0, 0.0, 0.0 ),
                                                  matProjectionWORLDtoLEFT,
                                                  p_uFrame ) );
 

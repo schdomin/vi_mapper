@@ -6,6 +6,7 @@
 #include "vision/CMiniVisionToolbox.h"
 #include "utility/CLogger.h"
 #include "optimization/CBridgeG2O.h"
+#include "exceptions/CExceptionEpipolarLine.h"
 
 CMatcherEpipolar::CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTriangulator,
                                     const std::shared_ptr< cv::FeatureDetector > p_pDetectorSingle,
@@ -32,8 +33,6 @@ CMatcherEpipolar::CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTr
                                                                               m_iSearchVMax( m_pCameraLEFT->m_uHeightPixel-5 ),
                                                                               m_cSearchROI( cv::Point2i( m_iSearchUMin, m_iSearchVMin ), cv::Point2i( m_iSearchUMax, m_iSearchVMax ) ),
                                                                               m_uMaximumFailedSubsequentTrackingsPerLandmark( p_uMaximumFailedSubsequentTrackingsPerLandmark ),
-                                                                              m_uRecursionLimitEpipolarLines( 13 ),
-                                                                              m_uNumberOfInvalidLandmarks( 0 ),
                                                                               m_cSolverPoseProjection( m_pCameraLEFT->m_matProjection ),
                                                                               m_cSolverPoseSTEREO( m_pCameraSTEREO ),
                                                                               m_pFileOdometryOptimization( std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/optimization_odometry.txt", "w" ) ),
@@ -87,7 +86,8 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p
                                                             cv::Mat& p_matDisplayLEFT,
                                                             const cv::Mat& p_matImageLEFT,
                                                             const cv::Mat& p_matImageRIGHT,
-                                                            const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT )
+                                                            const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
+                                                            const Eigen::Vector3d& p_vecCameraOrientation )
 {
     //ds vectors for pose solver
     gtools::Vector3dVector vecLandmarksWORLD;
@@ -254,7 +254,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p
         {
             try
             {
-                _addMeasurementToLandmarkLEFT( p_uFrame, pMatch.pLandmark, p_matImageRIGHT, pMatch.cKeyPoint, pMatch.matDescriptor, matTransformationLEFTtoWORLD, matProjectionWORLDtoLEFT );
+                _addMeasurementToLandmarkLEFT( p_uFrame, pMatch.pLandmark, p_matImageRIGHT, pMatch.cKeyPoint, pMatch.matDescriptor, matTransformationLEFTtoWORLD, p_vecCameraOrientation, matProjectionWORLDtoLEFT );
             }
             catch( const CExceptionNoMatchFound& p_eException )
             {
@@ -279,9 +279,10 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
                                                                   const cv::Mat& p_matImageLEFT,
                                                                   const cv::Mat& p_matImageRIGHT,
                                                                   const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
-                                                                  const double& p_dSquaredNormAngularVelocityFiltered )
+                                                                  const Eigen::Vector3d& p_vecCameraOrientation,
+                                                                  const double& p_dMotionScaling )
 {
-    assert( 0.0 <= p_dSquaredNormAngularVelocityFiltered );
+    assert( 1.0 <= p_dMotionScaling );
 
     //ds vectors for pose solver
     gtools::Vector3dVector vecLandmarksWORLD;
@@ -290,9 +291,6 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
 
     //ds found landmarks in this frame
     std::vector< CMatchPoseOptimizationSTEREO > vecLandmarkMatches;
-
-    //ds dynamic scaling
-    const double dMotionScaling = 1.0+2*p_dSquaredNormAngularVelocityFiltered;
 
     //ds initial translation
     const CPoint3DInWorldFrame vecTranslationEstimate( p_matTransformationEstimateWORLDtoLEFT.inverse( ).translation( ) );
@@ -318,8 +316,8 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
                 try
                 {
                     //ds compute search ranges
-                    const double dScaleSearchULEFT      = m_pCameraLEFT->getPrincipalWeightU( ptUVEstimateLEFT ) + dMotionScaling;
-                    const double dScaleSearchVLEFT      = m_pCameraLEFT->getPrincipalWeightV( ptUVEstimateLEFT ) + dMotionScaling;
+                    const double dScaleSearchULEFT      = m_pCameraLEFT->getPrincipalWeightU( ptUVEstimateLEFT ) + p_dMotionScaling;
+                    const double dScaleSearchVLEFT      = m_pCameraLEFT->getPrincipalWeightV( ptUVEstimateLEFT ) + p_dMotionScaling;
                     const double dSearchHalfWidthLEFT   = dScaleSearchULEFT*m_uSearchBlockSizePoseOptimization;
                     const double dSearchHalfHeightLEFT  = dScaleSearchVLEFT*m_uSearchBlockSizePoseOptimization;
 
@@ -417,8 +415,8 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
                     try
                     {
                         //ds compute search ranges
-                        const double dScaleSearchURIGHT      = std::fabs( ptUVEstimateRIGHT.x-m_pCameraRIGHT->m_dCx )/100.0 + dMotionScaling;;
-                        const double dScaleSearchVRIGHT      = std::fabs( ptUVEstimateRIGHT.y-m_pCameraRIGHT->m_dCy )/100.0 + dMotionScaling;;
+                        const double dScaleSearchURIGHT      = m_pCameraRIGHT->getPrincipalWeightU( ptUVEstimateRIGHT ) + p_dMotionScaling;;
+                        const double dScaleSearchVRIGHT      = m_pCameraRIGHT->getPrincipalWeightV( ptUVEstimateRIGHT ) + p_dMotionScaling;;
                         const double dSearchHalfWidthRIGHT   = dScaleSearchURIGHT*m_uSearchBlockSizePoseOptimization;
                         const double dSearchHalfHeightRIGHT  = dScaleSearchVRIGHT*m_uSearchBlockSizePoseOptimization;
 
@@ -584,10 +582,10 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
 
         //ds qualitiy information
         const double dDeltaOptimization      = ( matTransformationLEFTtoWORLD.translation( )-vecTranslationEstimate ).squaredNorm( );
-        const double dOptimizationCovariance = dDeltaOptimization/dMotionScaling;
+        const double dOptimizationCovariance = dDeltaOptimization/p_dMotionScaling;
 
         //ds log resulting trajectory and delta to initial
-        std::fprintf( m_pFileOdometryOptimization, " %6.2f %6.2f %6.2f | %6.4f |   %4.2f |     %6.4f", matTransformationLEFTtoWORLD.translation( ).x( ), matTransformationLEFTtoWORLD.translation( ).y( ), matTransformationLEFTtoWORLD.translation( ).z( ), dDeltaOptimization, dMotionScaling, dOptimizationCovariance );
+        std::fprintf( m_pFileOdometryOptimization, " %6.2f %6.2f %6.2f | %6.4f |   %4.2f |     %6.4f", matTransformationLEFTtoWORLD.translation( ).x( ), matTransformationLEFTtoWORLD.translation( ).y( ), matTransformationLEFTtoWORLD.translation( ).z( ), dDeltaOptimization, p_dMotionScaling, dOptimizationCovariance );
 
         //ds check if acceptable
         if( 0.5 > dOptimizationCovariance )
@@ -596,9 +594,13 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
             const MatrixProjection matProjectionWORLDtoLEFT( m_pCameraLEFT->m_matProjection*m_cSolverPoseSTEREO.T.matrix( ) );
             for( CMatchPoseOptimizationSTEREO pMatchSTEREO: vecLandmarkMatches )
             {
-                _addMeasurementToLandmarkSTEREO( p_uFrame, pMatchSTEREO, matTransformationLEFTtoWORLD, matProjectionWORLDtoLEFT );
+                _addMeasurementToLandmarkSTEREO( p_uFrame, pMatchSTEREO, matTransformationLEFTtoWORLD, p_vecCameraOrientation, matProjectionWORLDtoLEFT );
             }
 
+            //ds update info
+            m_uNumberOfDetectionsPoseOptimization = vecLandmarkMatches.size( );
+
+            //ds return optimized pose
             return m_cSolverPoseSTEREO.T;
         }
         else
@@ -619,6 +621,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                                                                                                                     const cv::Mat& p_matImageLEFT,
                                                                                                                     const cv::Mat& p_matImageRIGHT,
                                                                                                                     const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                                                                                                    const Eigen::Vector3d& p_vecCameraOrientation,
                                                                                                                     const int32_t& p_iHalfLineLengthBase,
                                                                                                                     cv::Mat& p_matDisplayTrajectory )
 {
@@ -806,7 +809,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                 pLandmarkReference->matDescriptorLASTLEFT      = pMatchLEFT->matDescriptor; //( pMatchLEFT->matDescriptor + pLandmarkReference->matDescriptorLastLEFT )/2.0;
                 pLandmarkReference->matDescriptorLASTRIGHT     = matDescriptorRIGHT;
                 pLandmarkReference->uFailedSubsequentTrackings = 0;
-                pLandmarkReference->addMeasurement( p_uFrame, ptUVLEFT, ptUVRIGHT, vecPointTriangulatedLEFT, vecPointXYZ, vecCameraPosition, matProjectionWORLDtoLEFT );
+                pLandmarkReference->addMeasurement( p_uFrame, ptUVLEFT, ptUVRIGHT, vecPointTriangulatedLEFT, vecPointXYZ, vecCameraPosition, p_vecCameraOrientation, matProjectionWORLDtoLEFT );
 
                 //ds register measurement
                 vecVisibleLandmarksPerKeyFrame.push_back( pLandmarkReference->getLastMeasurement( ) );
@@ -953,6 +956,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                                                                                                                     const cv::Mat& p_matImageLEFT,
                                                                                                                     const cv::Mat& p_matImageRIGHT,
                                                                                                                     const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                                                                                                    const Eigen::Vector3d& p_vecCameraOrientation,
                                                                                                                     const int32_t& p_iHalfLineLengthBase )
 {
     //ds detected landmarks at this position
@@ -988,7 +992,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksEssential) landmark [%06lu] dropped (optimization failed, successful: %u, error: %f)\n", pLandmark->uID, pLandmark->uOptimizationsSuccessful, pLandmark->dCurrentAverageSquaredError );
-                ++m_uNumberOfInvalidLandmarks;
+                ++m_uNumberOfInvalidLandmarksTotal;
             }
 
             //ds check if we can skip this landmark due to invalid optimization
@@ -997,7 +1001,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksEssential) landmark [%06lu] dropped (invalid optimization, successful: %u, error: %f)\n", pLandmark->uID, pLandmark->uOptimizationsSuccessful, pLandmark->dCurrentAverageSquaredError );
-                ++m_uNumberOfInvalidLandmarks;
+                ++m_uNumberOfInvalidLandmarksTotal;
             }
 
             //ds process the landmark
@@ -1122,7 +1126,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                         }
 
                         //ds add this measurement to the landmark
-                        _addMeasurementToLandmarkLEFT( p_uFrame, pLandmark, p_matImageRIGHT, pMatchLEFT->cKeyPoint, pMatchLEFT->matDescriptor, p_matTransformationLEFTtoWORLD, matProjectionWORLDtoLEFT );
+                        _addMeasurementToLandmarkLEFT( p_uFrame, pLandmark, p_matImageRIGHT, pMatchLEFT->cKeyPoint, pMatchLEFT->matDescriptor, p_matTransformationLEFTtoWORLD, p_vecCameraOrientation, matProjectionWORLDtoLEFT );
 
                         //ds register measurement
                         vecVisibleLandmarksPerDetectionPoint.push_back( pLandmark->getLastMeasurement( ) );
@@ -1191,8 +1195,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                                                                                                                  const uint64_t p_uFrame,
                                                                                                                  const cv::Mat& p_matImageLEFT,
                                                                                                                  const cv::Mat& p_matImageRIGHT,
-                                                                                                                 const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                                                                                 const int32_t& p_iHalfLineLengthBase )
+                                                                                                                 const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD )
 {
     //ds detected landmarks at this position
     std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( std::make_shared< std::vector< const CMeasurementLandmark* > >( ) );
@@ -1254,9 +1257,10 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                                                                                                                       const cv::Mat& p_matImageLEFT,
                                                                                                                       const cv::Mat& p_matImageRIGHT,
                                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                                                                                      const double& p_dSquaredNormAngularVelocityFiltered )
+                                                                                                                      const Eigen::Vector3d& p_vecCameraOrientation,
+                                                                                                                      const double& p_dMotionScaling )
 {
-    assert( 0.0 <= p_dSquaredNormAngularVelocityFiltered );
+    assert( 1.0 <= p_dMotionScaling );
 
     //ds detected landmarks at this position
     std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( std::make_shared< std::vector< const CMeasurementLandmark* > >( ) );
@@ -1268,11 +1272,11 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
     //ds new active measurement points
     std::vector< CDetectionPoint > vecDetectionPointsActive;
 
-    //ds dynamic scaling
-    const double dMotionScaling = 1.0+p_dSquaredNormAngularVelocityFiltered;
-
     //ds compute initial sampling line
-    const double dHalfLineLength = dMotionScaling*10;
+    const double dHalfLineLength = p_dMotionScaling*10;
+
+    //ds total detections counter
+    UIDLandmark uDetectionsEpipolar = 0;
 
     //ds active measurements
     for( const CDetectionPoint cDetectionPoint: m_vecDetectionPointsActive )
@@ -1298,8 +1302,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
             {
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
-                //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksEssential) landmark [%06lu] dropped (optimization failed, successful: %u, error: %f)\n", pLandmark->uID, pLandmark->uOptimizationsSuccessful, pLandmark->dCurrentAverageSquaredError );
-                ++m_uNumberOfInvalidLandmarks;
+                ++m_uNumberOfInvalidLandmarksTotal;
             }
 
             //ds check if we can skip this landmark due to invalid optimization
@@ -1307,8 +1310,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
             {
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
-                //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksEssential) landmark [%06lu] dropped (invalid optimization, successful: %u, error: %f)\n", pLandmark->uID, pLandmark->uOptimizationsSuccessful, pLandmark->dCurrentAverageSquaredError );
-                ++m_uNumberOfInvalidLandmarks;
+                ++m_uNumberOfInvalidLandmarksTotal;
             }
 
             //ds process the landmark
@@ -1326,27 +1328,44 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                     //ds projection from triangulation to estimate epipolar line drawing TODO: remove cast
                     const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DInWorldFrame >( matTransformationWORLDtoLEFT*pLandmark->vecPointXYZOptimized ) ) );
 
-                    //ds compute the projection of the point (line) in the current frame (working in normalized coordinates)
-                    const Eigen::Vector3d vecCoefficients( matFundamental*pLandmark->vecUVReferenceLEFT );
-
-                    //ds raw values
-                    const double dUMinimumRAW     = std::max( ptProjection.x-dHalfLineLength, 0.0 );
-                    const double dUMaximumRAW     = std::min( ptProjection.x+dHalfLineLength, m_pCameraLEFT->m_dWidthPixel );
-                    const double dVForUMinimumRAW = _getCurveFundamentalV( vecCoefficients, dUMinimumRAW );
-                    const double dVForUMaximumRAW = _getCurveFundamentalV( vecCoefficients, dUMaximumRAW );
-
-                    assert( 0.0 <= dUMinimumRAW && m_pCameraLEFT->m_dWidthPixel >= dUMinimumRAW );
-                    assert( 0.0 <= dUMaximumRAW && m_pCameraLEFT->m_dWidthPixel >= dUMaximumRAW );
-                    assert( dUMinimumRAW     != dUMaximumRAW );
-                    assert( dVForUMinimumRAW != dVForUMaximumRAW );
-
-                    //ds check if line is out of scope
-                    if( ( 0.0 > dVForUMinimumRAW && 0.0 > dVForUMaximumRAW ) || ( m_pCameraLEFT->m_dHeightPixel < dVForUMinimumRAW && m_pCameraLEFT->m_dHeightPixel < dVForUMaximumRAW ) )
+                    try
                     {
-                        std::printf( "out of sight: [%6.2f,%6.2f][%6.2f,%6.2f]\n", dUMinimumRAW, dUMaximumRAW, dVForUMinimumRAW, dVForUMaximumRAW );
-                    }
-                    else
-                    {
+                        //ds check if the projection is out of the fov
+                        if( !m_pCameraLEFT->m_cFOV.contains( ptProjection ) )
+                        {
+                            throw CExceptionEpipolarLine( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) projection out of sight" );
+                        }
+
+                        //ds compute the projection of the point (line) in the current frame (working in normalized coordinates)
+                        const Eigen::Vector3d vecCoefficients( matFundamental*pLandmark->vecUVReferenceLEFT );
+
+                        //ds line length for this projection based on principal weighting
+                        const double dHalfLineLengthU = 10 + m_pCameraLEFT->getPrincipalWeightU( ptProjection )*dHalfLineLength;
+                        const double dHalfLineLengthV = 10 + m_pCameraLEFT->getPrincipalWeightV( ptProjection )*dHalfLineLength;
+
+                        assert( 0.0 < dHalfLineLengthU );
+                        assert( 0.0 < dHalfLineLengthV );
+
+                        //ds raw values
+                        const double dUMinimumRAW     = std::max( ptProjection.x-dHalfLineLengthU, 0.0 );
+                        const double dUMaximumRAW     = std::min( ptProjection.x+dHalfLineLengthU, m_pCameraLEFT->m_dWidthPixel );
+                        const double dVForUMinimumRAW = _getCurveFundamentalV( vecCoefficients, dUMinimumRAW );
+                        const double dVForUMaximumRAW = _getCurveFundamentalV( vecCoefficients, dUMaximumRAW );
+
+                        assert( 0.0 <= dUMinimumRAW );
+                        assert( m_pCameraLEFT->m_dWidthPixel >= dUMinimumRAW );
+                        assert( 0.0 <= dUMaximumRAW );
+                        assert( m_pCameraLEFT->m_dWidthPixel >= dUMaximumRAW );
+                        assert( dUMinimumRAW     < dUMaximumRAW );
+                        assert( dVForUMinimumRAW != dVForUMaximumRAW );
+
+                        //ds check if line is out of scope
+                        if( ( 0.0 > dVForUMinimumRAW && 0.0 > dVForUMaximumRAW ) || ( m_pCameraLEFT->m_dHeightPixel < dVForUMinimumRAW && m_pCameraLEFT->m_dHeightPixel < dVForUMaximumRAW ) )
+                        {
+                            //ds landmark out of sight (not visible in this frame, still active though)
+                            throw CExceptionEpipolarLine( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) vertical out of sight" );
+                        }
+
                         //ds final values set after if tree TODO reduce booleans for performance
                         double dUMinimum     = -1.0;
                         double dUMaximum     = -1.0;
@@ -1354,58 +1373,74 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                         double dVForUMaximum = -1.0;
 
                         //ds compute v border values
-                        const double dVLimitMinimum( std::max( ptProjection.y-dHalfLineLength, 0.0 ) );
-                        const double dVLimitMaximum( std::min( ptProjection.y+dHalfLineLength, m_pCameraLEFT->m_dHeightPixel ) );
+                        const double dVLimitMinimum( std::max( ptProjection.y-dHalfLineLengthV, 0.0 ) );
+                        const double dVLimitMaximum( std::min( ptProjection.y+dHalfLineLengthV, m_pCameraLEFT->m_dHeightPixel ) );
 
                         assert( 0.0 <= dVLimitMinimum && m_pCameraLEFT->m_dHeightPixel >= dVLimitMinimum );
                         assert( 0.0 <= dVLimitMaximum && m_pCameraLEFT->m_dHeightPixel >= dVLimitMaximum );
 
-                        //ds distinguish line type for sampling: U min is at V min
-                        if( dUMinimumRAW < dUMaximumRAW )
-                        {
-                            //ds regular U
-                            dUMinimum = dUMinimumRAW;
-                            dUMaximum = dUMaximumRAW;
+                        //ds regular U
+                        dUMinimum = dUMinimumRAW;
+                        dUMaximum = dUMaximumRAW;
 
-                            if( dVForUMinimumRAW < dVForUMaximumRAW )
+                        //ds check line configuration
+                        if( dVForUMinimumRAW < dVForUMaximumRAW )
+                        {
+                            //ds check for invalid border values (bad reprojections)
+                            if( dVLimitMinimum > dVForUMaximumRAW || dVLimitMaximum < dVForUMinimumRAW )
                             {
-                                //ds regular case
-                                dVForUMinimum = std::max( dVForUMinimumRAW, dVLimitMinimum );
-                                dVForUMaximum = std::min( dVForUMaximumRAW, dVLimitMaximum );
-                                //std::printf( "sampling case 0: [%6.2f,%6.2f][%6.2f,%6.2f]\n", dUMinimum, dUMaximum, dVForUMinimum, dVForUMaximum );
+                                throw CExceptionEpipolarLine( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) caught bad projection negative slope" );
+                            }
+
+                            //ds regular case
+                            if( dVLimitMinimum > dVForUMinimumRAW )
+                            {
+                                dVForUMinimum = dVLimitMinimum;
+                                dUMinimum     = _getCurveFundamentalU( vecCoefficients, dVForUMinimum );
                             }
                             else
                             {
-                                //ds swapped case
-                                dVForUMinimum = std::max( dVForUMaximumRAW, dVLimitMinimum );
-                                dVForUMaximum = std::min( dVForUMinimumRAW, dVLimitMaximum );
-                                //std::printf( "sampling case 1: [%6.2f,%6.2f][%6.2f,%6.2f]\n", dUMinimum, dUMaximum, dVForUMinimum, dVForUMaximum );
+                                dVForUMinimum = dVForUMinimumRAW;
                             }
+                            if( dVLimitMaximum < dVForUMaximumRAW )
+                            {
+                                dVForUMaximum = dVLimitMaximum;
+                                dUMaximum     = _getCurveFundamentalU( vecCoefficients, dVForUMaximum );
+                            }
+                            else
+                            {
+                                dVForUMaximum = dVForUMaximumRAW;
+                            }
+                            //std::printf( "sampling case 0: [%6.2f,%6.2f][%6.2f,%6.2f]\n", dUMinimum, dUMaximum, dVForUMinimum, dVForUMaximum );
                         }
-
-                        //ds U min is at V max
                         else
                         {
-                            assert( false );
-
-                            //ds swapped U
-                            dUMinimum = dUMaximumRAW;
-                            dUMaximum = dUMinimumRAW;
-
-                            if( dVForUMinimumRAW < dVForUMaximumRAW )
+                            //ds check for invalid border values (bad reprojections)
+                            if( dVLimitMinimum > dVForUMinimumRAW || dVLimitMaximum < dVForUMaximumRAW )
                             {
-                                //ds regular case
-                                dVForUMinimum = std::max( dVForUMinimumRAW, dVLimitMinimum );
-                                dVForUMaximum = std::min( dVForUMaximumRAW, dVLimitMaximum );
-                                //std::printf( "sampling case 2: [%6.2f,%6.2f][%6.2f,%6.2f]\n", dUMinimum, dUMaximum, dVForUMinimum, dVForUMaximum );
+                                throw CExceptionEpipolarLine( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) caught bad projection positive slope" );
+                            }
+
+                            //ds swapped case
+                            if( dVLimitMinimum > dVForUMaximumRAW )
+                            {
+                                dVForUMinimum = dVLimitMinimum;
+                                dUMaximum     = _getCurveFundamentalU( vecCoefficients, dVForUMinimum );
                             }
                             else
                             {
-                                //ds swapped case
-                                dVForUMinimum = std::max( dVForUMaximumRAW, dVLimitMinimum );
-                                dVForUMaximum = std::min( dVForUMinimumRAW, dVLimitMaximum );
-                                //std::printf( "sampling case 3: [%6.2f,%6.2f][%6.2f,%6.2f]\n", dUMinimum, dUMaximum, dVForUMinimum, dVForUMaximum );
+                                dVForUMinimum = dVForUMaximumRAW;
                             }
+                            if( dVLimitMaximum < dVForUMinimumRAW )
+                            {
+                                dVForUMaximum = dVLimitMaximum;
+                                dUMinimum     = _getCurveFundamentalU( vecCoefficients, dVForUMaximum );
+                            }
+                            else
+                            {
+                                dVForUMaximum = dVForUMinimumRAW;
+                            }
+                            //std::printf( "sampling case 1: [%6.2f,%6.2f][%6.2f,%6.2f]\n", dUMinimum, dUMaximum, dVForUMinimum, dVForUMaximum );
                         }
 
                         assert( 0.0 <= dUMaximum && m_pCameraLEFT->m_dWidthPixel >= dUMaximum );
@@ -1416,59 +1451,51 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                         assert( 0.0 <= dVForUMaximum-dVForUMinimum );
 
                         //ds compute pixel ranges to sample
-                        const uint32_t uDeltaU( dUMaximum-dUMinimum );
-                        const uint32_t uDeltaV( dVForUMaximum-dVForUMinimum );
+                        const uint32_t uDeltaU = dUMaximum-dUMinimum;
+                        const uint32_t uDeltaV = dVForUMaximum-dVForUMinimum;
 
                         //ds draw last position
                         cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 2, CColorCodeBGR( 255, 0, 0 ), -1 );
 
                         //ds the match to find
-                        const CMatchTracking* pMatchLEFT( 0 );
+                        std::shared_ptr< CMatchTracking > pMatchLEFT = 0;
 
-                        try
+                        //ds sample the larger range
+                        if( uDeltaV < uDeltaU )
                         {
-                            //ds sample the larger range
-                            if( uDeltaV < uDeltaU )
-                            {
-                                //ds get the match over U
-                                pMatchLEFT = _getMatchSampleRecursiveFundamentalU( p_matDisplayLEFT, p_matImageLEFT, dUMinimum, uDeltaU, vecCoefficients, pLandmark->matDescriptorLASTLEFT, pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
-                            }
-                            else
-                            {
-                                //ds get the match over V
-                                pMatchLEFT = _getMatchSampleRecursiveFundamentalV( p_matDisplayLEFT, p_matImageLEFT, dVForUMinimum, uDeltaV, vecCoefficients, pLandmark->matDescriptorLASTLEFT, pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
-                            }
-
-                            //ds add this measurement to the landmark
-                            _addMeasurementToLandmarkLEFT( p_uFrame, pLandmark, p_matImageRIGHT, pMatchLEFT->cKeyPoint, pMatchLEFT->matDescriptor, p_matTransformationLEFTtoWORLD, matProjectionWORLDtoLEFT );
-
-                            //ds register measurement
-                            vecVisibleLandmarksPerDetectionPoint.push_back( pLandmark->getLastMeasurement( ) );
-
-                            //ds new positions
-                            //cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 2, CColorCodeBGR( 0, 255, 0 ), -1 );
-
-                            //ds draw reprojection of triangulation
-                            //cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 2, CColorCodeBGR( 0, 255, 0 ), -1 );
-
-                            //ds free handle
-                            delete pMatchLEFT;
+                            //ds get the match over U
+                            pMatchLEFT = _getMatchSampleRecursiveFundamentalU( p_matDisplayLEFT, p_matImageLEFT, dUMinimum, uDeltaU, vecCoefficients, pLandmark->matDescriptorLASTLEFT, pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
                         }
-                        catch( const CExceptionNoMatchFound& p_eException )
+                        else
                         {
-                            ++pLandmark->uFailedSubsequentTrackings;
-                            //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksEssential) landmark [%06lu] caught exception: %s\n", pLandmark->uID, p_eException.what( ) );
+                            //ds get the match over V
+                            pMatchLEFT = _getMatchSampleRecursiveFundamentalV( p_matDisplayLEFT, p_matImageLEFT, dVForUMinimum, uDeltaV, vecCoefficients, pLandmark->matDescriptorLASTLEFT, pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
                         }
+
+                        //ds add this measurement to the landmark
+                        _addMeasurementToLandmarkLEFT( p_uFrame, pLandmark, p_matImageRIGHT, pMatchLEFT->cKeyPoint, pMatchLEFT->matDescriptor, p_matTransformationLEFTtoWORLD, p_vecCameraOrientation, matProjectionWORLDtoLEFT );
+
+                        //ds register measurement
+                        vecVisibleLandmarksPerDetectionPoint.push_back( pLandmark->getLastMeasurement( ) );
+
+                        //ds update info
+                        ++uDetectionsEpipolar;
+                    }
+                    catch( const CExceptionEpipolarLine& p_cException )
+                    {
+                        //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) landmark [%06lu] epipolar failure: %s\n", pLandmark->uID, p_cException.what( ) );
+                        ++pLandmark->uFailedSubsequentTrackings;
+                    }
+                    catch( const CExceptionNoMatchFound& p_cException )
+                    {
+                        //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) landmark [%06lu] matching failure: %s\n", pLandmark->uID, p_cException.what( ) );
+                        ++pLandmark->uFailedSubsequentTrackings;
                     }
 
                     //ds check activity
                     if( m_uMaximumFailedSubsequentTrackingsPerLandmark > pLandmark->uFailedSubsequentTrackings )
                     {
                         vecActiveLandmarksPerDetectionPoint->push_back( pLandmark );
-                    }
-                    else
-                    {
-                        //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksEssential) landmark [%06lu] dropped (out of sight)\n", pLandmark->uID );
                     }
                 }
             }
@@ -1491,6 +1518,9 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
             std::printf( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) erased detection point [%06lu]\n", cDetectionPoint.uID );
         }
     }
+
+    //ds update info
+    m_uNumberOfDetectionsEpipolar = uDetectionsEpipolar;
 
     //ds update active measurement points
     m_vecDetectionPointsActive.swap( vecDetectionPointsActive );
@@ -1553,7 +1583,7 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveU( cv::Mat& p_ma
     try
     {
         //ds return if we find a match on the epipolar line
-        return _getMatch( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
+        return _getMatchCStyle( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
     }
     catch( const CExceptionNoMatchFoundInternal& p_cException )
     {
@@ -1624,7 +1654,7 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveV( cv::Mat& p_ma
     try
     {
         //ds return if we find a match on the epipolar line
-        return _getMatch( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
+        return _getMatchCStyle( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
     }
     catch( const CExceptionNoMatchFoundInternal& p_cException )
     {
@@ -1641,15 +1671,15 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveV( cv::Mat& p_ma
     }
 }
 
-const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveFundamentalU( cv::Mat& p_matDisplay,
-                                                                              const cv::Mat& p_matImage,
-                                                                              const double& p_dUMinimum,
-                                                                              const uint32_t& p_uDeltaU,
-                                                                              const Eigen::Vector3d& p_vecCoefficients,
-                                                                              const CDescriptor& p_matReferenceDescriptor,
-                                                                              const CDescriptor& p_matOriginalDescriptor,
-                                                                              const double& p_dKeyPointSize,
-                                                                              const uint8_t& p_uRecursionDepth ) const
+const std::shared_ptr< CMatchTracking > CMatcherEpipolar::_getMatchSampleRecursiveFundamentalU( cv::Mat& p_matDisplay,
+                                                                                                const cv::Mat& p_matImage,
+                                                                                                const double& p_dUMinimum,
+                                                                                                const uint32_t& p_uDeltaU,
+                                                                                                const Eigen::Vector3d& p_vecCoefficients,
+                                                                                                const CDescriptor& p_matReferenceDescriptor,
+                                                                                                const CDescriptor& p_matOriginalDescriptor,
+                                                                                                const double& p_dKeyPointSize,
+                                                                                                const uint8_t& p_uRecursionDepth ) const
 {
     //ds allocate keypoint pool
     std::vector< cv::KeyPoint > vecPoolKeyPoints( p_uDeltaU );
@@ -1703,20 +1733,20 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveFundamentalU( cv
         else
         {
             //ds sample further
-            return _getMatchSampleRecursiveFundamentalU( p_matDisplay, p_matImage, p_dUMinimum, p_uDeltaU, p_vecCoefficients, p_matReferenceDescriptor, p_matOriginalDescriptor, p_dKeyPointSize, p_uRecursionDepth+1 );
+            return _getMatchSampleRecursiveFundamentalU( p_matDisplay, p_matImage, p_dUMinimum, p_uDeltaU, p_vecCoefficients, p_matReferenceDescriptor, p_matOriginalDescriptor, p_dKeyPointSize, p_uRecursionDepth+m_uRecursionStepSize );
         }
     }
 }
 
-const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveFundamentalV( cv::Mat& p_matDisplay,
-                                                                              const cv::Mat& p_matImage,
-                                                                              const double& p_dVMinimum,
-                                                                              const uint32_t& p_uDeltaV,
-                                                                              const Eigen::Vector3d& p_vecCoefficients,
-                                                                              const CDescriptor& p_matReferenceDescriptor,
-                                                                              const CDescriptor& p_matOriginalDescriptor,
-                                                                              const double& p_dKeyPointSize,
-                                                                              const uint8_t& p_uRecursionDepth ) const
+const std::shared_ptr< CMatchTracking > CMatcherEpipolar::_getMatchSampleRecursiveFundamentalV( cv::Mat& p_matDisplay,
+                                                                                                const cv::Mat& p_matImage,
+                                                                                                const double& p_dVMinimum,
+                                                                                                const uint32_t& p_uDeltaV,
+                                                                                                const Eigen::Vector3d& p_vecCoefficients,
+                                                                                                const CDescriptor& p_matReferenceDescriptor,
+                                                                                                const CDescriptor& p_matOriginalDescriptor,
+                                                                                                const double& p_dKeyPointSize,
+                                                                                                const uint8_t& p_uRecursionDepth ) const
 {
     //ds allocate keypoint pool
     std::vector< cv::KeyPoint > vecPoolKeyPoints( p_uDeltaV );
@@ -1770,7 +1800,7 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveFundamentalV( cv
         else
         {
             //ds sample further
-            return _getMatchSampleRecursiveFundamentalV( p_matDisplay, p_matImage, p_dVMinimum, p_uDeltaV, p_vecCoefficients, p_matReferenceDescriptor, p_matOriginalDescriptor, p_dKeyPointSize, p_uRecursionDepth+1 );
+            return _getMatchSampleRecursiveFundamentalV( p_matDisplay, p_matImage, p_dVMinimum, p_uDeltaV, p_vecCoefficients, p_matReferenceDescriptor, p_matOriginalDescriptor, p_dKeyPointSize, p_uRecursionDepth+m_uRecursionStepSize );
         }
     }
 }
@@ -1826,7 +1856,7 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveU( const cv::Mat
     try
     {
         //ds return if we find a match on the epipolar line
-        return _getMatch( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
+        return _getMatchCStyle( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
     }
     catch( const CExceptionNoMatchFoundInternal& p_cException )
     {
@@ -1894,7 +1924,7 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveV( const cv::Mat
     try
     {
         //ds return if we find a match on the epipolar line
-        return _getMatch( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
+        return _getMatchCStyle( p_matImage, vecPoolKeyPoints, p_matReferenceDescriptor, p_matOriginalDescriptor );
     }
     catch( const CExceptionNoMatchFoundInternal& p_cException )
     {
@@ -1911,7 +1941,7 @@ const CMatchTracking* CMatcherEpipolar::_getMatchSampleRecursiveV( const cv::Mat
     }
 }
 
-const CMatchTracking* CMatcherEpipolar::_getMatch( const cv::Mat& p_matImage,
+const CMatchTracking* CMatcherEpipolar::_getMatchCStyle( const cv::Mat& p_matImage,
                                                               std::vector< cv::KeyPoint >& p_vecPoolKeyPoints,
                                                               const CDescriptor& p_matDescriptorReference,
                                                               const CDescriptor& p_matDescriptorOriginal ) const
@@ -1984,18 +2014,77 @@ const CMatchTracking* CMatcherEpipolar::_getMatch( const cv::Mat& p_matImage,
     }
 }
 
+const std::shared_ptr< CMatchTracking > CMatcherEpipolar::_getMatch( const cv::Mat& p_matImage,
+                                                                     std::vector< cv::KeyPoint >& p_vecPoolKeyPoints,
+                                                                     const CDescriptor& p_matDescriptorReference,
+                                                                     const CDescriptor& p_matDescriptorOriginal ) const
+{
+    //ds descriptor pool
+    cv::Mat matPoolDescriptors;
+
+    //ds compute descriptors of current search area
+    m_pExtractor->compute( p_matImage, p_vecPoolKeyPoints, matPoolDescriptors );
+
+    //ds escape if we didnt find any descriptors
+    if( p_vecPoolKeyPoints.empty( ) )
+    {
+        throw CExceptionNoMatchFoundInternal( "could not find a matching descriptor (empty KeyPoint pool)" );
+    }
+
+    //ds match the descriptors
+    std::vector< cv::DMatch > vecMatches;
+    m_pMatcher->match( p_matDescriptorReference, matPoolDescriptors, vecMatches );
+
+    //ds escape for no matches
+    if( vecMatches.empty( ) )
+    {
+        throw CExceptionNoMatchFoundInternal( "could not find any matches (empty DMatches pool)" );
+    }
+
+    //ds buffer first match
+    const cv::DMatch& cBestMatch( vecMatches[0] );
+
+    //ds check if we are in the range (works for negative ids as well)
+    assert( static_cast< std::vector< cv::KeyPoint >::size_type >( cBestMatch.trainIdx ) < p_vecPoolKeyPoints.size( ) );
+
+    //ds bufffer new descriptor
+    const CDescriptor matDescriptorNew( matPoolDescriptors.row(cBestMatch.trainIdx) );
+
+    //ds distances
+    const double dMatchingDistanceToRelative( cBestMatch.distance );
+    const double dMatchingDistanceToOriginal( cv::norm( p_matDescriptorOriginal, matDescriptorNew, cv::NORM_HAMMING ) );
+
+    if( m_dMatchingDistanceCutoffTrackingEssential > dMatchingDistanceToRelative )
+    {
+        if( m_dMatchingDistanceCutoffOriginal > dMatchingDistanceToOriginal )
+        {
+            //ds return the match
+            return std::make_shared< CMatchTracking >( p_vecPoolKeyPoints[cBestMatch.trainIdx], matDescriptorNew );
+        }
+        else
+        {
+            throw CExceptionNoMatchFoundInternal( "could not find a matching descriptor (ORIGINAL matching distance: "+ std::to_string( dMatchingDistanceToOriginal ) +")" );
+        }
+    }
+    else
+    {
+        throw CExceptionNoMatchFoundInternal( "could not find a matching descriptor (matching distance: "+ std::to_string( cBestMatch.distance ) +")" );
+    }
+}
+
 void CMatcherEpipolar::_addMeasurementToLandmarkLEFT( const uint64_t p_uFrame,
                                                   CLandmark* p_pLandmark,
                                                   const cv::Mat& p_matImageRIGHT,
                                                   const cv::KeyPoint& p_cKeyPoint,
                                                   const CDescriptor& p_matDescriptorNew,
                                                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                                  const Eigen::Vector3d& p_vecCameraOrientation,
                                                   const MatrixProjection& p_matProjectionWORLDtoLEFT )
 {
     //ds buffer point
     cv::Point2f ptUVLEFT( p_cKeyPoint.pt );
 
-    assert( m_cSearchROI.contains( p_cKeyPoint.pt ) );
+    assert( m_pCameraLEFT->m_cFOV.contains( p_cKeyPoint.pt ) );
 
     //ds triangulate point
     const CMatchTriangulation cMatch( m_pTriangulator->getPointTriangulatedCompactInRIGHT( p_matImageRIGHT, p_cKeyPoint, p_matDescriptorNew ) );
@@ -2011,24 +2100,32 @@ void CMatcherEpipolar::_addMeasurementToLandmarkLEFT( const uint64_t p_uFrame,
         throw CExceptionNoMatchFound( "<CMatcherEpipolar>(_addMeasurementToLandmark) invalid depth: " + std::to_string( dDepthMeters ) );
     }
 
-    assert( m_cSearchROI.contains( ptUVRIGHT ) );
+    assert( m_pCameraRIGHT->m_cFOV.contains( ptUVRIGHT ) );
 
     //ds update landmark (NO EXCEPTIONS HERE)
     p_pLandmark->bIsCurrentlyVisible        = true;
     p_pLandmark->matDescriptorLASTLEFT      = p_matDescriptorNew;
     p_pLandmark->matDescriptorLASTRIGHT     = cMatch.matDescriptorCAMERA;
     p_pLandmark->uFailedSubsequentTrackings = 0;
-    p_pLandmark->addMeasurement( p_uFrame, ptUVLEFT, ptUVRIGHT, vecPointXYZLEFT, p_matTransformationLEFTtoWORLD*vecPointXYZLEFT, p_matTransformationLEFTtoWORLD.translation( ), p_matProjectionWORLDtoLEFT );
+    p_pLandmark->addMeasurement( p_uFrame,
+                                 ptUVLEFT,
+                                 ptUVRIGHT,
+                                 vecPointXYZLEFT,
+                                 p_matTransformationLEFTtoWORLD*vecPointXYZLEFT,
+                                 p_matTransformationLEFTtoWORLD.translation( ),
+                                 p_vecCameraOrientation,
+                                 p_matProjectionWORLDtoLEFT );
 }
 
 void CMatcherEpipolar::_addMeasurementToLandmarkSTEREO( const uint64_t p_uFrame,
                                                   CMatchPoseOptimizationSTEREO& p_cMatchSTEREO,
                                                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                                  const Eigen::Vector3d& p_vecCameraOrientation,
                                                   const MatrixProjection& p_matProjectionWORLDtoLEFT )
 {
     //ds input validation
-    assert( m_cSearchROI.contains( p_cMatchSTEREO.ptUVLEFT ) );
-    assert( m_cSearchROI.contains( p_cMatchSTEREO.ptUVRIGHT ) );
+    assert( m_pCameraLEFT->m_cFOV.contains( p_cMatchSTEREO.ptUVLEFT ) );
+    assert( m_pCameraRIGHT->m_cFOV.contains( p_cMatchSTEREO.ptUVRIGHT ) );
     assert( m_dMinimumDepthMeters < p_cMatchSTEREO.vecPointXYZLEFT.z( ) );
     assert( m_dMaximumDepthMeters > p_cMatchSTEREO.vecPointXYZLEFT.z( ) );
 
@@ -2037,7 +2134,14 @@ void CMatcherEpipolar::_addMeasurementToLandmarkSTEREO( const uint64_t p_uFrame,
     p_cMatchSTEREO.pLandmark->matDescriptorLASTLEFT      = p_cMatchSTEREO.matDescriptorLEFT;
     p_cMatchSTEREO.pLandmark->matDescriptorLASTRIGHT     = p_cMatchSTEREO.matDescriptorRIGHT;
     p_cMatchSTEREO.pLandmark->uFailedSubsequentTrackings = 0;
-    p_cMatchSTEREO.pLandmark->addMeasurement( p_uFrame, p_cMatchSTEREO.ptUVLEFT, p_cMatchSTEREO.ptUVRIGHT, p_cMatchSTEREO.vecPointXYZLEFT, p_matTransformationLEFTtoWORLD*p_cMatchSTEREO.vecPointXYZLEFT, p_matTransformationLEFTtoWORLD.translation( ), p_matProjectionWORLDtoLEFT );
+    p_cMatchSTEREO.pLandmark->addMeasurement( p_uFrame,
+                                              p_cMatchSTEREO.ptUVLEFT,
+                                              p_cMatchSTEREO.ptUVRIGHT,
+                                              p_cMatchSTEREO.vecPointXYZLEFT,
+                                              p_matTransformationLEFTtoWORLD*p_cMatchSTEREO.vecPointXYZLEFT,
+                                              p_matTransformationLEFTtoWORLD.translation( ),
+                                              p_vecCameraOrientation,
+                                              p_matProjectionWORLDtoLEFT );
 }
 
 const double CMatcherEpipolar::_getCurveEssentialX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const

@@ -12,6 +12,7 @@
 #include "CTriangulator.h"
 #include "CDetectorMonoTilewise.h"
 #include "CMatcherEpipolar.h"
+#include "gui/CViewerScene.h"
 
 class CTrackerStereoMotionModel
 {
@@ -21,7 +22,8 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
-                    const uint32_t& p_uWaitKeyTimeout = 1 );
+                               const std::shared_ptr< CViewerScene > p_pViewer,
+                               const uint32_t& p_uWaitKeyTimeout = 1 );
     ~CTrackerStereoMotionModel( );
 
 //ds members
@@ -78,6 +80,7 @@ private:
     bool m_bIsShutdownRequested;
 
     //ds info display
+    std::shared_ptr< CViewerScene > m_pViewer;
     cv::Mat m_matTrajectoryXY;
     const uint32_t m_uOffsetTrajectoryU;
     const uint32_t m_uOffsetTrajectoryV;
@@ -135,14 +138,16 @@ private:
                           const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
                           const Eigen::Isometry3d& p_matTransformationEstimateDampedWORLDtoLEFT,
                           const CAngularVelocityInIMUFrame& p_vecAngularVelocity,
-                          const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration );
+                          const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration,
+                          const Eigen::Vector3d& p_vecRotation );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const uint64_t& p_uFrame,
                                                       cv::Mat& p_matDisplay,
                                                       const cv::Mat& p_matImageLEFT,
                                                       const cv::Mat& p_matImageRIGHT,
                                                       const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                      const cv::Mat& p_matMask );
+                                                      const cv::Mat& p_matMask,
+                                                      const Eigen::Vector3d& p_vecRotation );
 
     //ds control
     void _shutDown( );

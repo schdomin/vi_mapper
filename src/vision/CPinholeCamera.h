@@ -49,7 +49,8 @@ public:
                                                       m_dWidthPixel( m_uWidthPixel ),
                                                       m_dHeightPixel( m_uHeightPixel ),
                                                       m_prRangeWidthNormalized( std::pair< double, double >( getNormalizedX( 0 ), getNormalizedX( p_uWidthPixel ) ) ),
-                                                      m_prRangeHeightNormalized( std::pair< double, double >( getNormalizedY( 0 ), getNormalizedY( p_uHeightPixel ) ) )
+                                                      m_prRangeHeightNormalized( std::pair< double, double >( getNormalizedY( 0 ), getNormalizedY( p_uHeightPixel ) ) ),
+                                                      m_cFOV( cv::Point2i( 0, 0 ), cv::Point2i( m_uWidthPixel, m_uHeightPixel ) )
     {
         m_matTransformationFromIMU.linear( )      = m_vecRotationFromIMU.toRotationMatrix( );
         m_matTransformationFromIMU.translation( ) = m_vecTranslationFromIMU;
@@ -106,6 +107,7 @@ public:
     const double m_dHeightPixel;
     const std::pair< double, double > m_prRangeWidthNormalized;
     const std::pair< double, double > m_prRangeHeightNormalized;
+    const cv::Rect m_cFOV;
 
 //ds access
 public:

@@ -18,6 +18,8 @@ find_package(Threads REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED )
 find_package(G2O REQUIRED)
+find_package(Qt4 REQUIRED)
+find_package(QGLViewer REQUIRED)
 
 #ds log found packages
 message("using OpenCV version: ${OpenCV_VERSION}")
@@ -36,6 +38,8 @@ include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${G2O_INCLUDE_DIR})
 #include_directories(${CSPARSE_INCLUDE_DIR})
 #include_directories(${CHOLMOD_INCLUDE_DIR})
+include_directories(${QT_INCLUDES})
+include_directories(${QGLVIEWER_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 #ds print all defined cmake variables
@@ -56,7 +60,8 @@ src/core/CTriangulator.cpp
 src/core/CDetectorMonoTilewise.cpp
 src/core/CMatcherEpipolar.cpp
 src/core/CMockedMatcherEpipolar.cpp
-src/optimization/CBridgeG2O.cpp)
+src/optimization/CBridgeG2O.cpp
+src/gui/CViewerScene.cpp)
 
 set(SOURCEFILES_MOCKED
 src/types/CLandmark.cpp
@@ -111,7 +116,13 @@ target_link_libraries(stereo_free
                       ${G2O_TYPES_SLAM3D} 
                       ${G2O_CORE_LIBRARY} 
                       ${G2O_STUFF_LIBRARY}
-                      ${G2O_TYPES_SBA})
+                      ${G2O_TYPES_SBA}
+                      ${QGLVIEWER_LIBRARY}
+                      ${QT_QTXML_LIBRARY} 
+                      ${QT_QTOPENGL_LIBRARY} 
+                      ${QT_QTGUI_LIBRARY} 
+                      ${QT_QTCORE_LIBRARY}
+                      glut )
 #target_link_libraries(republisher_node 
 #                      ${catkin_LIBRARIES} 
 #                      ${OpenCV_LIBRARIES}     
