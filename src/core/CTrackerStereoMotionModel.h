@@ -1,8 +1,6 @@
 #ifndef CTRACKERSTEREOMOTIONMODEL_H
 #define CTRACKERSTEREOMOTIONMODEL_H
 
-#include <memory>
-
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
 #include "txt_io/pose_message.h"
@@ -10,9 +8,7 @@
 #include "vision/CStereoCamera.h"
 #include "optimization/CBridgeG2O.h"
 #include "CTriangulator.h"
-#include "CDetectorMonoTilewise.h"
 #include "CMatcherEpipolar.h"
-#include "gui/CViewerScene.h"
 
 class CTrackerStereoMotionModel
 {
@@ -22,7 +18,6 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
-                               const std::shared_ptr< CViewerScene > p_pViewer,
                                const uint32_t& p_uWaitKeyTimeout = 1 );
     ~CTrackerStereoMotionModel( );
 
@@ -36,7 +31,7 @@ private:
     const std::shared_ptr< CStereoCamera > m_pCameraSTEREO;
 
     //ds reference information
-    uint64_t m_uFrameCount;
+    uint64_t m_uFrameCount = 0;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
     Eigen::Isometry3d m_matTransformationMotionWORLDtoIMU;
@@ -74,23 +69,23 @@ private:
 
     //ds g2o data
     std::vector< CKeyFrame > m_vecKeyFrames;
+    UIDKeyFrame m_uIDProcessedKeyFrameLAST            = 0;
+    const UIDKeyFrame m_uIDDeltaKeyFrameForProcessing = 9;
+    uint32_t m_uOptimizationsG2O                      = 0;
 
     //ds control
     const EPlaybackMode m_eMode;
-    bool m_bIsShutdownRequested;
+    bool m_bIsShutdownRequested = false;
 
     //ds info display
-    std::shared_ptr< CViewerScene > m_pViewer;
-    cv::Mat m_matTrajectoryXY;
-    const uint32_t m_uOffsetTrajectoryU;
-    const uint32_t m_uOffsetTrajectoryV;
-    uint64_t m_uTimingToken;
-    uint32_t m_uFramesCurrentCycle;
-    double m_dPreviousFrameRate;
+    bool m_bIsFrameAvailable = false;
+    Eigen::Isometry3d m_matFrameLEFTtoWORLD;
+    uint32_t m_uFramesCurrentCycle      = 0;
+    double m_dPreviousFrameRate         = 0.0;
+    double m_dPreviousFrameTime         = 0.0;
 
     //ds debug logging
     std::FILE* m_pFileLandmarkCreation;
-    std::FILE* m_pFileLandmarkFinal;
     std::FILE* m_pFileTrajectory;
 
 //ds accessors
@@ -100,13 +95,16 @@ public:
                          const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
                          const txt_io::CIMUMessage& p_cIMU );
 
-    void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
+    /*void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
                          const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
                          const txt_io::CIMUMessage& p_cIMU,
-                         const Eigen::Isometry3d& p_matTransformationIMU );
+                         const Eigen::Isometry3d& p_matTransformationIMU );*/
 
     const uint64_t getFrameCount( ) const { return m_uFrameCount; }
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
+    const std::shared_ptr< std::vector< CLandmark* > > getLandmarksHandle( ) const { return m_vecLandmarks; }
+    const bool isFrameAvailable( ) const { return m_bIsFrameAvailable; }
+    const Eigen::Isometry3d getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_matFrameLEFTtoWORLD; }
 
     //ds postprocessing
     void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
@@ -153,6 +151,7 @@ private:
     void _shutDown( );
     void _updateFrameRateForInfoBox( const uint32_t& p_uFrameProbeRange = 10 );
     void _drawInfoBox( cv::Mat& p_matDisplay ) const;
+
 };
 
 #endif //#define CTRACKERSTEREOMOTIONMODEL_H

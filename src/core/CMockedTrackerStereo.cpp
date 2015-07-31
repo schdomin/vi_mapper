@@ -10,7 +10,6 @@
 #include "utility/CWrapperOpenCV.h"
 #include "exceptions/CExceptionNoMatchFound.h"
 #include "vision/CMiniVisionToolbox.h"
-#include "utility/CMiniTimer.h"
 
 CMockedTrackerStereo::CMockedTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
                                   const EPlaybackMode& p_eMode,
@@ -46,7 +45,7 @@ CMockedTrackerStereo::CMockedTrackerStereo( const uint32_t& p_uFrequencyPlayback
                                                                            m_ptPositionXY( 0.0, 0.0 ),
                                                                            m_uOffsetTrajectoryU( 180 ),
                                                                            m_uOffsetTrajectoryV( 360 ),
-                                                                           m_uTimingToken( 0 ),
+                                                                           m_dFrameTimeSecondsLAST( 0 ),
                                                                            m_uFramesCurrentCycle( 0 ),
                                                                            m_dPreviousFrameRate( 0.0 ),
                                                                            m_uTotalMeasurementPoints( 0 ),
@@ -427,7 +426,7 @@ void CMockedTrackerStereo::_updateFrameRateForInfoBox( const uint32_t& p_uFrameP
     if( p_uFrameProbeRange == m_uFramesCurrentCycle )
     {
         //ds get time delta
-        const double dDuration( CMiniTimer::toc( m_uTimingToken ) );
+        const double dDuration = CLogger::getTimeSeconds( )-m_dFrameTimeSecondsLAST;
 
         //ds compute framerate
         m_dPreviousFrameRate = p_uFrameProbeRange/dDuration;
@@ -440,7 +439,7 @@ void CMockedTrackerStereo::_updateFrameRateForInfoBox( const uint32_t& p_uFrameP
     if( 0 == m_uFramesCurrentCycle )
     {
         //ds stop time
-        m_uTimingToken = CMiniTimer::tic( );
+        m_dFrameTimeSecondsLAST = CLogger::getTimeSeconds( );
     }
 
     //ds count frames

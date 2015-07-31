@@ -1,25 +1,16 @@
-#include <iostream>
-#include <fstream>
-#include <cmath>
 #include <opencv/highgui.h>
 #include <qapplication.h>
-
-//ds ROS
-#include <ros/ros.h>
+#include <stack>
+#include <thread>
 
 //ds custom
-#include "txt_io/imu_message.h"
-#include "txt_io/pinhole_image_message.h"
-#include "txt_io/pose_message.h"
-#include "utility/CStack.h"
 #include "core/CTrackerStereoMotionModel.h"
-#include "utility/CMiniTimer.h"
 #include "exceptions/CExceptionEndOfFile.h"
 #include "gui/CViewerScene.h"
 //#include "types/CIMUInterpolator.h"
 
 //ds data vectors
-CStack< txt_io::CIMUMessage > g_vecMessagesIMU;
+std::stack< txt_io::CIMUMessage > g_vecMessagesIMU;
 std::shared_ptr< txt_io::PinholeImageMessage > g_pActiveMessageCamera_0 = 0;
 std::shared_ptr< txt_io::PinholeImageMessage > g_pActiveMessageCamera_1 = 0;
 
@@ -30,9 +21,6 @@ uint64_t g_uFrameIDCamera_1 = 0;
 
 //ds interpolator
 //CIMUInterpolator g_cInterpolator;
-
-//ds initialize statics
-std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::vec_tmStart;
 
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder );
 
@@ -75,21 +63,8 @@ int main( int argc, char **argv )
     const uint32_t uImageRows = 480;
     const uint32_t uImageCols = 752;
 
-    //ds setup node
-    ros::init( argc, argv, "stereo_detector_free" );
-    std::shared_ptr< ros::NodeHandle > pNode( new ros::NodeHandle( "~" ) );
-
-    //ds escape here on failure
-    if( !pNode->ok( ) )
-    {
-        std::printf( "\n(main) ERROR: unable to instantiate node\n" );
-        std::printf( "(main) terminated: %s\n", argv[0]);
-        std::fflush( stdout );
-        return 1;
-    }
-
-    //ds open the file
-    std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
+    //ds start the qt application
+    QApplication cApplicationQT( argc, argv );
 
     //ds internals
     uint32_t uWaitKeyTimeout( 1 );
@@ -117,16 +92,19 @@ int main( int argc, char **argv )
         }
     }
 
-    //ds start qt application
-    std::shared_ptr< QApplication > pQT( std::make_shared< QApplication >( argc, argv ) );
+    //ds open the file
+    std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
 
-    //ds instantiate the viewer
-    std::shared_ptr< CViewerScene > pViewer( std::make_shared< CViewerScene >( ) );
-    pViewer->setWindowTitle( "CViewerScene: WORLD" );
-    pViewer->show( );
+    //ds escape here on failure
+    if( !ifMessages.good( ) )
+    {
+        std::printf( "\n(main) ERROR: unable to open message file: %s\n", strInfileMessageDump.c_str( ) );
+        std::printf( "(main) terminated: %s\n", argv[0]);
+        std::fflush( stdout );
+        return 1;
+    }
 
     //ds log configuration
-    std::printf( "(main) ROS Node namespace   := '%s'\n", pNode->getNamespace( ).c_str( ) );
     std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
     std::printf( "(main) uImageCols (width)   := '%u'\n", uImageCols );
     std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
@@ -135,22 +113,34 @@ int main( int argc, char **argv )
     std::fflush( stdout );
     CLogger::closeBox( );
 
-    //ds feature detector
-    CTrackerStereoMotionModel cDetector( eMode, pViewer, uWaitKeyTimeout );
+    //ds allocate the tracker
+    CTrackerStereoMotionModel cTracker( eMode, uWaitKeyTimeout );
 
-    //ds get start time
-    const uint64_t uToken( CMiniTimer::tic( ) );
+    //ds allocate a libqglviewer
+    CViewerScene cViewer( cTracker.getLandmarksHandle( ) );
+    cViewer.setWindowTitle( "CViewerScene: WORLD" );
+    cViewer.showMaximized( );
+
+    //ds stop time
+    const double dTimeStartSeconds = CLogger::getTimeSeconds( );
 
     try
     {
         //ds playback the dump
-        while( ifMessages.good( ) && ros::ok( ) && !cDetector.isShutdownRequested( ) )
+        while( ifMessages.good( ) && !cTracker.isShutdownRequested( ) )
         {
+            //ds check if viewer is still active
+            if( cViewer.isVisible( ) )
+            {
+                //ds check for frames to update the viewer
+                if( cTracker.isFrameAvailable( ) ){ cViewer.addFrame( cTracker.getFrameLEFTtoWORLD( ) ); }
+            }
+
             //ds read a message
             readNextMessageFromFile( ifMessages, strImageFolder );
 
             //ds as long as we have data in all the stacks - process
-            if( 0 != g_pActiveMessageCamera_0 && 0 != g_pActiveMessageCamera_1 && !g_vecMessagesIMU.isEmpty( ) )
+            if( 0 != g_pActiveMessageCamera_0 && 0 != g_pActiveMessageCamera_1 && !g_vecMessagesIMU.empty( ) )
             {
                 //ds pop the camera images
                 std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_0( g_pActiveMessageCamera_0 );
@@ -168,12 +158,14 @@ int main( int argc, char **argv )
                     g_pActiveMessageCamera_1 = 0;
 
                     //ds get the most recent imu measurement
-                    txt_io::CIMUMessage cMessageIMU( g_vecMessagesIMU.pop( ) );
+                    txt_io::CIMUMessage cMessageIMU( g_vecMessagesIMU.top( ) );
+                    g_vecMessagesIMU.pop( );
 
                     //ds look for the matching timestamp in the stack (assuming that IMU messages have arrived in chronological order)
-                    while( dTimestamp_0 < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.isEmpty( ) )
+                    while( dTimestamp_0 < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.empty( ) )
                     {
-                        cMessageIMU = g_vecMessagesIMU.pop( );
+                        cMessageIMU = g_vecMessagesIMU.top( );
+                        g_vecMessagesIMU.pop( );
                     }
 
                     //ds in case we have not received the matching timestamp yet - TODO this blocks indefinitely if there is no matching IMU data arriving
@@ -183,9 +175,10 @@ int main( int argc, char **argv )
                         readNextMessageFromFile( ifMessages, strImageFolder );
 
                         //ds check if we got a new imu measurement
-                        if( !g_vecMessagesIMU.isEmpty( ) )
+                        if( !g_vecMessagesIMU.empty( ) )
                         {
-                            cMessageIMU = g_vecMessagesIMU.pop( );
+                            cMessageIMU = g_vecMessagesIMU.top( );
+                            g_vecMessagesIMU.pop( );
                         }
                     }
 
@@ -197,7 +190,7 @@ int main( int argc, char **argv )
 
                         //ds callback with triplet
                         //cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU, g_cInterpolatorAngular.getTransformation( dTimestamp_0 ) );
-                        cDetector.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU );
+                        cTracker.receivevDataVI( cImageCamera_1, cImageCamera_0, cMessageIMU );
                     }
                     else
                     {
@@ -228,8 +221,8 @@ int main( int argc, char **argv )
     }
 
     //ds get end time
-    const double dDuration( CMiniTimer::toc( uToken ) );
-    const uint64_t uFrameCount( cDetector.getFrameCount( ) );
+    const double dDuration     = CLogger::getTimeSeconds( )-dTimeStartSeconds;
+    const uint64_t uFrameCount = cTracker.getFrameCount( );
 
     std::printf( "(main) dataset completed\n" );
     std::printf( "(main) duration: %fs\n", dDuration );
@@ -239,37 +232,29 @@ int main( int argc, char **argv )
     if( 1 < uFrameCount )
     {
         //ds generate full file names
-        const std::string strG2ODumpComplete( "/home/dominik/libs/g2o/bin/graphs/graph_" + CMiniTimer::getTimestamp( ) + "_uvdepthdisparity.g2o" );
-        const std::string strG2ODumpXYZ( "/home/dominik/libs/g2o/bin/graphs/graph_" + CMiniTimer::getTimestamp( ) + "_xyz.g2o" );
-        const std::string strG2ODumpUVDepth( "/home/dominik/libs/g2o/bin/graphs/graph_" + CMiniTimer::getTimestamp( ) + "_uvdepth.g2o" );
-        const std::string strG2ODumpUVDisparity( "/home/dominik/libs/g2o/bin/graphs/graph_" + CMiniTimer::getTimestamp( ) + "_uvdisparity.g2o" );
-        const std::string strG2ODumpCOMBO( "/home/dominik/libs/g2o/bin/graphs/graph_" + CMiniTimer::getTimestamp( ) + "_combo.g2o" );
+        const std::string strG2ODump( "/home/dominik/libs/g2o/bin/graphs/graph_" + CLogger::getTimestamp( ) );
 
         //ds dump file
-        cDetector.saveUVDepthOrDisparity( strG2ODumpComplete );
-        cDetector.saveXYZ( strG2ODumpXYZ );
-        cDetector.saveUVDepth( strG2ODumpUVDepth );
-        cDetector.saveUVDisparity( strG2ODumpUVDisparity );
-        cDetector.saveCOMBO( strG2ODumpCOMBO );
+        cTracker.saveUVDepthOrDisparity( strG2ODump );
+        cTracker.saveXYZ( strG2ODump );
+        cTracker.saveUVDepth( strG2ODump );
+        cTracker.saveUVDisparity( strG2ODump );
+        cTracker.saveCOMBO( strG2ODump );
 
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpComplete.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpXYZ.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpUVDepth.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpUVDisparity.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpCOMBO.c_str( ) );
-    }
-
-    //ds if detector was not manually shut down
-    if( !cDetector.isShutdownRequested( ) )
-    {
-        std::printf( "(main) press [ENTER] to exit" );
-        std::getchar( );
+        std::printf( "(main) successfully written g2o dump to: %s_TYPE.g2o\n", strG2ODump.c_str( ) );
     }
 
     //ds exit
     std::printf( "(main) terminated: %s\n", argv[0] );
     std::fflush( stdout);
-    return 0;
+    if( cViewer.isVisible( ) )
+    {
+        return cApplicationQT.exec( );
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder )

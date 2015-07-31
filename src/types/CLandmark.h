@@ -45,13 +45,14 @@ public:
     const CPoint2DInCameraFrameHomogenized vecUVLEFTReference;
     const CPoint2DHomogenized vecUVReferenceLEFT;
 
-    uint8_t uFailedSubsequentTrackings;
-    uint32_t uOptimizationsSuccessful;
-    uint32_t uOptimizationsFailed;
-    double dCurrentAverageSquaredError;
+    uint8_t uFailedSubsequentTrackings = 0;
+    uint32_t uOptimizationsSuccessful  = 0;
+    uint32_t uOptimizationsFailed      = 0;
+    double dCurrentAverageSquaredError = 0.0;
     CPoint3DInWorldFrame vecPointXYZMean;
 
     bool bIsCurrentlyVisible;
+    uint32_t uNumberOfKeyFramePresences = 0;
 
 private:
 

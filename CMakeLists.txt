@@ -13,8 +13,7 @@ message("build type: ${CMAKE_BUILD_TYPE}")
 
 #ds find packages
 find_package(catkin REQUIRED COMPONENTS roscpp std_msgs genmsg sensor_msgs fps_mapper)
-#find_package(Boost REQUIRED COMPONENTS thread program_options)
-find_package(Threads REQUIRED)
+#find_package(Threads REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED )
 find_package(G2O REQUIRED)
@@ -28,7 +27,10 @@ message("using OpenCV version: ${OpenCV_VERSION}")
 catkin_package(CATKIN_DEPENDS roscpp std_msgs genmsg sensor_msgs fps_mapper)
 
 #ds add c++11 support, no optimization, all warnings
-add_definitions(-O3 -march=native -Wall -pedantic -std=c++11 -pthread -fopenmp)
+add_definitions(-O3 -march=native -Wall -pedantic -std=c++11)
+
+#ds configure QT
+#set(QMAKE_CXXFLAGS_CXX11 "-std=c++11" ${CMAKE_MODULE_PATH})
 
 #ds include dirs
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -59,7 +61,6 @@ src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
 src/core/CDetectorMonoTilewise.cpp
 src/core/CMatcherEpipolar.cpp
-src/core/CMockedMatcherEpipolar.cpp
 src/optimization/CBridgeG2O.cpp
 src/gui/CViewerScene.cpp)
 
@@ -78,7 +79,8 @@ src/optimization/CBridgeG2O.cpp)
 #add_executable(stereo_detector_alberto_node src/runnable/stereo_detector_alberto_node.cpp src/core/CTrackerStereo.cpp ${SOURCEFILES})
 add_executable(stereo_detector_mocked src/runnable/stereo_detector_mocked.cpp src/core/CMockedTrackerStereo.cpp ${SOURCEFILES_MOCKED})
 #add_executable(test_depth src/runnable/test_depth.cpp ${SOURCEFILES})
-add_executable(stereo_free src/runnable/stereo_free.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
+add_executable(stereo_single src/runnable/stereo_single.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
+add_executable(stereo_parallel src/runnable/stereo_parallel.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 #add_executable(republisher_node src/runnable/republisher_node.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
@@ -108,7 +110,7 @@ target_link_libraries(stereo_detector_mocked
 #                      ${catkin_LIBRARIES} 
 #                      ${OpenCV_LIBRARIES}
 #                      -fopenmp)
-target_link_libraries(stereo_free 
+target_link_libraries(stereo_single 
                       ${catkin_LIBRARIES} 
                       ${OpenCV_LIBRARIES}     
                       ${G2O_OPENGL_HELPER_LIBRARY}
@@ -121,8 +123,21 @@ target_link_libraries(stereo_free
                       ${QT_QTXML_LIBRARY} 
                       ${QT_QTOPENGL_LIBRARY} 
                       ${QT_QTGUI_LIBRARY} 
-                      ${QT_QTCORE_LIBRARY}
-                      glut )
+                      ${QT_QTCORE_LIBRARY} )
+target_link_libraries(stereo_parallel 
+                      ${catkin_LIBRARIES} 
+                      ${OpenCV_LIBRARIES}     
+                      ${G2O_OPENGL_HELPER_LIBRARY}
+                      ${G2O_SOLVER_CSPARSE_EXTENSION}
+                      ${G2O_TYPES_SLAM3D} 
+                      ${G2O_CORE_LIBRARY} 
+                      ${G2O_STUFF_LIBRARY}
+                      ${G2O_TYPES_SBA}
+                      ${QGLVIEWER_LIBRARY}
+                      ${QT_QTXML_LIBRARY} 
+                      ${QT_QTOPENGL_LIBRARY} 
+                      ${QT_QTGUI_LIBRARY} 
+                      ${QT_QTCORE_LIBRARY} )
 #target_link_libraries(republisher_node 
 #                      ${catkin_LIBRARIES} 
 #                      ${OpenCV_LIBRARIES}     

@@ -1,8 +1,6 @@
 #ifndef CMATCHEREPIPOLAR_H
 #define CMATCHEREPIPOLAR_H
 
-#include <memory>
-
 #include "CTriangulator.h"
 #include "types/CLandmark.h"
 #include "optimization/CPositSolver.h"
@@ -163,6 +161,9 @@ public:
 
     //ds routine that resets the visibility of all active landmarks
     void resetVisibilityActiveLandmarks( );
+
+    //ds register keyframing on currently visible landmarks
+    void setKeyFrameToVisibleLandmarks( );
 
     const Eigen::Isometry3d getPoseOptimizedLEFT( const uint64_t p_uFrame,
                                               cv::Mat& p_matDisplayLEFT,

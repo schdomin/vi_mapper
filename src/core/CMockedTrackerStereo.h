@@ -71,7 +71,7 @@ private:
     cv::Point2d m_ptPositionXY;
     const uint32_t m_uOffsetTrajectoryU;
     const uint32_t m_uOffsetTrajectoryV;
-    uint64_t m_uTimingToken;
+    uint64_t m_dFrameTimeSecondsLAST;
     uint32_t m_uFramesCurrentCycle;
     double m_dPreviousFrameRate;
     uint64_t m_uTotalMeasurementPoints;

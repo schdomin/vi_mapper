@@ -2,11 +2,12 @@
 #define CVIEWERSCENE_H
 
 #include <QGLViewer/qglviewer.h>
+#include <QMatrix4x4>
 #include <vector>
 #include <map>
 
 //ds custom
-#include "types/Typedefs.h"
+#include "types/CLandmark.h"
 
 class CViewerScene: public QGLViewer
 {
@@ -28,6 +29,11 @@ class CViewerScene: public QGLViewer
         qglviewer::Vec vecPositionXYZOptimized;
     };
 
+public:
+
+    CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks );
+    ~CViewerScene( );
+
 protected:
 
     virtual void draw( );
@@ -37,46 +43,24 @@ protected:
 
 public:
 
-    void addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks )
-    {
-        //ds position
-        const CPoint3DInWorldFrame vecPosition( p_matTransformationLEFTtoWORLD.translation( ) );
-        const Eigen::Quaterniond vecQuaternion( p_matTransformationLEFTtoWORLD.linear( ) );
-
-        //ds setup the new frame
-        qglviewer::Frame cFrameNew;
-        cFrameNew.setPosition( vecPosition.x( ), vecPosition.y( ), vecPosition.z( ) );
-        cFrameNew.setOrientation( vecQuaternion.x( ), vecQuaternion.y( ), vecQuaternion.z( ), vecQuaternion.w( ) );
-
-        //ds add it to the vector
-        m_vecKeyFrames.push_back( cFrameNew );
-
-        //ds add/update the landmarks
-        for( const CMeasurementLandmark* pLandmark: *p_pLandmarks )
-        {
-            try
-            {
-                //ds check if landmark is present
-                CLandmarkInScene cLandmarkInScene( m_mapLandmarks.at( pLandmark->uID ) );
-
-                //ds update optimized position
-                cLandmarkInScene.vecPositionXYZOptimized = qglviewer::Vec( pLandmark->vecPointXYZWORLDOptimized.x( ), pLandmark->vecPointXYZWORLDOptimized.y( ), pLandmark->vecPointXYZWORLDOptimized.z( ) );
-            }
-            catch( const std::out_of_range& p_cException )
-            {
-                //ds add the landmark
-                m_mapLandmarks.insert( std::pair< UIDLandmark, CLandmarkInScene >( pLandmark->uID, CLandmarkInScene( pLandmark->uID, pLandmark->vecPointXYZWORLD, pLandmark->vecPointXYZWORLDOptimized ) ) );
-            }
-        }
-
-        //ds force redraw
-        draw( );
-    }
+    void addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks );
+    void addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD );
+    void addFrame( const QMatrix4x4& p_matTransformationLEFTtoWORLD );
 
 private:
 
-    std::vector< qglviewer::Frame > m_vecKeyFrames;
-    std::map< UIDLandmark, CLandmarkInScene > m_mapLandmarks;
+    //ds snippet of g2o: opengl_primitives
+    void _drawBox(GLfloat l, GLfloat w, GLfloat h) const;
+
+private:
+
+    std::vector< qglviewer::Frame > m_vecFrames;
+    std::map< UIDLandmark, CPoint3DInWorldFrame > m_mapLandmarks;
+
+    std::shared_ptr< std::vector< const CMeasurementLandmark* > > m_pLiveMeasurements;
+
+    //ds slandmarks
+    const std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
 
 };
 

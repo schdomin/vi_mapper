@@ -2,7 +2,17 @@
 
 #include <QKeyEvent>
 #include <QGLViewer/manipulatedFrame.h>
-#include </usr/include/GL/freeglut_std.h>
+
+#include "optimization/CBridgeG2O.h"
+
+CViewerScene::CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): m_vecLandmarks( p_vecLandmarks )
+{
+    //ds nothing to do
+}
+CViewerScene::~CViewerScene( )
+{
+    //ds nothing to do
+}
 
 void CViewerScene::draw()
 {
@@ -15,7 +25,7 @@ void CViewerScene::draw()
     qglviewer::Frame cFramePrevious;
 
     //ds draw all keyframes
-    for( qglviewer::Frame cFrame: m_vecKeyFrames )
+    for( const qglviewer::Frame& cFrame: m_vecFrames )
     {
         //ds positions
         const qglviewer::Vec vecPositionPrevious( cFramePrevious.position( ) );
@@ -32,44 +42,170 @@ void CViewerScene::draw()
         glEnd( );
         glPopAttrib( );
 
-        //ds orientation
+        /*ds orientation
         glColor3f( 1.0, 1.0, 1.0 );
         glLineWidth( 1.0 );
         glPushMatrix( );
         glMultMatrixd( cFrame.matrix( ) );
         drawAxis( 0.1 );
-        glPopMatrix( );
+        glPopMatrix( );*/
 
         //ds update previous
         cFramePrevious = cFrame;
     }
 
-    //ds draw all landmarks
-    for( const std::pair< UIDLandmark, CLandmarkInScene >& cLandmarkInScene: m_mapLandmarks )
+    //ds orientation for head only
+    glColor3f( 1.0, 1.0, 1.0 );
+    glLineWidth( 1.5 );
+    glPushMatrix( );
+    glMultMatrixd( cFramePrevious.matrix( ) );
+    drawAxis( 0.25 );
+    glPopMatrix( );
+
+    glPushAttrib( GL_ENABLE_BIT );
+    glDisable( GL_LIGHTING );
+    glLineWidth( 1.0 );
+    glPointSize( 2.0 );
+
+    assert( 0 != m_vecLandmarks );
+
+    //ds draw all existing landmarks so far
+    for( const CLandmark* pLandmarkInScene: *m_vecLandmarks )
     {
-        glColor3f( 0.5, 0.5, 0.5 );
-        glLineWidth( 1.0 );
-        glPushMatrix( );
-        glTranslatef( cLandmarkInScene.second.vecPositionXYZOptimized.x, cLandmarkInScene.second.vecPositionXYZOptimized.y, cLandmarkInScene.second.vecPositionXYZOptimized.z );
-        glutSolidSphere( 0.05, 8, 8 );
-        glPopMatrix( );
-        glFlush( );
+        assert( 0 != pLandmarkInScene );
+
+        //ds buffer positions
+        const qglviewer::Vec vecPositionInitial( pLandmarkInScene->vecPointXYZInitial );
+        const qglviewer::Vec vecPositionOptimized( pLandmarkInScene->vecPointXYZOptimized );
+
+        //ds check if landmark is visible
+        if( pLandmarkInScene->bIsCurrentlyVisible )
+        {
+            //ds draw the line between original and optimized
+            glColor3f( 1.0, 0.1, 0.1 );
+            glBegin( GL_LINES );
+            glVertex3f( vecPositionInitial.x, vecPositionInitial.y, vecPositionInitial.z );
+            glVertex3f( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
+            glEnd( );
+
+            //ds draw optimized position
+            glPushMatrix( );
+            glColor3f( 0.0, 1.0, 0.0 );
+            glTranslatef( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
+            glBegin( GL_POINTS );
+            glVertex3f( 0, 0, 0 );
+            glEnd( );
+            glPopMatrix( );
+
+            //ds draw original position
+            glPushMatrix( );
+            glColor3f( 0.75, 0.75, 0.75 );
+            glTranslatef( vecPositionInitial.x, vecPositionInitial.y, vecPositionInitial.z );
+            glBegin( GL_POINTS );
+            glVertex3f( 0, 0, 0 );
+            glEnd( );
+            glPopMatrix( );
+        }
+        else
+        {
+            //ds draw landmark if valid
+            if( CBridgeG2O::isOptimized( pLandmarkInScene ) )
+            {
+                //ds enable transparency
+                glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+                glEnable( GL_BLEND );
+
+                //ds draw optimized position
+                glPushMatrix( );
+                glColor4f( 0.75, 0.75, 0.75, 0.25 );
+                glTranslatef( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
+                glBegin( GL_POINTS );
+                glVertex3f( 0, 0, 0 );
+                glEnd( );
+                glPopMatrix( );
+
+                //ds disable transparency
+                glDisable( GL_BLEND );
+            }
+        }
     }
+
+    glPopAttrib( );
+
+    /*ds enable transparency
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glEnable( GL_BLEND );
+
+    //ds draw all existing landmarks
+    for( const std::pair< UIDLandmark, CPoint3DInWorldFrame >& cLandmarkInScene: m_mapLandmarks )
+    {
+        //ds draw optimized position
+        glColor3f( 0.5, 0.5, 0.5 );
+        glPushMatrix( );
+        glTranslatef( cLandmarkInScene.second.x( ), cLandmarkInScene.second.y( ), cLandmarkInScene.second.z( ) );
+        _drawBox( 0.02, 0.02, 0.02 );
+        glPopMatrix( );
+    }
+
+    //ds disable transparency
+    glDisable( GL_BLEND );
+
+    //ds check if we have measurements
+    if( 0 != m_pLiveMeasurements )
+    {
+        //ds loop over currently live measurements
+        for( const CMeasurementLandmark* pLandmark: *m_pLiveMeasurements )
+        {
+            //ds buffer positions
+            const qglviewer::Vec vecPositionOriginal( pLandmark->vecPointXYZWORLD );
+            const qglviewer::Vec vecPositionOptimized( pLandmark->vecPointXYZWORLDOptimized );
+
+            //ds draw the line between original and optimized
+            glColor3f( 1.0, 0.1, 0.1 );
+            glLineWidth( 1.0 );
+            glPushAttrib( GL_ENABLE_BIT );
+            glDisable( GL_LIGHTING );
+            glBegin( GL_LINES );
+            glVertex3f( vecPositionOriginal.x, vecPositionOriginal.y, vecPositionOriginal.z );
+            glVertex3f( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
+            glEnd( );
+            glPopAttrib( );
+
+            //ds draw original position
+            glColor3f( 0.75, 0.75, 0.75 );
+            glPushMatrix( );
+            glTranslatef( vecPositionOriginal.x, vecPositionOriginal.y, vecPositionOriginal.z );
+            _drawBox( 0.025, 0.025, 0.025 );
+            glPopMatrix( );
+
+            //ds draw optimized position
+            glColor3f( 0.25, 1.0, 0.25 );
+            glPushMatrix( );
+            glTranslatef( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
+            _drawBox( 0.025, 0.025, 0.025 );
+            glPopMatrix( );
+
+            try
+            {
+                //ds check if the live measurement updates a existing landmark
+                m_mapLandmarks.at( pLandmark->uID ) = pLandmark->vecPointXYZWORLDOptimized;
+            }
+            catch( const std::out_of_range& p_cException )
+            {
+                //ds landmark not found, we can add it
+                m_mapLandmarks.insert( std::pair< UIDLandmark, CPoint3DInWorldFrame >( pLandmark->uID, pLandmark->vecPointXYZWORLDOptimized ) );
+            }
+        }
+    }*/
 }
 
 void CViewerScene::init( )
 {
     //ds initialize
-    m_vecKeyFrames.clear( );
+    m_vecFrames.clear( );
     m_mapLandmarks.clear( );
-    restoreStateFromFile( );
+    //restoreStateFromFile( );
     setSceneRadius( 25.0 );
-
-    //ds UGLY HACK
-    char fakeParam[] = "fake";
-    char *fakeargv[] = { fakeParam, NULL };
-    int fakeargc = 1;
-    glutInit( &fakeargc, fakeargv );
 }
 
 QString CViewerScene::helpString( ) const
@@ -87,6 +223,66 @@ QString CViewerScene::helpString( ) const
   return text;
 }
 
+void CViewerScene::addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks )
+{
+    //ds position
+    const CPoint3DInWorldFrame vecPosition( p_matTransformationLEFTtoWORLD.translation( ) );
+    const Eigen::Quaterniond vecQuaternion( p_matTransformationLEFTtoWORLD.linear( ) );
+
+    //ds setup the new frame
+    qglviewer::Frame cFrameNew;
+    cFrameNew.setPosition( vecPosition.x( ), vecPosition.y( ), vecPosition.z( ) );
+    cFrameNew.setOrientation( vecQuaternion.x( ), vecQuaternion.y( ), vecQuaternion.z( ), vecQuaternion.w( ) );
+
+    //ds add it to the vector
+    m_vecFrames.push_back( cFrameNew );
+
+    //ds set live measurements
+    m_pLiveMeasurements = p_pLandmarks;
+
+    //ds force redraw
+    draw( );
+    updateGL( );
+}
+
+void CViewerScene::addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD )
+{
+    //ds position
+    const CPoint3DInWorldFrame vecPosition( p_matTransformationLEFTtoWORLD.translation( ) );
+    const Eigen::Quaterniond vecQuaternion( p_matTransformationLEFTtoWORLD.linear( ) );
+
+    //ds setup the new frame
+    qglviewer::Frame cFrameNew;
+    cFrameNew.setPosition( vecPosition.x( ), vecPosition.y( ), vecPosition.z( ) );
+    cFrameNew.setOrientation( vecQuaternion.x( ), vecQuaternion.y( ), vecQuaternion.z( ), vecQuaternion.w( ) );
+
+    //ds add it to the vector
+    m_vecFrames.push_back( cFrameNew );
+
+    //ds force redraw
+    draw( );
+    updateGL( );
+}
+
+void CViewerScene::addFrame( const QMatrix4x4& p_matTransformationLEFTtoWORLD )
+{
+    /*ds position
+    const CPoint3DInWorldFrame vecPosition( p_matTransformationLEFTtoWORLD.QMatrix4x4 );
+    const Eigen::Quaterniond vecQuaternion( p_matTransformationLEFTtoWORLD.linear( ) );*/
+
+    //ds setup the new frame
+    qglviewer::Frame cFrameNew;
+    //cFrameNew.setPosition( vecPosition.x( ), vecPosition.y( ), vecPosition.z( ) );
+    //cFrameNew.setOrientation( vecQuaternion.x( ), vecQuaternion.y( ), vecQuaternion.z( ), vecQuaternion.w( ) );
+
+    //ds add it to the vector
+    m_vecFrames.push_back( cFrameNew );
+
+    //ds force redraw
+    draw( );
+    updateGL( );
+}
+
 /*void CViewerScene::keyPressEvent( QKeyEvent* p_pEvent )
 {
     switch( p_pEvent->key( ) )
@@ -98,3 +294,49 @@ QString CViewerScene::helpString( ) const
         }
     }
 }*/
+
+void CViewerScene::_drawBox(GLfloat l, GLfloat w, GLfloat h) const
+{
+    GLfloat sx = l*0.5f;
+    GLfloat sy = w*0.5f;
+    GLfloat sz = h*0.5f;
+
+    glBegin(GL_QUADS);
+    // bottom
+    glNormal3f( 0.0f, 0.0f,-1.0f);
+    glVertex3f(-sx, -sy, -sz);
+    glVertex3f(-sx, sy, -sz);
+    glVertex3f(sx, sy, -sz);
+    glVertex3f(sx, -sy, -sz);
+    // top
+    glNormal3f( 0.0f, 0.0f,1.0f);
+    glVertex3f(-sx, -sy, sz);
+    glVertex3f(-sx, sy, sz);
+    glVertex3f(sx, sy, sz);
+    glVertex3f(sx, -sy, sz);
+    // back
+    glNormal3f(-1.0f, 0.0f, 0.0f);
+    glVertex3f(-sx, -sy, -sz);
+    glVertex3f(-sx, sy, -sz);
+    glVertex3f(-sx, sy, sz);
+    glVertex3f(-sx, -sy, sz);
+    // front
+    glNormal3f( 1.0f, 0.0f, 0.0f);
+    glVertex3f(sx, -sy, -sz);
+    glVertex3f(sx, sy, -sz);
+    glVertex3f(sx, sy, sz);
+    glVertex3f(sx, -sy, sz);
+    // left
+    glNormal3f( 0.0f, -1.0f, 0.0f);
+    glVertex3f(-sx, -sy, -sz);
+    glVertex3f(sx, -sy, -sz);
+    glVertex3f(sx, -sy, sz);
+    glVertex3f(-sx, -sy, sz);
+    //right
+    glNormal3f( 0.0f, 1.0f, 0.0f);
+    glVertex3f(-sx, sy, -sz);
+    glVertex3f(sx, sy, -sz);
+    glVertex3f(sx, sy, sz);
+    glVertex3f(-sx, sy, sz);
+    glEnd();
+}

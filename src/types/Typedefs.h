@@ -5,6 +5,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <memory>
+#include <cassert>
 
 enum EPlaybackMode
 {
@@ -26,6 +27,7 @@ typedef cv::Mat         CDescriptor;
 typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
 typedef uint64_t        UIDDetectionPoint;
+typedef uint64_t        UIDKeyFrame;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
 typedef Eigen::Vector3d CLinearAccelerationInIMUFrame;
@@ -75,13 +77,13 @@ struct CKeyFrame
 {
     const Eigen::Isometry3d matTransformationLEFTtoWORLD;
     const CLinearAccelerationInIMUFrame vecLinearAccelerationNormalized;
-    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecLandmarks;
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecLandmarkMeasurements;
 
     CKeyFrame( const Eigen::Isometry3d p_matTransformationLEFTtoWORLD,
                       const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration,
                       const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_vecLandmarks ): matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
                                                                                                             vecLinearAccelerationNormalized( p_vecLinearAcceleration ),
-                                                                                                            vecLandmarks( p_vecLandmarks )
+                                                                                                            vecLandmarkMeasurements( p_vecLandmarks )
     {
         //ds nothing to do
     }

@@ -7,16 +7,11 @@
 #include <ros/ros.h>
 
 //ds custom
-#include "txt_io/imu_message.h"
-#include "txt_io/pinhole_image_message.h"
-#include "txt_io/pose_message.h"
-#include "utility/CStack.h"
 #include "core/CMockedTrackerStereo.h"
-#include "utility/CMiniTimer.h"
 #include "vision/CMiniVisionToolbox.h"
 
 //ds data vectors
-CStack< txt_io::CIMUMessage > g_vecMessagesIMU;
+std::stack< txt_io::CIMUMessage > g_vecMessagesIMU;
 std::shared_ptr< txt_io::PinholeImageMessage > g_pActiveMessageCamera_0 = 0;
 std::shared_ptr< txt_io::PinholeImageMessage > g_pActiveMessageCamera_1 = 0;
 std::shared_ptr< txt_io::CPoseMessage > g_pActiveMessagesPose           = 0;
@@ -26,9 +21,6 @@ uint64_t g_uFrameIDIMU      = 0;
 uint64_t g_uFrameIDCamera_0 = 0;
 uint64_t g_uFrameIDCamera_1 = 0;
 uint64_t g_uFrameIDPose     = 0;
-
-//ds initialize statics
-std::vector< std::chrono::time_point< std::chrono::system_clock > > CMiniTimer::vec_tmStart;
 
 const double dAngularVelocityNoise = 0.01;
 
@@ -136,7 +128,7 @@ int main( int argc, char **argv )
     CMockedTrackerStereo cDetector( uFrequencyPlaybackHz, eMode, strMockedLandmarks, uWaitKeyTimeout );
 
     //ds get start time
-    const uint64_t uToken( CMiniTimer::tic( ) );
+    const double dTimeStartSeconds = CLogger::getTimeSeconds( );
 
     //ds playback the dump
     while( ifMessages.good( ) && ros::ok( ) && !cDetector.isShutdownRequested( ) )
@@ -148,7 +140,7 @@ int main( int argc, char **argv )
         readNextMessageFromFile( ifMessages, strImageFolder, uSleepMicroseconds );
 
         //ds as long as we have data in all the stacks - process
-        if( 0 != g_pActiveMessageCamera_0 && 0 != g_pActiveMessageCamera_1 && !g_vecMessagesIMU.isEmpty( ) && 0 != g_pActiveMessagesPose )
+        if( 0 != g_pActiveMessageCamera_0 && 0 != g_pActiveMessageCamera_1 && !g_vecMessagesIMU.empty( ) && 0 != g_pActiveMessagesPose )
         {
             //ds pop the camera images
             std::shared_ptr< txt_io::PinholeImageMessage > cImageCamera_0( g_pActiveMessageCamera_0 );
@@ -166,22 +158,25 @@ int main( int argc, char **argv )
                 g_pActiveMessageCamera_1 = 0;
 
                 //ds get the most recent imu measurement
-                txt_io::CIMUMessage cMessageIMU( g_vecMessagesIMU.pop( ) );
+                txt_io::CIMUMessage cMessageIMU( g_vecMessagesIMU.top( ) );
+                g_vecMessagesIMU.pop( );
 
                 //ds look for the matching timestamp in the stack (assuming that IMU messages have arrived in chronological order)
-                while( dTimestamp_0 < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.isEmpty( ) )
+                while( dTimestamp_0 < cMessageIMU.timestamp( ) && !g_vecMessagesIMU.empty( ) )
                 {
-                    cMessageIMU = g_vecMessagesIMU.pop( );
+                    cMessageIMU = g_vecMessagesIMU.top( );
+                    g_vecMessagesIMU.pop( );
                 }
 
                 //ds in case we have not received the matching timestamp yet - TODO this blocks indefinitely if there is no IMU data arriving
                 while( dTimestamp_0 > cMessageIMU.timestamp( ) )
                 {
                     //ds pop the most recent imu measurement and check
-                    if( !g_vecMessagesIMU.isEmpty( ) )
+                    if( !g_vecMessagesIMU.empty( ) )
                     {
                         readNextMessageFromFile( ifMessages, strImageFolder, uSleepMicroseconds );
-                        cMessageIMU = g_vecMessagesIMU.pop( );
+                        cMessageIMU = g_vecMessagesIMU.top( );
+                        g_vecMessagesIMU.pop( );
                     }
                 }
 
@@ -239,8 +234,8 @@ int main( int argc, char **argv )
     }
 
     //ds get end time
-    const double dDuration( CMiniTimer::toc( uToken ) );
-    const uint64_t uFrameCount( cDetector.getFrameCount( ) );
+    const double dDuration     = CLogger::getTimeSeconds( )-dTimeStartSeconds;
+    const uint64_t uFrameCount = cDetector.getFrameCount( );
 
     std::printf( "(main) dataset completed\n" );
     std::printf( "(main) duration: %fs\n", dDuration );
@@ -250,24 +245,16 @@ int main( int argc, char **argv )
     if( 1 < uFrameCount )
     {
         //ds generate full file names
-        const std::string strG2ODumpComplete( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_uvdepthdisparity.g2o" );
-        const std::string strG2ODumpXYZ( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_xyz.g2o" );
-        const std::string strG2ODumpUVDepth( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_uvdepth.g2o" );
-        const std::string strG2ODumpUVDisparity( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_uvdisparity.g2o" );
-        const std::string strG2ODumpCOMBO( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CMiniTimer::getTimestamp( ) + "_combo.g2o" );
+        const std::string strG2ODump( "/home/dominik/libs/g2o/bin/graphs/mocked/graph_" + CLogger::getTimestamp( ) );
 
         //ds dump file
-        cDetector.saveUVDepthOrDisparity( strG2ODumpComplete );
-        cDetector.saveXYZ( strG2ODumpXYZ );
-        cDetector.saveUVDepth( strG2ODumpUVDepth );
-        cDetector.saveUVDisparity( strG2ODumpUVDisparity );
-        cDetector.saveCOMBO( strG2ODumpCOMBO );
+        cDetector.saveUVDepthOrDisparity( strG2ODump );
+        cDetector.saveXYZ( strG2ODump );
+        cDetector.saveUVDepth( strG2ODump );
+        cDetector.saveUVDisparity( strG2ODump );
+        cDetector.saveCOMBO( strG2ODump );
 
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpComplete.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpXYZ.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpUVDepth.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpUVDisparity.c_str( ) );
-        std::printf( "(main) successfully written g2o dump to: %s\n", strG2ODumpCOMBO.c_str( ) );
+        std::printf( "(main) successfully written g2o dump to: %s_TYPE.g2o\n", strG2ODump.c_str( ) );
     }
 
     //ds if detector was not manually shut down

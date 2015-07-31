@@ -1,9 +1,6 @@
 #ifndef CSTEREOCAMERA_H
 #define CSTEREOCAMERA_H
 
-#include <cassert>
-#include <memory>
-
 #include "CPinholeCamera.h"
 #include "utility/CWrapperOpenCV.h"
 

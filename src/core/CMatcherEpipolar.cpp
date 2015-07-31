@@ -82,6 +82,20 @@ void CMatcherEpipolar::resetVisibilityActiveLandmarks( )
     }
 }
 
+void CMatcherEpipolar::setKeyFrameToVisibleLandmarks( )
+{
+    //ds active measurements
+    for( const CDetectionPoint& cDetectionPoint: m_vecDetectionPointsActive )
+    {
+        //ds loop over the points for the current scan
+        for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
+        {
+            //ds added in keyframe
+            if( pLandmark->bIsCurrentlyVisible ){ ++pLandmark->uNumberOfKeyFramePresences; }
+        }
+    }
+}
+
 const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p_uFrame,
                                                             cv::Mat& p_matDisplayLEFT,
                                                             const cv::Mat& p_matImageLEFT,
@@ -1302,6 +1316,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
             {
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
+                pLandmark->bIsCurrentlyVisible = false;
                 ++m_uNumberOfInvalidLandmarksTotal;
             }
 
@@ -1310,6 +1325,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
             {
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
+                pLandmark->bIsCurrentlyVisible = false;
                 ++m_uNumberOfInvalidLandmarksTotal;
             }
 
@@ -1485,11 +1501,13 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                     {
                         //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) landmark [%06lu] epipolar failure: %s\n", pLandmark->uID, p_cException.what( ) );
                         ++pLandmark->uFailedSubsequentTrackings;
+                        pLandmark->bIsCurrentlyVisible = false;
                     }
                     catch( const CExceptionNoMatchFound& p_cException )
                     {
                         //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) landmark [%06lu] matching failure: %s\n", pLandmark->uID, p_cException.what( ) );
                         ++pLandmark->uFailedSubsequentTrackings;
+                        pLandmark->bIsCurrentlyVisible = false;
                     }
 
                     //ds check activity
