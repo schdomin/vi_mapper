@@ -38,7 +38,7 @@ private:
 
     //ds reference information
     uint64_t m_uFrameCount;
-    CPoint3DInWorldFrame m_vecTranslationLast;
+    CPoint3DInWorldFrame m_vecTranslationKeyFrameLAST;
     double m_dTranslationDeltaForMAPMeters;
 
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
@@ -56,7 +56,10 @@ private:
     uint64_t m_uNumberofLastVisibleLandmarks;
 
     //ds g2o data
-    std::vector< CKeyFrame > m_vecLogG2OMeasurementPoints;
+    std::vector< CKeyFrame > m_vecKeyFrames;
+    UIDKeyFrame m_uIDProcessedKeyFrameLAST            = 0;
+    const UIDKeyFrame m_uIDDeltaKeyFrameForProcessing = 9;
+    uint32_t m_uOptimizationsG2O                      = 0;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -69,13 +72,11 @@ private:
     //ds info display
     cv::Mat m_matTrajectoryXY;
     cv::Point2d m_ptPositionXY;
-    const uint32_t m_uOffsetTrajectoryU;
-    const uint32_t m_uOffsetTrajectoryV;
-    uint64_t m_dFrameTimeSecondsLAST;
-    uint32_t m_uFramesCurrentCycle;
-    double m_dPreviousFrameRate;
-    uint64_t m_uTotalMeasurementPoints;
-    uint64_t m_uMAPPoints;
+    const uint32_t m_uOffsetTrajectoryU = 180;
+    const uint32_t m_uOffsetTrajectoryV = 360;
+    double m_dFrameTimeSecondsLAST      = 0.0;
+    uint32_t m_uFramesCurrentCycle      = 0;
+    double m_dPreviousFrameRate         = 0.0;
 
     //ds debug logging
     std::FILE* m_pFileLandmarkCreation;
@@ -96,23 +97,23 @@ public:
     //ds postprocessing
     void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
     {
-        CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+        CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
     }
     void saveXYZ( const std::string& p_strOutfile ) const
     {
-        CBridgeG2O::saveXYZ( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+        CBridgeG2O::saveXYZ( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
     }
     void saveUVDepth( const std::string& p_strOutfile ) const
     {
-        CBridgeG2O::saveUVDepth( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+        CBridgeG2O::saveUVDepth( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
     }
     void saveUVDisparity( const std::string& p_strOutfile ) const
     {
-        CBridgeG2O::saveUVDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+        CBridgeG2O::saveUVDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
     }
     void saveCOMBO( const std::string& p_strOutfile ) const
     {
-        CBridgeG2O::saveCOMBO( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecLogG2OMeasurementPoints );
+        CBridgeG2O::saveCOMBO( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
     }
 
 //ds helpers
@@ -121,7 +122,6 @@ private:
     void _trackLandmarks( const cv::Mat& p_matImageLEFT,
                           const cv::Mat& p_matImageRIGHT,
                           const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                          const Eigen::Vector3d& p_vecAngularVelocity,
                           const Eigen::Vector3d& p_vecLinearAcceleration );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const uint64_t& p_uFrame,

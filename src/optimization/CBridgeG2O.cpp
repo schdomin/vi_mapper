@@ -169,11 +169,11 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
                 g2o::VertexPointXYZ* pVertexLandmark = dynamic_cast< g2o::VertexPointXYZ* >( itLandmark->second );
 
                 //ds maximum depth to produce a reliable XYZ estimate
-                if( CBridgeG2O::m_dMaximumReliableDepthForPointXYZ > pMeasurementLandmark->vecPointXYZLEFT.z( ) )
-                {
+                //if( CBridgeG2O::m_dMaximumReliableDepthForPointXYZ > pMeasurementLandmark->vecPointXYZLEFT.z( ) )
+                //{
                     cGraph.addEdge( _getEdgePointXYZ( pVertexPoseCurrent, pVertexLandmark, EG2OParameterID::eWORLD, pMeasurementLandmark->vecPointXYZLEFT ) );
                     ++uMeasurementsStoredXYZ;
-                }
+                //}
             }
         }
     }
@@ -213,7 +213,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
 
     //ds set camera parameters
     g2o::ParameterCamera* pCameraParametersLEFT = new g2o::ParameterCamera( );
-    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFx, p_cStereoCamera.m_pCameraLEFT->m_dFy, p_cStereoCamera.m_pCameraLEFT->m_dCx, p_cStereoCamera.m_pCameraLEFT->m_dCy );
+    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFxP, p_cStereoCamera.m_pCameraLEFT->m_dFyP, p_cStereoCamera.m_pCameraLEFT->m_dCxP, p_cStereoCamera.m_pCameraLEFT->m_dCyP );
     pCameraParametersLEFT->setId( EG2OParameterID::eCAMERA_LEFT );
     cGraph.addParameter( pCameraParametersLEFT );
 
@@ -369,7 +369,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
 
     //ds set camera parameters
     g2o::ParameterCamera* pCameraParametersLEFT = new g2o::ParameterCamera( );
-    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFx, p_cStereoCamera.m_pCameraLEFT->m_dFy, p_cStereoCamera.m_pCameraLEFT->m_dCx, p_cStereoCamera.m_pCameraLEFT->m_dCy );
+    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFxP, p_cStereoCamera.m_pCameraLEFT->m_dFyP, p_cStereoCamera.m_pCameraLEFT->m_dCxP, p_cStereoCamera.m_pCameraLEFT->m_dCyP );
     pCameraParametersLEFT->setId( EG2OParameterID::eCAMERA_LEFT );
     cGraph.addParameter( pCameraParametersLEFT );
 
@@ -488,7 +488,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
                 assert( 0.0 != dDisparity );
 
                 //ds disparity (LEFT camera)
-                cGraph.addEdge( _getEdgeUVDisparity( pVertexPoseCurrent, pVertexLandmark, EG2OParameterID::eCAMERA_LEFT, dDisparity, pMeasurementLandmark, p_cStereoCamera.m_pCameraLEFT->m_dFx, p_cStereoCamera.m_dBaselineMeters ) );
+                cGraph.addEdge( _getEdgeUVDisparity( pVertexPoseCurrent, pVertexLandmark, EG2OParameterID::eCAMERA_LEFT, dDisparity, pMeasurementLandmark, p_cStereoCamera.m_pCameraLEFT->m_dFxP, p_cStereoCamera.m_dBaselineMeters ) );
                 ++uMeasurementsStoredDisparity;
             }
         }
@@ -524,7 +524,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
 
     //ds set camera parameters
     g2o::ParameterCamera* pCameraParametersLEFT = new g2o::ParameterCamera( );
-    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFx, p_cStereoCamera.m_pCameraLEFT->m_dFy, p_cStereoCamera.m_pCameraLEFT->m_dCx, p_cStereoCamera.m_pCameraLEFT->m_dCy );
+    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFxP, p_cStereoCamera.m_pCameraLEFT->m_dFyP, p_cStereoCamera.m_pCameraLEFT->m_dCxP, p_cStereoCamera.m_pCameraLEFT->m_dCyP );
     pCameraParametersLEFT->setId( EG2OParameterID::eCAMERA_LEFT );
     cGraph.addParameter( pCameraParametersLEFT );
 
@@ -665,7 +665,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
                 else
                 {
                     //ds disparity (LEFT camera)
-                    cGraph.addEdge( _getEdgeUVDisparity( pVertexPoseCurrent, pVertexLandmark, EG2OParameterID::eCAMERA_LEFT, dDisparity, pMeasurementLandmark, p_cStereoCamera.m_pCameraLEFT->m_dFx, p_cStereoCamera.m_dBaselineMeters ) );
+                    cGraph.addEdge( _getEdgeUVDisparity( pVertexPoseCurrent, pVertexLandmark, EG2OParameterID::eCAMERA_LEFT, dDisparity, pMeasurementLandmark, p_cStereoCamera.m_pCameraLEFT->m_dFxP, p_cStereoCamera.m_dBaselineMeters ) );
                     ++uMeasurementsStoredDisparity;
 
                     //std::printf( "<CBridgeG2O>(saveUVDepthOrDisparity) landmark [%lu] imprecision: %f - stored disparity measurement (%ip) instead of depth (%fm)\n", pMeasurementLandmark->uID, dImprecision, iDisparity, dDepthMeters );
@@ -711,7 +711,7 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
 
     //ds set camera parameters
     g2o::ParameterCamera* pCameraParametersLEFT = new g2o::ParameterCamera( );
-    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFx, p_cStereoCamera.m_pCameraLEFT->m_dFy, p_cStereoCamera.m_pCameraLEFT->m_dCx, p_cStereoCamera.m_pCameraLEFT->m_dCy );
+    pCameraParametersLEFT->setKcam( p_cStereoCamera.m_pCameraLEFT->m_dFxP, p_cStereoCamera.m_pCameraLEFT->m_dFyP, p_cStereoCamera.m_pCameraLEFT->m_dCxP, p_cStereoCamera.m_pCameraLEFT->m_dCyP );
     pCameraParametersLEFT->setId( EG2OParameterID::eCAMERA_LEFT );
     cGraph.addParameter( pCameraParametersLEFT );
 
@@ -861,7 +861,7 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
                     const double dDisparity = pMeasurementLandmark->ptUVLEFT.x-pMeasurementLandmark->ptUVRIGHT.x;
 
                     //ds disparity (LEFT camera)
-                    cGraph.addEdge( _getEdgeUVDisparity( pVertexPoseCurrent, pVertexLandmark, EG2OParameterID::eCAMERA_LEFT, dDisparity, pMeasurementLandmark, p_cStereoCamera.m_pCameraLEFT->m_dFx, p_cStereoCamera.m_dBaselineMeters ) );
+                    cGraph.addEdge( _getEdgeUVDisparity( pVertexPoseCurrent, pVertexLandmark, EG2OParameterID::eCAMERA_LEFT, dDisparity, pMeasurementLandmark, p_cStereoCamera.m_pCameraLEFT->m_dFxP, p_cStereoCamera.m_dBaselineMeters ) );
                     ++uMeasurementsStoredUVDisparity;
                 }
             }

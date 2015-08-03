@@ -51,6 +51,6 @@ public:
 
     //ds QT macro for thread communication
     //public slots:
-    void updateFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD ){ m_pViewer->addFrame( p_matTransformationLEFTtoWORLD ); }
+    void updateFrame( const std::pair< bool, Eigen::Isometry3d > p_prFrame ){ m_pViewer->addFrame( p_prFrame ); }
     void close( ){ m_bIsViewerActive = false; }
 };

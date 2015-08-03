@@ -16,6 +16,10 @@ CViewerScene::~CViewerScene( )
 
 void CViewerScene::draw()
 {
+    glPushAttrib( GL_ENABLE_BIT );
+    glDisable( GL_LIGHTING );
+    glPointSize( 5.0 );
+
     //ds draw WORLD coordinate frame
     glColor3f( 1.0, 1.0, 1.0 );
     glLineWidth( 1.0 );
@@ -25,11 +29,11 @@ void CViewerScene::draw()
     qglviewer::Frame cFramePrevious;
 
     //ds draw all keyframes
-    for( const qglviewer::Frame& cFrame: m_vecFrames )
+    for( const std::pair< bool, qglviewer::Frame >& prFrame: m_vecFrames )
     {
         //ds positions
         const qglviewer::Vec vecPositionPrevious( cFramePrevious.position( ) );
-        const qglviewer::Vec vecPositionNow( cFrame.position( ) );
+        const qglviewer::Vec vecPositionNow( prFrame.second.position( ) );
 
         //ds draw the line between the previous and current keyframe
         glColor3f( 0.25, 0.25, 1.0 );
@@ -50,8 +54,20 @@ void CViewerScene::draw()
         drawAxis( 0.1 );
         glPopMatrix( );*/
 
+        //ds draw a point for keyframes
+        if( prFrame.first )
+        {
+            glPushMatrix( );
+            glColor3f( 0.0, 1.0, 1.0 );
+            glTranslatef( vecPositionNow.x, vecPositionNow.y, vecPositionNow.z );
+            glBegin( GL_POINTS );
+            glVertex3f( 0, 0, 0 );
+            glEnd( );
+            glPopMatrix( );
+        }
+
         //ds update previous
-        cFramePrevious = cFrame;
+        cFramePrevious = prFrame.second;
     }
 
     //ds orientation for head only
@@ -62,8 +78,7 @@ void CViewerScene::draw()
     drawAxis( 0.25 );
     glPopMatrix( );
 
-    glPushAttrib( GL_ENABLE_BIT );
-    glDisable( GL_LIGHTING );
+    //ds set line width and point size for landmarks
     glLineWidth( 1.0 );
     glPointSize( 2.0 );
 
@@ -203,7 +218,7 @@ void CViewerScene::init( )
 {
     //ds initialize
     m_vecFrames.clear( );
-    m_mapLandmarks.clear( );
+    //m_mapLandmarks.clear( );
     //restoreStateFromFile( );
     setSceneRadius( 25.0 );
 }
@@ -223,7 +238,7 @@ QString CViewerScene::helpString( ) const
   return text;
 }
 
-void CViewerScene::addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks )
+/*void CViewerScene::addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks )
 {
     //ds position
     const CPoint3DInWorldFrame vecPosition( p_matTransformationLEFTtoWORLD.translation( ) );
@@ -243,13 +258,13 @@ void CViewerScene::addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFT
     //ds force redraw
     draw( );
     updateGL( );
-}
+}*/
 
-void CViewerScene::addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD )
+void CViewerScene::addFrame( const std::pair< bool, Eigen::Isometry3d > p_prFrame )
 {
     //ds position
-    const CPoint3DInWorldFrame vecPosition( p_matTransformationLEFTtoWORLD.translation( ) );
-    const Eigen::Quaterniond vecQuaternion( p_matTransformationLEFTtoWORLD.linear( ) );
+    const CPoint3DInWorldFrame vecPosition( p_prFrame.second.translation( ) );
+    const Eigen::Quaterniond vecQuaternion( p_prFrame.second.linear( ) );
 
     //ds setup the new frame
     qglviewer::Frame cFrameNew;
@@ -257,26 +272,7 @@ void CViewerScene::addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoW
     cFrameNew.setOrientation( vecQuaternion.x( ), vecQuaternion.y( ), vecQuaternion.z( ), vecQuaternion.w( ) );
 
     //ds add it to the vector
-    m_vecFrames.push_back( cFrameNew );
-
-    //ds force redraw
-    draw( );
-    updateGL( );
-}
-
-void CViewerScene::addFrame( const QMatrix4x4& p_matTransformationLEFTtoWORLD )
-{
-    /*ds position
-    const CPoint3DInWorldFrame vecPosition( p_matTransformationLEFTtoWORLD.QMatrix4x4 );
-    const Eigen::Quaterniond vecQuaternion( p_matTransformationLEFTtoWORLD.linear( ) );*/
-
-    //ds setup the new frame
-    qglviewer::Frame cFrameNew;
-    //cFrameNew.setPosition( vecPosition.x( ), vecPosition.y( ), vecPosition.z( ) );
-    //cFrameNew.setOrientation( vecQuaternion.x( ), vecQuaternion.y( ), vecQuaternion.z( ), vecQuaternion.w( ) );
-
-    //ds add it to the vector
-    m_vecFrames.push_back( cFrameNew );
+    m_vecFrames.push_back( std::pair< bool, qglviewer::Frame >( p_prFrame.first, cFrameNew ) );
 
     //ds force redraw
     draw( );

@@ -43,9 +43,8 @@ protected:
 
 public:
 
-    void addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks );
-    void addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD );
-    void addFrame( const QMatrix4x4& p_matTransformationLEFTtoWORLD );
+    //void addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks );
+    void addFrame( const std::pair< bool, Eigen::Isometry3d > p_prFrame );
 
 private:
 
@@ -54,12 +53,12 @@ private:
 
 private:
 
-    std::vector< qglviewer::Frame > m_vecFrames;
-    std::map< UIDLandmark, CPoint3DInWorldFrame > m_mapLandmarks;
+    std::vector< std::pair< bool, qglviewer::Frame > > m_vecFrames;
+    //std::map< UIDLandmark, CPoint3DInWorldFrame > m_mapLandmarks;
 
-    std::shared_ptr< std::vector< const CMeasurementLandmark* > > m_pLiveMeasurements;
+    //std::shared_ptr< std::vector< const CMeasurementLandmark* > > m_pLiveMeasurements;
 
-    //ds slandmarks
+    //ds landmarks
     const std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
 
 };

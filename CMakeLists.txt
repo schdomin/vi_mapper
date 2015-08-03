@@ -70,6 +70,31 @@ src/vision/CMiniVisionToolbox.cpp
 src/core/CMockedMatcherEpipolar.cpp
 src/optimization/CBridgeG2O.cpp)
 
+set(LIBRARIES_GENERAL
+${catkin_LIBRARIES} 
+${OpenCV_LIBRARIES}     
+${G2O_OPENGL_HELPER_LIBRARY}
+${G2O_SOLVER_CSPARSE_EXTENSION}
+${G2O_TYPES_SLAM3D} 
+${G2O_CORE_LIBRARY} 
+${G2O_STUFF_LIBRARY}
+${G2O_TYPES_SBA}
+${QGLVIEWER_LIBRARY}
+${QT_QTXML_LIBRARY} 
+${QT_QTOPENGL_LIBRARY} 
+${QT_QTGUI_LIBRARY} 
+${QT_QTCORE_LIBRARY})
+
+set(LIBRARIES_MOCKED
+${catkin_LIBRARIES} 
+${OpenCV_LIBRARIES}     
+${G2O_OPENGL_HELPER_LIBRARY}
+${G2O_SOLVER_CSPARSE_EXTENSION}
+${G2O_TYPES_SLAM3D} 
+${G2O_CORE_LIBRARY} 
+${G2O_STUFF_LIBRARY}
+${G2O_TYPES_SBA})
+
 #add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
@@ -79,73 +104,21 @@ src/optimization/CBridgeG2O.cpp)
 #add_executable(stereo_detector_alberto_node src/runnable/stereo_detector_alberto_node.cpp src/core/CTrackerStereo.cpp ${SOURCEFILES})
 add_executable(stereo_detector_mocked src/runnable/stereo_detector_mocked.cpp src/core/CMockedTrackerStereo.cpp ${SOURCEFILES_MOCKED})
 #add_executable(test_depth src/runnable/test_depth.cpp ${SOURCEFILES})
-add_executable(stereo_single src/runnable/stereo_single.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
-add_executable(stereo_parallel src/runnable/stereo_parallel.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
+#add_executable(stereo_single src/runnable/stereo_single.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
+#add_executable(stereo_parallel src/runnable/stereo_parallel.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
+add_executable(stereo_fps src/runnable/stereo_fps.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 #add_executable(republisher_node src/runnable/republisher_node.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
-#target_link_libraries(message_dumper_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+#target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
 #target_link_libraries(stereo_detector_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_blocking_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-
-#target_link_libraries(stereo_detector_alberto_node 
-#                      ${catkin_LIBRARIES} 
-#                      ${OpenCV_LIBRARIES}     
-#                      ${G2O_OPENGL_HELPER_LIBRARY}
-#                      ${G2O_SOLVER_CSPARSE_EXTENSION}
-#                      ${G2O_TYPES_SLAM3D} 
-#                      ${G2O_CORE_LIBRARY} 
-#                      ${G2O_STUFF_LIBRARY}
-#                      ${G2O_TYPES_SBA})
-target_link_libraries(stereo_detector_mocked 
-                      ${catkin_LIBRARIES} 
-                      ${OpenCV_LIBRARIES}     
-                      ${G2O_OPENGL_HELPER_LIBRARY}
-                      ${G2O_SOLVER_CSPARSE_EXTENSION}
-                      ${G2O_TYPES_SLAM3D} 
-                      ${G2O_CORE_LIBRARY} 
-                      ${G2O_STUFF_LIBRARY}
-                      ${G2O_TYPES_SBA})
-#target_link_libraries(test_depth 
-#                      ${catkin_LIBRARIES} 
-#                      ${OpenCV_LIBRARIES}
-#                      -fopenmp)
-target_link_libraries(stereo_single 
-                      ${catkin_LIBRARIES} 
-                      ${OpenCV_LIBRARIES}     
-                      ${G2O_OPENGL_HELPER_LIBRARY}
-                      ${G2O_SOLVER_CSPARSE_EXTENSION}
-                      ${G2O_TYPES_SLAM3D} 
-                      ${G2O_CORE_LIBRARY} 
-                      ${G2O_STUFF_LIBRARY}
-                      ${G2O_TYPES_SBA}
-                      ${QGLVIEWER_LIBRARY}
-                      ${QT_QTXML_LIBRARY} 
-                      ${QT_QTOPENGL_LIBRARY} 
-                      ${QT_QTGUI_LIBRARY} 
-                      ${QT_QTCORE_LIBRARY} )
-target_link_libraries(stereo_parallel 
-                      ${catkin_LIBRARIES} 
-                      ${OpenCV_LIBRARIES}     
-                      ${G2O_OPENGL_HELPER_LIBRARY}
-                      ${G2O_SOLVER_CSPARSE_EXTENSION}
-                      ${G2O_TYPES_SLAM3D} 
-                      ${G2O_CORE_LIBRARY} 
-                      ${G2O_STUFF_LIBRARY}
-                      ${G2O_TYPES_SBA}
-                      ${QGLVIEWER_LIBRARY}
-                      ${QT_QTXML_LIBRARY} 
-                      ${QT_QTOPENGL_LIBRARY} 
-                      ${QT_QTGUI_LIBRARY} 
-                      ${QT_QTCORE_LIBRARY} )
-#target_link_libraries(republisher_node 
-#                      ${catkin_LIBRARIES} 
-#                      ${OpenCV_LIBRARIES}     
-#                      ${G2O_OPENGL_HELPER_LIBRARY}
-#                      ${G2O_SOLVER_CSPARSE_EXTENSION}
-#                      ${G2O_TYPES_SLAM3D} 
-#                      ${G2O_CORE_LIBRARY} 
-#                      ${G2O_STUFF_LIBRARY}
-#                      ${G2O_TYPES_SBA})
+#target_link_libraries(stereo_detector_alberto_node ${LIBRARIES_GENERAL})
+target_link_libraries(stereo_detector_mocked ${LIBRARIES_MOCKED})
+#target_link_libraries(test_depth ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} -fopenmp)
+#target_link_libraries(stereo_single ${LIBRARIES_GENERAL})
+#target_link_libraries(stereo_parallel ${LIBRARIES_GENERAL})
+target_link_libraries(stereo_fps ${LIBRARIES_GENERAL})
+#target_link_libraries(republisher_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 message("--------------------------------------------------------------------")

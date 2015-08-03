@@ -31,9 +31,11 @@ typedef uint64_t        UIDKeyFrame;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
 typedef Eigen::Vector3d CLinearAccelerationInIMUFrame;
-typedef Eigen::Vector3d CLinearAccelerationInCameraFrame;
+typedef Eigen::Vector3d CLinearAccelerationLEFT;
 typedef Eigen::Vector3d CAngularVelocityInIMUFrame;
 typedef Eigen::Vector3d CAngularVelocityInCameraFrame;
+typedef Eigen::Vector3d CAngularVelocityWORLD;
+typedef Eigen::Vector3d CLinearAccelerationWORLD;
 
 struct CMeasurementLandmark
 {

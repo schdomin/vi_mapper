@@ -79,7 +79,7 @@ private:
 
     //ds info display
     bool m_bIsFrameAvailable = false;
-    Eigen::Isometry3d m_matFrameLEFTtoWORLD;
+    std::pair< bool, Eigen::Isometry3d > m_prFrameLEFTtoWORLD;
     uint32_t m_uFramesCurrentCycle      = 0;
     double m_dPreviousFrameRate         = 0.0;
     double m_dPreviousFrameTime         = 0.0;
@@ -95,16 +95,15 @@ public:
                          const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
                          const txt_io::CIMUMessage& p_cIMU );
 
-    /*void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
+    void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
                          const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
-                         const txt_io::CIMUMessage& p_cIMU,
-                         const Eigen::Isometry3d& p_matTransformationIMU );*/
+                         const std::shared_ptr< txt_io::CIMUMessage > p_pIMU );
 
     const uint64_t getFrameCount( ) const { return m_uFrameCount; }
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
     const std::shared_ptr< std::vector< CLandmark* > > getLandmarksHandle( ) const { return m_vecLandmarks; }
     const bool isFrameAvailable( ) const { return m_bIsFrameAvailable; }
-    const Eigen::Isometry3d getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_matFrameLEFTtoWORLD; }
+    const std::pair< bool, Eigen::Isometry3d > getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_prFrameLEFTtoWORLD; }
 
     //ds postprocessing
     void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const

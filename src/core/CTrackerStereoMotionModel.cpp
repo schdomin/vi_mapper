@@ -19,7 +19,7 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMo
 
                                                                            m_matTransformationWORLDtoLEFTLAST( Eigen::Matrix4d( CConfigurationCamera::matTransformationIntialStandard ).transpose( ) ),
                                                                            m_matTransformationLEFTLASTtoLEFTNOW( Eigen::Matrix4d::Identity( ) ),
-                                                                           m_matTransformationMotionWORLDtoIMU( m_pCameraLEFT->m_matTransformationToIMU*m_matTransformationWORLDtoLEFTLAST ),
+                                                                           m_matTransformationMotionWORLDtoIMU( m_pCameraLEFT->m_matTransformationFromIMU*m_matTransformationWORLDtoLEFTLAST ),
                                                                            m_matTransformationIMULAST( Eigen::Matrix4d::Identity( ) ),
                                                                            m_vecVelocityAngularFilteredLAST( 0.0, 0.0, 0.0 ),
                                                                            m_dMaximumDeltaTimestampSeconds( 0.11 ),
@@ -202,7 +202,7 @@ void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::P
         m_matTransformationLEFTLASTtoLEFTNOW.linear( ) = CMiniVisionToolbox::fromOrientationRodrigues( vecRotation );
 
         //ds get to camera frame
-        const CLinearAccelerationInCameraFrame vecLinearAccelerationFiltered = m_pCameraLEFT->m_matTransformationFromIMU.linear( )*CIMUInterpolator::getLinearAccelerationFiltered( vecLinearAcceleration );
+        const CLinearAccelerationLEFT vecLinearAccelerationFiltered = m_pCameraLEFT->m_matTransformationToIMU.linear( )*CIMUInterpolator::getLinearAccelerationFiltered( vecLinearAcceleration );
 
         //ds add acceleration
         m_matTransformationLEFTLASTtoLEFTNOW.translation( ) += 0.5*vecLinearAccelerationFiltered*dDeltaTimestampSeconds*dDeltaTimestampSeconds;
@@ -227,16 +227,15 @@ void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::P
 
     //ds update reference
     m_dTimestampLASTSeconds          = dTimestampSeconds;
-    m_vecVelocityAngularFilteredLAST = m_pCameraLEFT->m_matTransformationFromIMU.linear( )*CIMUInterpolator::getAngularVelocityFiltered( vecAngularVelocity );
+    m_vecVelocityAngularFilteredLAST = m_pCameraLEFT->m_matTransformationToIMU.linear( )*CIMUInterpolator::getAngularVelocityFiltered( vecAngularVelocity );
 
     //ds flush all output
     std::fflush( stdout );
 }
 
-/*void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
+void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
                                                 const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
-                                                const txt_io::CIMUMessage& p_cIMU,
-                                                const Eigen::Isometry3d& p_matTransformationIMU )
+                                                const std::shared_ptr< txt_io::CIMUMessage > p_pIMU )
 {
     //ds flush all output
     std::fflush( stdout );
@@ -250,24 +249,60 @@ void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::P
     cv::equalizeHist( p_pImageRIGHT->image( ), matPreprocessedRIGHT );
     m_pCameraSTEREO->undistortAndrectify( matPreprocessedLEFT, matPreprocessedRIGHT );
 
-    //ds motion prior
-    const Eigen::Isometry3d matTransformationIMULASTtoIMUNOW( p_matTransformationIMU*m_matTransformationIMULAST.inverse( ) );
+    //ds current timestamp
+    const double dTimestampSeconds      = p_pIMU->timestamp( );
+    const double dDeltaTimestampSeconds = dTimestampSeconds - m_dTimestampLASTSeconds;
 
-    //ds imu reference
-    m_matTransformationMotionWORLDtoIMU = matTransformationIMULASTtoIMUNOW*m_matTransformationMotionWORLDtoIMU;
+    assert( 0 < dDeltaTimestampSeconds );
 
-    //ds motion for camera
-    m_matTransformationLEFTLASTtoLEFTNOW = m_pCameraLEFT->m_matTransformationFromIMU*matTransformationIMULASTtoIMUNOW;
+    //ds buffer unfiltered values
+    const CLinearAccelerationInIMUFrame vecLinearAcceleration( p_pIMU->getLinearAcceleration( ) );
+    const CAngularVelocityInIMUFrame vecAngularVelocity( p_pIMU->getAngularVelocity( ) );
+    const Eigen::Isometry3d matTransformationIMULASTtoWORLD( m_matTransformationWORLDtoLEFTLAST.inverse( )*m_pCameraLEFT->m_matTransformationFromIMU );
+
+    //ds parallel transformation
+    Eigen::Isometry3d matTransformationParallelLEFTLASTtoLEFTNOW( m_matTransformationLEFTLASTtoLEFTNOW );
+
+    //ds compute total rotation
+    const Eigen::Vector3d vecRotation( m_vecVelocityAngularFilteredLAST*dDeltaTimestampSeconds );
+
+    //ds if the delta is acceptable
+    if( m_dMaximumDeltaTimestampSeconds > dDeltaTimestampSeconds )
+    {
+        //ds integrate imu input: overwrite rotation
+        m_matTransformationLEFTLASTtoLEFTNOW.linear( ) = CMiniVisionToolbox::fromOrientationRodrigues( vecRotation );
+
+        //ds get to camera frame
+        const CLinearAccelerationLEFT vecLinearAccelerationFiltered = m_matTransformationWORLDtoLEFTLAST.linear( )*CIMUInterpolator::getLinearAccelerationFiltered( vecLinearAcceleration, matTransformationIMULASTtoWORLD );
+
+        //ds add acceleration
+        m_matTransformationLEFTLASTtoLEFTNOW.translation( ) += 0.5*vecLinearAccelerationFiltered*dDeltaTimestampSeconds*dDeltaTimestampSeconds;
+    }
+    else
+    {
+        //ds use full angular velocity
+        std::printf( "<CTrackerStereoMotionModel>(receivevDataVI) using rotation-only IMU input, timestamp delta: %f \n", dDeltaTimestampSeconds );
+
+        //ds integrate imu input: overwrite rotation only
+        m_matTransformationLEFTLASTtoLEFTNOW.linear( ) = CMiniVisionToolbox::fromOrientationRodrigues( vecRotation );
+    }
 
     //ds process images (fed with IMU prior pose)
-    //_trackLandmarks( matPreprocessedLEFT, matPreprocessedRIGHT, m_matTransformationLEFTLASTtoLEFTNOW*m_matTransformationWORLDtoLEFTLAST, p_cIMU.getAngularVelocity( ), p_cIMU.getLinearAcceleration( ) );
+    _trackLandmarks( matPreprocessedLEFT,
+                     matPreprocessedRIGHT,
+                     m_matTransformationLEFTLASTtoLEFTNOW*m_matTransformationWORLDtoLEFTLAST,
+                     matTransformationParallelLEFTLASTtoLEFTNOW*m_matTransformationWORLDtoLEFTLAST,
+                     p_pIMU->getAngularVelocity( ),
+                     vecLinearAcceleration,
+                     vecRotation );
 
-    //ds update last IMU transform
-    m_matTransformationIMULAST = p_matTransformationIMU;
+    //ds update reference
+    m_dTimestampLASTSeconds          = dTimestampSeconds;
+    m_vecVelocityAngularFilteredLAST = m_pCameraLEFT->m_matTransformationFromIMU.linear( )*CIMUInterpolator::getAngularVelocityFiltered( vecAngularVelocity );
 
     //ds flush all output
     std::fflush( stdout );
-}*/
+}
 
 void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                                                  const cv::Mat& p_matImageRIGHT,
@@ -314,7 +349,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         catch( const CExceptionPoseOptimization& p_cException )
         {
             //ds stick to the original estimate
-            std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) parallel damped pose optimization failed: '%s'\n", p_cException.what( ) );
+            std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) parallel pose optimization failed: '%s'\n", p_cException.what( ) );
             matTransformationWORLDtoLEFT = p_matTransformationEstimateWORLDtoLEFT;
         }
     }
@@ -370,8 +405,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
 
     //ds update scene in viewer
     //m_pSceneHandle->updateTransformation( matTransformationLEFTtoWORLD );
-    m_matFrameLEFTtoWORLD = matTransformationLEFTtoWORLD;
-    m_bIsFrameAvailable   = true;
+    m_bIsFrameAvailable = true;
 
     //ds compute delta
     m_dTranslationDeltaSquaredNormCurrent = ( m_vecPositionCurrent-m_vecTranslationLastKeyFrame ).squaredNorm( );
@@ -382,6 +416,8 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         m_cMatcherEpipolar.setKeyFrameToVisibleLandmarks( );
         m_vecTranslationLastKeyFrame = m_vecPositionCurrent;
         m_vecKeyFrames.push_back( CKeyFrame( matTransformationLEFTtoWORLD, p_vecLinearAcceleration.normalized( ), vecVisibleLandmarks ) );
+
+        m_prFrameLEFTtoWORLD = std::pair< bool, Eigen::Isometry3d >( true, matTransformationLEFTtoWORLD );
 
         //ds current "id"
         const UIDKeyFrame uIDKeyFrameCurrent = m_vecKeyFrames.size( )-1;
@@ -401,11 +437,17 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
             CBridgeG2O::saveCOMBO( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
             CBridgeG2O::saveUVDepthOrDisparity( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
             CBridgeG2O::saveUVDepth( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
+            CBridgeG2O::saveXYZ( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
 
             //ds update last
             m_uIDProcessedKeyFrameLAST = uIDKeyFrameCurrent;
             ++m_uOptimizationsG2O;
         }
+    }
+    else
+    {
+        //ds no keyframe
+        m_prFrameLEFTtoWORLD = std::pair< bool, Eigen::Isometry3d >( false, matTransformationLEFTtoWORLD );
     }
 
     //ds check if we have to detect new landmarks
