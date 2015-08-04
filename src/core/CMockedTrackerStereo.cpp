@@ -1,9 +1,6 @@
 #include "CMockedTrackerStereo.h"
 
 #include <opencv/highgui.h>
-#include <Eigen/Core>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
 
 #include "configuration/CConfigurationOpenCV.h"
 #include "configuration/CConfigurationCamera.h"
@@ -51,6 +48,8 @@ CMockedTrackerStereo::CMockedTrackerStereo( const uint32_t& p_uFrequencyPlayback
     //ds dump file format
     std::fprintf( m_pFileLandmarkCreation, "FRAME | ID_LANDMARK |      X      Y      Z :  DEPTH | U_LEFT V_LEFT : NOISE_U NOISE_V | U_RIGHT V_RIGHT : NOISE_U NOISE_V | KEYPOINT_SIZE\n" );
     std::fprintf( m_pFileLandmarkFinal, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | MEASUREMENTS | CALIBRATIONS | MEAN_X MEAN_Y MEAN_Z\n" );
+
+    CLogger::CLogLandmarkCreation::open( );
 
     //ds initialize reference frames with black images
     m_matDisplayLowerReference = cv::Mat::zeros( m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );

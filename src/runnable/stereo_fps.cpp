@@ -190,6 +190,9 @@ int main( int argc, char **argv )
         std::printf( "(main) successfully written g2o dump to: %s_TYPE.g2o\n", strG2ODump.c_str( ) );
     }
 
+    //ds close log files
+    CLogger::closeOpenLogFiles( );
+
     //ds exit
     std::printf( "(main) terminated: %s\n", argv[0] );
     std::fflush( stdout);

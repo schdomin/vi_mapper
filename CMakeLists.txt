@@ -57,6 +57,7 @@ endforeach()
 #ds BINARIES
 set(SOURCEFILES
 src/types/CLandmark.cpp
+src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
 src/core/CDetectorMonoTilewise.cpp
@@ -66,6 +67,7 @@ src/gui/CViewerScene.cpp)
 
 set(SOURCEFILES_MOCKED
 src/types/CLandmark.cpp
+src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CMockedMatcherEpipolar.cpp
 src/optimization/CBridgeG2O.cpp)
