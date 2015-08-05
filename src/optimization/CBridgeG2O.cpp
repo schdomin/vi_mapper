@@ -57,7 +57,7 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationFromIMU );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -219,7 +219,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationFromIMU );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -375,7 +375,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationFromIMU );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -530,7 +530,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationFromIMU );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -717,7 +717,7 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationFromIMU );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -889,7 +889,7 @@ const bool CBridgeG2O::isOptimized( const CLandmark* p_pLandmark )
 const bool CBridgeG2O::isKeyFramed( const CLandmark* p_pLandmark )
 {
     //ds criteria
-    return ( m_uMinimumKeyFramePresences < p_pLandmark->uNumberOfKeyFramePresences );
+    return ( CBridgeG2O::m_uMinimumKeyFramePresences < p_pLandmark->uNumberOfKeyFramePresences );
 }
 
 g2o::EdgeSE3PointXYZ* CBridgeG2O::_getEdgePointXYZ( g2o::VertexSE3* p_pVertexPose,

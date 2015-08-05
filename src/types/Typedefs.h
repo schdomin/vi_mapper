@@ -30,7 +30,7 @@ typedef uint64_t        UIDDetectionPoint;
 typedef uint64_t        UIDKeyFrame;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
-typedef Eigen::Vector3d CLinearAccelerationInIMUFrame;
+typedef Eigen::Vector3d CLinearAccelerationIMU;
 typedef Eigen::Vector3d CLinearAccelerationLEFT;
 typedef Eigen::Vector3d CAngularVelocityInIMUFrame;
 typedef Eigen::Vector3d CAngularVelocityInCameraFrame;
@@ -78,11 +78,11 @@ struct CMeasurementLandmark
 struct CKeyFrame
 {
     const Eigen::Isometry3d matTransformationLEFTtoWORLD;
-    const CLinearAccelerationInIMUFrame vecLinearAccelerationNormalized;
+    const CLinearAccelerationIMU vecLinearAccelerationNormalized;
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecLandmarkMeasurements;
 
     CKeyFrame( const Eigen::Isometry3d p_matTransformationLEFTtoWORLD,
-                      const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration,
+                      const CLinearAccelerationIMU& p_vecLinearAcceleration,
                       const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_vecLandmarks ): matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
                                                                                                             vecLinearAccelerationNormalized( p_vecLinearAcceleration ),
                                                                                                             vecLandmarkMeasurements( p_vecLandmarks )

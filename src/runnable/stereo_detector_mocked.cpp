@@ -1,10 +1,4 @@
-#include <iostream>
-#include <fstream>
-#include <cmath>
 #include <opencv/highgui.h>
-
-//ds ROS
-#include <ros/ros.h>
 
 //ds custom
 #include "core/CMockedTrackerStereo.h"
@@ -22,9 +16,7 @@ uint64_t g_uFrameIDCamera_0 = 0;
 uint64_t g_uFrameIDCamera_1 = 0;
 uint64_t g_uFrameIDPose     = 0;
 
-const double dAngularVelocityNoise = 0.01;
-
-inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
+inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder );
 
 //ds command line parsing (setting params IN/OUT)
 void setParametersNaive( const int& p_iArgc,
@@ -43,7 +35,7 @@ int main( int argc, char **argv )
     std::printf( "(main) launched: %s\n", argv[0] );
 
     //ds defaults
-    std::string strMode              = "interactive";
+    std::string strMode              = "stepwise";
     std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
     std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
     std::string strMockedLandmarks   = "/home/dominik/workspace_catkin/src/vi_mapper/mocking/landmarks_clean_level2.txt";
@@ -52,7 +44,7 @@ int main( int argc, char **argv )
     setParametersNaive( argc, argv, strMode, strInfileMessageDump, strImageFolder, strMockedLandmarks );
 
     //ds get playback mode to enum
-    EPlaybackMode eMode( ePlaybackInteractive );
+    EPlaybackMode eMode( ePlaybackStepwise );
 
     if( "stepwise" == strMode )
     {
@@ -63,29 +55,10 @@ int main( int argc, char **argv )
         eMode = ePlaybackBenchmark;
     }
 
-    //ds image resolution
-    const uint32_t uImageRows = 480;
-    const uint32_t uImageCols = 752;
-
-    //ds setup node
-    ros::init( argc, argv, "stereo_detector_mocked" );
-    std::shared_ptr< ros::NodeHandle > pNode( new ros::NodeHandle( "~" ) );
-
-    //ds escape here on failure
-    if( !pNode->ok( ) )
-    {
-        std::printf( "\n(main) ERROR: unable to instantiate node\n" );
-        std::printf( "(main) terminated: %s\n", argv[0]);
-        std::fflush( stdout );
-        return 1;
-    }
-
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
 
     //ds internals
-    uint32_t uFrequencyPlaybackHz( 100 );
-    uint32_t uSleepMicroseconds( ( 1.0/uFrequencyPlaybackHz )*1e6 );
     uint32_t uWaitKeyTimeout( 1 );
 
     //ds adjust depending on mode
@@ -93,13 +66,11 @@ int main( int argc, char **argv )
     {
         case ePlaybackStepwise:
         {
-            uSleepMicroseconds = 0;
             uWaitKeyTimeout    = 0;
             break;
         }
         case ePlaybackBenchmark:
         {
-            uSleepMicroseconds = 0;
             uWaitKeyTimeout    = 1;
             break;
         }
@@ -109,13 +80,16 @@ int main( int argc, char **argv )
         }
     }
 
+    //ds logfiles used (will be closed independently)
+    CLogger::CLogLandmarkCreationMocked::open( );
+    CLogger::CLogDetectionEpipolar::open( );
+    CLogger::CLogLandmarkFinal::open( );
+    CLogger::CLogLandmarkFinalOptimized::open( );
+    CLogger::CLogOptimizationOdometry::open( );
+    CLogger::CLogTrajectory::open( );
+
     //ds log configuration
-    std::printf( "(main) ROS Node namespace   := '%s'\n", pNode->getNamespace( ).c_str( ) );
-    std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
-    std::printf( "(main) uImageCols (width)   := '%u'\n", uImageCols );
     std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
-    std::printf( "(main) uFrequencyPlaybackHz := '%u'\n", uFrequencyPlaybackHz );
-    std::printf( "(main) uSleepMicroseconds   := '%u'\n", uSleepMicroseconds );
     std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
     std::printf( "(main) strImageFolder       := '%s'\n", strImageFolder.c_str( ) );
     std::printf( "(main) strMockedLandmarks   := '%s'\n", strMockedLandmarks.c_str( ) );
@@ -123,19 +97,16 @@ int main( int argc, char **argv )
     CLogger::closeBox( );
 
     //ds feature detector
-    CMockedTrackerStereo cDetector( uFrequencyPlaybackHz, eMode, strMockedLandmarks, uWaitKeyTimeout );
+    CMockedTrackerStereo cDetector( eMode, strMockedLandmarks, uWaitKeyTimeout );
 
     //ds get start time
     const double dTimeStartSeconds = CLogger::getTimeSeconds( );
 
     //ds playback the dump
-    while( ifMessages.good( ) && ros::ok( ) && !cDetector.isShutdownRequested( ) )
+    while( ifMessages.good( ) && !cDetector.isShutdownRequested( ) )
     {
-        //ds update the frequency
-        const uint32_t uSleepMicroseconds = ( 1.0/cDetector.getPlaybackFrequencyHz( ) )*1e6;
-
         //ds read a message
-        readNextMessageFromFile( ifMessages, strImageFolder, uSleepMicroseconds );
+        readNextMessageFromFile( ifMessages, strImageFolder );
 
         //ds as long as we have data in all the stacks - process
         if( 0 != g_pActiveMessageCameraRIGHT && 0 != g_pActiveMessageCameraLEFT && !g_vecMessagesIMU.empty( ) && 0 != g_pActiveMessagesPose )
@@ -172,7 +143,7 @@ int main( int argc, char **argv )
                     //ds pop the most recent imu measurement and check
                     if( !g_vecMessagesIMU.empty( ) )
                     {
-                        readNextMessageFromFile( ifMessages, strImageFolder, uSleepMicroseconds );
+                        readNextMessageFromFile( ifMessages, strImageFolder );
                         cMessageIMU = g_vecMessagesIMU.top( );
                         g_vecMessagesIMU.pop( );
                     }
@@ -203,7 +174,7 @@ int main( int argc, char **argv )
                     }
 
                     //ds read a message
-                    readNextMessageFromFile( ifMessages, strImageFolder, uSleepMicroseconds );
+                    readNextMessageFromFile( ifMessages, strImageFolder );
                 }
 
                 if( !bCalledDetector )
@@ -280,7 +251,7 @@ inline int8_t sign( const float& p_fNumber )
     return 0;
 }
 
-inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds )
+inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder )
 {
     //ds line buffer
     std::string strLineBuffer;
@@ -312,14 +283,14 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         Eigen::Vector3d vecAngularVelocity;
         Eigen::Vector3d vecLinearAcceleration;
 
-        //ds parse the values (order x/z/y) TODO align coordinate systems
+        //ds parse the values
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
-        //ds add to interpolator
-        //g_cInterpolator.addMeasurement( vecLinearAcceleration, vecAngularVelocity, dTimeSeconds );
-
-        //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
-        //vecLinearAcceleration[1] += 9.80665;
+        //ds flip Y and Z values (TODO VERIFY)
+        vecLinearAcceleration[1] = -vecLinearAcceleration[1];
+        vecLinearAcceleration[2] = -vecLinearAcceleration[2];
+        vecAngularVelocity[1] = -vecAngularVelocity[1];
+        vecAngularVelocity[2] = -vecAngularVelocity[2];
 
         //ds set message fields
         msgIMU.setAngularVelocity( vecAngularVelocity );
@@ -391,12 +362,11 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //ds set it
         //g_pActiveMessagesPose->setOrientationQuaternion( vecOrientationQuaternion );
         //g_pActiveMessagesPose->setOrientationEulerAngles( vecOrientation );
+
         g_pActiveMessagesPose->setOrientationMatrix( CMiniVisionToolbox::fromOrientationRodrigues( vecOrientation ) );
 
         //std::cout << g_pActiveMessagesPose->getOrientationMatrix( ) << std::endl;
     }
-
-    //usleep( p_uSleepMicroseconds );
 }
 
 void setParametersNaive( const int& p_iArgc,

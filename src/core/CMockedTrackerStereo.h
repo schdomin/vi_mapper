@@ -18,8 +18,7 @@ class CMockedTrackerStereo
 public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    CMockedTrackerStereo( const uint32_t& p_uFrequencyPlaybackHz,
-                    const EPlaybackMode& p_eMode,
+    CMockedTrackerStereo( const EPlaybackMode& p_eMode,
                     const std::string& p_strLandmarksMocked,
                     const uint32_t& p_uWaitKeyTimeout = 1 );
     ~CMockedTrackerStereo( );
@@ -64,10 +63,6 @@ private:
     //ds control
     const EPlaybackMode m_eMode;
     bool m_bIsShutdownRequested;
-    double m_dFrequencyPlaybackHz;
-    uint32_t m_uFrequencyPlaybackDeltaHz;
-    int32_t m_iPlaybackSpeedupCounter;
-    cv::RNG_MT19937 m_cRandomGenerator;
 
     //ds info display
     cv::Mat m_matTrajectoryXY;
@@ -77,10 +72,6 @@ private:
     double m_dFrameTimeSecondsLAST      = 0.0;
     uint32_t m_uFramesCurrentCycle      = 0;
     double m_dPreviousFrameRate         = 0.0;
-
-    //ds debug logging
-    std::FILE* m_pFileLandmarkCreation;
-    std::FILE* m_pFileLandmarkFinal;
 
 //ds accessors
 public:
@@ -92,7 +83,6 @@ public:
 
     const uint64_t getFrameCount( ) const { return m_uFrameCount; }
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
-    const uint32_t getPlaybackFrequencyHz( ) const { return std::lround( m_dFrequencyPlaybackHz ); }
 
     //ds postprocessing
     void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
@@ -122,7 +112,7 @@ private:
     void _trackLandmarks( const cv::Mat& p_matImageLEFT,
                           const cv::Mat& p_matImageRIGHT,
                           const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                          const Eigen::Vector3d& p_vecLinearAcceleration );
+                          const CLinearAccelerationIMU& p_vecLinearAcceleration );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const uint64_t& p_uFrame,
                                                                                      cv::Mat& p_matDisplay,
@@ -132,8 +122,6 @@ private:
 
     //ds control
     void _shutDown( );
-    void _speedUp( );
-    void _slowDown( );
     void _updateFrameRateForInfoBox( const uint32_t& p_uFrameProbeRange = 10 );
     void _drawInfoBox( cv::Mat& p_matDisplay ) const;
 };

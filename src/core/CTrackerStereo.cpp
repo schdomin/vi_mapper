@@ -198,7 +198,7 @@ void CTrackerStereo::receivevDataVIWithPose( const std::shared_ptr< txt_io::Pinh
     matTransformationIMUToWORLD.linear( )      = p_cPose->getOrientationMatrix( );
 
     //ds compute LEFT camera transformation
-    const Eigen::Isometry3d matTransformationLEFTToWORLD( matTransformationIMUToWORLD*m_pCameraLEFT->m_matTransformationToIMU );
+    const Eigen::Isometry3d matTransformationLEFTToWORLD( matTransformationIMUToWORLD*m_pCameraLEFT->m_matTransformationLEFTtoIMU );
 
     //ds process images
     _trackLandmarks( matPreprocessedLEFT, matPreprocessedRIGHT, matTransformationLEFTToWORLD, p_cIMU.getAngularVelocity( ), p_cIMU.getLinearAcceleration( ) );

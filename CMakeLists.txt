@@ -108,7 +108,7 @@ add_executable(stereo_detector_mocked src/runnable/stereo_detector_mocked.cpp sr
 #add_executable(test_depth src/runnable/test_depth.cpp ${SOURCEFILES})
 #add_executable(stereo_single src/runnable/stereo_single.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 #add_executable(stereo_parallel src/runnable/stereo_parallel.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
-add_executable(stereo_fps src/runnable/stereo_fps.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
+#add_executable(stereo_fps src/runnable/stereo_fps.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 #add_executable(republisher_node src/runnable/republisher_node.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
@@ -120,7 +120,7 @@ target_link_libraries(stereo_detector_mocked ${LIBRARIES_MOCKED})
 #target_link_libraries(test_depth ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} -fopenmp)
 #target_link_libraries(stereo_single ${LIBRARIES_GENERAL})
 #target_link_libraries(stereo_parallel ${LIBRARIES_GENERAL})
-target_link_libraries(stereo_fps ${LIBRARIES_GENERAL})
+#target_link_libraries(stereo_fps ${LIBRARIES_GENERAL})
 #target_link_libraries(republisher_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 message("--------------------------------------------------------------------")

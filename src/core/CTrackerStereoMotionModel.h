@@ -34,9 +34,8 @@ private:
     uint64_t m_uFrameCount = 0;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
-    Eigen::Isometry3d m_matTransformationMotionWORLDtoIMU;
-    Eigen::Isometry3d m_matTransformationIMULAST;
     CAngularVelocityInCameraFrame m_vecVelocityAngularFilteredLAST;
+    CLinearAccelerationLEFT m_vecLinearAccelerationLAST;
     const double m_dMaximumDeltaTimestampSeconds;
     double m_dTimestampLASTSeconds;
     CPoint3DInWorldFrame m_vecTranslationLastKeyFrame;
@@ -134,8 +133,7 @@ private:
                           const cv::Mat& p_matImageRIGHT,
                           const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
                           const Eigen::Isometry3d& p_matTransformationEstimateDampedWORLDtoLEFT,
-                          const CAngularVelocityInIMUFrame& p_vecAngularVelocity,
-                          const CLinearAccelerationInIMUFrame& p_vecLinearAcceleration,
+                          const CLinearAccelerationLEFT& p_vecLinearAcceleration,
                           const Eigen::Vector3d& p_vecRotation );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const uint64_t& p_uFrame,

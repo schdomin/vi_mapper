@@ -15,14 +15,8 @@ CMockedMatcherEpipolar::CMockedMatcherEpipolar( const std::shared_ptr< CPinholeC
                                                                               m_uAvailableMeasurementPointID( 0 ),
                                                                               m_uMaximumFailedSubsequentTrackingsPerLandmark( p_uMaximumFailedSubsequentTrackingsPerLandmark ),
                                                                               m_cSolverPose( m_pCameraLEFT->m_matProjection ),
-                                                                              m_cSolverPoseSTEREO( m_pCameraSTEREO ),
-                                                                              m_pFileOdometryError( std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/error_odometry.txt", "w" ) ),
-                                                                              m_pFileEpipolarDetection( std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/epipolar_detection.txt", "w" ) )
+                                                                              m_cSolverPoseSTEREO( m_pCameraSTEREO )
 {
-    //ds dump file format
-    std::fprintf( m_pFileOdometryError, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS REPROJECTIONS | ERROR_RSS\n" );
-    std::fprintf( m_pFileEpipolarDetection, "FRAME MEASUREMENT_POINT LANDMARKS_TOTAL LANDMARKS_ACTIVE LANDMARKS_VISIBLE\n" );
-
     CLogger::openBox( );
     std::printf( "<CMockedMatcherEpipolar>(CMockedMatcherEpipolar) maximum number of non-detections before dropping landmark: %u\n", m_uMaximumFailedSubsequentTrackingsPerLandmark );
     std::printf( "<CMockedMatcherEpipolar>(CMockedMatcherEpipolar) instance allocated\n" );
@@ -31,8 +25,10 @@ CMockedMatcherEpipolar::CMockedMatcherEpipolar( const std::shared_ptr< CPinholeC
 
 CMockedMatcherEpipolar::~CMockedMatcherEpipolar( )
 {
-    std::fclose( m_pFileOdometryError );
-    std::fclose( m_pFileEpipolarDetection );
+    //ds close logfiles
+    CLogger::CLogDetectionEpipolar::close( );
+    CLogger::CLogOptimizationOdometry::close( );
+
     std::printf( "<CMockedMatcherEpipolar>(~CMockedMatcherEpipolar) instance deallocated\n" );
 }
 
@@ -49,7 +45,8 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
                                                                                                                     const cv::Mat& p_matImageLEFT,
                                                                                                                     const cv::Mat& p_matImageRIGHT,
                                                                                                                     const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                                                                                    cv::Mat& p_matDisplayTrajectory )
+                                                                                                                    cv::Mat& p_matDisplayTrajectory,
+                                                                                                                    const double& p_dMotionScaling )
 {
     //ds detected landmarks at this position
     std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( std::make_shared< std::vector< const CMeasurementLandmark* > >( ) );
@@ -67,6 +64,9 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
 
     //ds new active measurement points after this matching
     std::vector< CDetectionPoint > vecMeasurementPointsActive;
+
+    //ds initial translation
+    const CPoint3DInWorldFrame vecTranslationEstimate( p_matTransformationLEFTtoWORLD.translation( ) );
 
     //ds vectors for pose solver
     gtools::Vector3dVector vecLandmarksWORLD;
@@ -146,7 +146,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
         }
 
         //ds log
-        std::fprintf( m_pFileEpipolarDetection, "%04lu %03lu %02lu %02lu %02lu\n", p_uFrame, cMeasurementPoint.uID, cMeasurementPoint.vecLandmarks->size( ), vecActiveLandmarksPerMeasurementPoint->size( ), vecVisibleLandmarksPerMeasurementPoint.size( ) );
+        CLogger::CLogDetectionEpipolar::addEntry( p_uFrame, cMeasurementPoint.uID, cMeasurementPoint.vecLandmarks->size( ), vecActiveLandmarksPerMeasurementPoint->size( ), vecVisibleLandmarksPerMeasurementPoint.size( ) );
 
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerMeasurementPoint->empty( ) )
@@ -190,14 +190,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
             const double dErrorSolverPoseCurrent = m_cSolverPoseSTEREO.oneRound( );
             const uint32_t uInliersCurrent       = m_cSolverPoseSTEREO.uNumberOfInliers;
 
-            //ds log the error evolution
-            std::fprintf( m_pFileOdometryError, "    %04lu |         %01u |          %03lu     %03u           %03u |   %7.2f\n",
-                                                 p_uFrame,
-                                                 uIteration,
-                                                 vecLandmarksWORLD.size( ),
-                                                 uInliersCurrent,
-                                                 m_cSolverPoseSTEREO.uNumberOfReprojections,
-                                                 dErrorSolverPoseCurrent );
+            CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uIteration, vecLandmarksWORLD.size( ), uInliersCurrent, m_cSolverPoseSTEREO.uNumberOfReprojections, dErrorSolverPoseCurrent );
 
             //ds check convergence (triggers another last loop)
             if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorPrevious-dErrorSolverPoseCurrent ) )
@@ -209,12 +202,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
                     const double dErrorSolverPoseCurrentIO = m_cSolverPoseSTEREO.oneRoundInliersOnly( );
 
                     //ds log the error evolution
-                    std::fprintf( m_pFileOdometryError, "    %04lu |    INLIER |          %03lu     %03u           %03u |   %7.2f\n",
-                                                         p_uFrame,
-                                                         vecLandmarksWORLD.size( ),
-                                                         m_cSolverPoseSTEREO.uNumberOfInliers,
-                                                         m_cSolverPoseSTEREO.uNumberOfReprojections,
-                                                         dErrorSolverPoseCurrentIO );
+                    CLogger::CLogOptimizationOdometry::addEntryInliers( p_uFrame, vecLandmarksWORLD.size( ), m_cSolverPoseSTEREO.uNumberOfInliers, m_cSolverPoseSTEREO.uNumberOfReprojections, dErrorSolverPoseCurrentIO );
                 }
                 else
                 {
@@ -228,6 +216,14 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
         }
 
         const Eigen::Isometry3d matTransformationLEFTtoWORLDCorrected( m_cSolverPoseSTEREO.T.inverse( ) );
+
+        //ds qualitiy information
+        const double dDeltaOptimization      = ( matTransformationLEFTtoWORLDCorrected.translation( )-vecTranslationEstimate ).squaredNorm( );
+        const double dOptimizationCovariance = dDeltaOptimization/p_dMotionScaling;
+
+        //ds log resulting trajectory and delta to initial
+        CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLDCorrected.translation( ), dDeltaOptimization, p_dMotionScaling, dOptimizationCovariance );
+
         const cv::Point2d ptPositionXY( matTransformationLEFTtoWORLDCorrected.translation( ).x( ), matTransformationLEFTtoWORLDCorrected.translation( ).y( ) );
         cv::circle( p_matDisplayTrajectory, cv::Point2d( 180+ptPositionXY.x*10, 360-ptPositionXY.y*10 ), 2, CColorCodeBGR( 0, 0, 255 ), -1 );
     }

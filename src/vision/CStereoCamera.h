@@ -20,8 +20,8 @@ public:
         assert( p_pCameraLEFT->m_uHeightPixel == p_pCameraRIGHT->m_uHeightPixel );
 
         //ds setup extrinsic transformations
-        m_matTransformLEFTtoIMU   = p_pCameraLEFT->m_matTransformationToIMU;
-        m_matTransformRIGHTtoIMU  = p_pCameraRIGHT->m_matTransformationToIMU;
+        m_matTransformLEFTtoIMU   = p_pCameraLEFT->m_matTransformationLEFTtoIMU;
+        m_matTransformRIGHTtoIMU  = p_pCameraRIGHT->m_matTransformationLEFTtoIMU;
         m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
 
         m_dBaselineMeters = m_matTransformLEFTtoRIGHT.translation( ).norm( );
@@ -62,8 +62,8 @@ public:
         assert( p_cCameraLEFT.m_uHeightPixel == p_cCameraRIGHT.m_uHeightPixel );
 
         //ds setup extrinsic transformations
-        m_matTransformLEFTtoIMU   = p_cCameraLEFT.m_matTransformationToIMU;
-        m_matTransformRIGHTtoIMU  = p_cCameraRIGHT.m_matTransformationToIMU;
+        m_matTransformLEFTtoIMU   = p_cCameraLEFT.m_matTransformationLEFTtoIMU;
+        m_matTransformRIGHTtoIMU  = p_cCameraRIGHT.m_matTransformationLEFTtoIMU;
         m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
         m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
 

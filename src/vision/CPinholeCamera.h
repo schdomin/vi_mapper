@@ -18,7 +18,6 @@ public:
                     const double p_matProjection[12],
                     const double p_matQuaternionToIMU[4],
                     const double p_vecTranslationToIMU[3],
-                    const double p_matRotationFromIMUExtra[9],
                     const uint32_t& p_uWidthPixel,
                     const uint32_t& p_uHeightPixel,
                     const double& p_dFocalLengthMeters ): m_strCameraLabel( p_strCameraLabel ),
@@ -47,7 +46,7 @@ public:
                                                       m_vecPrincipalPointNormalized( Eigen::Vector3d( m_dCxNormalized, m_dCyNormalized, 1.0 ) ),
                                                       m_vecRotationToIMU( p_matQuaternionToIMU ),
                                                       m_vecTranslationToIMU( p_vecTranslationToIMU ),
-                                                      m_matTransformationToIMU( Eigen::Matrix4d::Identity( ) ),
+                                                      m_matTransformationLEFTtoIMU( Eigen::Matrix4d::Identity( ) ),
                                                       m_uWidthPixel( p_uWidthPixel ),
                                                       m_uHeightPixel( p_uHeightPixel ),
                                                       m_iWidthPixel( m_uWidthPixel ),
@@ -58,16 +57,14 @@ public:
                                                       m_prRangeHeightNormalized( std::pair< double, double >( getNormalizedY( 0 ), getNormalizedY( p_uHeightPixel ) ) ),
                                                       m_cFOV( cv::Point2i( 0, 0 ), cv::Point2i( m_uWidthPixel, m_uHeightPixel ) )
     {
-        //const Eigen::Matrix3d matRotationFromIMUExtra( p_matRotationFromIMUExtra );
-        m_matTransformationFromIMU.linear( )      = m_vecRotationToIMU.toRotationMatrix( );
-        //m_matTransformationToIMU.linear( )     *= matRotationFromIMUExtra.transpose( );
-        m_matTransformationFromIMU.translation( ) = m_vecTranslationToIMU;
+        m_matTransformationIMUtoLEFT.linear( )      = m_vecRotationToIMU.toRotationMatrix( );
+        m_matTransformationIMUtoLEFT.translation( ) = m_vecTranslationToIMU;
 
         //ds TODO Eigen BUG? corner point 3,3 not set to zero
         //m_matTransformationFromIMU( 3, 3 ) = 1.0;
 
         //ds set inverse transform
-        m_matTransformationToIMU = m_matTransformationFromIMU.inverse( );
+        m_matTransformationLEFTtoIMU = m_matTransformationIMUtoLEFT.inverse( );
 
         //ds log complete configuration
         _logConfiguration( );
@@ -108,8 +105,8 @@ public:
     //ds extrinsics
     const Eigen::Quaterniond m_vecRotationToIMU;
     const Eigen::Vector3d m_vecTranslationToIMU;
-    Eigen::Isometry3d m_matTransformationToIMU;
-    Eigen::Isometry3d m_matTransformationFromIMU;
+    Eigen::Isometry3d m_matTransformationLEFTtoIMU;
+    Eigen::Isometry3d m_matTransformationIMUtoLEFT;
 
     //ds misc
     const uint32_t m_uWidthPixel;
@@ -244,8 +241,8 @@ private:
                   << "\nRectification matrix (R):\n\n" << m_matRectification << "\n\n"
                   << "\nProjection matrix (P):\n\n" << m_matProjection << "\n\n"
                   << "Principal point: " << m_vecPrincipalPoint.transpose( ) << "\n"
-                  << "\nTransformation matrix (CAMERA to IMU):\n\n" << m_matTransformationToIMU.matrix( ) << "\n\n"
-                  << "\nTransformation matrix (IMU to CAMERA):\n\n" << m_matTransformationFromIMU.matrix( ) << "\n\n"
+                  << "\nTransformation matrix (CAMERA to IMU):\n\n" << m_matTransformationLEFTtoIMU.matrix( ) << "\n\n"
+                  << "\nTransformation matrix (IMU to CAMERA):\n\n" << m_matTransformationIMUtoLEFT.matrix( ) << "\n\n"
                   << "Resolution (w x h): " << m_uWidthPixel << " x " << m_uHeightPixel << "\n"
                   << "Normalized x range: [" << m_prRangeWidthNormalized.first << ", " << m_prRangeWidthNormalized.second << "]\n"
                   << "Normalized y range: [" << m_prRangeHeightNormalized.first << ", " << m_prRangeHeightNormalized.second << "]" << std::endl;

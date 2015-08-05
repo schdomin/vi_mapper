@@ -66,8 +66,6 @@ private:
     //ds debug logging
     gtools::CPositSolverProjection m_cSolverPose;
     gtools::CPositSolverStereo m_cSolverPoseSTEREO;
-    std::FILE* m_pFileOdometryError;
-    std::FILE* m_pFileEpipolarDetection;
 
 //ds api
 public:
@@ -80,7 +78,8 @@ public:
                                                                                                       const cv::Mat& p_matImageLEFT,
                                                                                                       const cv::Mat& p_matImageRIGHT,
                                                                                                       const Eigen::Isometry3d& p_matTransformationLEFTToWorldNow,
-                                                                                                      cv::Mat& p_matDisplayTrajectory );
+                                                                                                      cv::Mat& p_matDisplayTrajectory,
+                                                                                                      const double& p_dMotionScaling );
 
     const std::vector< CDetectionPoint >::size_type getNumberOfActiveMeasurementPoints( ) const
     {

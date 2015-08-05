@@ -22,7 +22,7 @@ int main( int argc, char **argv )
     std::printf( "(main) launched: %s\n", argv[0] );
 
     //ds defaults
-    std::string strMode              = "interactive";
+    std::string strMode              = "stepwise";
     std::string strInfileMessageDump = "/home/dominik/ros_dumps/dump_printer_room_sideways.txt";
 
     //ds get params
@@ -189,9 +189,6 @@ int main( int argc, char **argv )
 
         std::printf( "(main) successfully written g2o dump to: %s_TYPE.g2o\n", strG2ODump.c_str( ) );
     }
-
-    //ds close log files
-    CLogger::closeOpenLogFiles( );
 
     //ds exit
     std::printf( "(main) terminated: %s\n", argv[0] );

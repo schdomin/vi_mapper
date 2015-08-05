@@ -50,6 +50,7 @@ public:
         }
         static void addEntry( const uint64_t& p_uFrame, const CLandmark* p_pLandmark, const double& p_dDepthMeters, const cv::Point2d& p_ptLandmarkLEFT, const cv::Point2d& p_ptLandmarkRIGHT )
         {
+            assert( 0 != m_pFile );
             std::fprintf( m_pFile, "    %04lu |      %06lu | %6.2f %6.2f %6.2f : %6.2f | %6.2f %6.2f |  %6.2f  %6.2f |        %6.2f\n",
                 p_uFrame,
                 p_pLandmark->uID,
@@ -65,7 +66,7 @@ public:
         }
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 
-    } CLandmarkCreation;
+    } CLogLandmarkCreation;
 
     static struct CLogLandmarkCreationMocked
     {
@@ -80,6 +81,7 @@ public:
         }
         static void addEntry( const uint64_t& p_uFrame, const CLandmark* p_pLandmark, const double& p_dDepthMeters, const cv::Point2d& p_ptLandmarkLEFT, const cv::Point2d& p_ptLandmarkRIGHT, const CMockedDetection& p_cMockedDetection )
         {
+            assert( 0 != m_pFile );
             std::fprintf( m_pFile, " %04lu |      %06lu | %6.2f %6.2f %6.2f : %6.2f | %6.2f %6.2f :   %5.2f   %5.2f |  %6.2f  %6.2f :   %5.2f   %5.2f |        %6.2f\n", p_uFrame,
                 p_pLandmark->uID,
                 p_pLandmark->vecPointXYZOptimized.x( ),
@@ -108,19 +110,19 @@ public:
         {
             m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/trajectory.txt", "w" );
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, "ID_FRAME |      X      Y      Z | QUAT_X QUAT_Y QUAT_Z QUAT_W\n" );
+            std::fprintf( m_pFile, "ID_FRAME |      X      Y      Z | QUAT_X QUAT_Y QUAT_Z\n" );
         }
         static void addEntry( const uint64_t& p_uFrame, const CPoint3DInWorldFrame& p_vecPosition, const Eigen::Quaterniond& p_vecQuaternion )
         {
-            std::fprintf( m_pFile, "    %04lu | %6.2f %6.2f %6.2f | %6.3f %6.3f %6.3f %6.3f\n",
+            assert( 0 != m_pFile );
+            std::fprintf( m_pFile, "    %04lu | %6.2f %6.2f %6.2f | %6.3f %6.3f %6.3f\n",
                 p_uFrame,
                 p_vecPosition.x( ),
                 p_vecPosition.y( ),
                 p_vecPosition.z( ),
-                p_vecQuaternion.x( ),
-                p_vecQuaternion.y( ),
-                p_vecQuaternion.z( ),
-                p_vecQuaternion.w( ) );
+                p_vecQuaternion.x( )/p_vecQuaternion.w( ),
+                p_vecQuaternion.y( )/p_vecQuaternion.w( ),
+                p_vecQuaternion.z( )/p_vecQuaternion.w( ) );
         }
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 
@@ -143,6 +145,8 @@ public:
             const double dErrorY = std::fabs( ( p_pLandmark->vecPointXYZOptimized.y( )-p_pLandmark->vecPointXYZInitial.y( ) )/( 1.0+std::fabs( p_pLandmark->vecPointXYZInitial.y( ) ) ) );
             const double dErrorZ = std::fabs( ( p_pLandmark->vecPointXYZOptimized.z( )-p_pLandmark->vecPointXYZInitial.z( ) )/( 1.0+std::fabs( p_pLandmark->vecPointXYZInitial.z( ) ) ) );
             const double dErrorTotal = dErrorX + dErrorY + dErrorZ;
+
+            assert( 0 != m_pFile );
 
             //ds write final state to file before deleting
             std::fprintf( m_pFile, "     %06lu |    %6.2f    %6.2f    %6.2f |  %6.2f  %6.2f  %6.2f |   %5.2f   %5.2f   %5.2f       %5.2f |       %06lu |        %06u | %6.2f %6.2f %6.2f |        %02u\n",
@@ -186,6 +190,8 @@ public:
             const double dErrorZ = std::fabs( ( p_pLandmark->vecPointXYZOptimized.z( )-p_pLandmark->vecPointXYZInitial.z( ) )/( 1.0+std::fabs( p_pLandmark->vecPointXYZInitial.z( ) ) ) );
             const double dErrorTotal = dErrorX + dErrorY + dErrorZ;
 
+            assert( 0 != m_pFile );
+
             //ds write final state to file before deleting
             std::fprintf( m_pFile, "     %06lu |    %6.2f    %6.2f    %6.2f |  %6.2f  %6.2f  %6.2f |   %5.2f   %5.2f   %5.2f       %5.2f |       %06lu |        %06u | %6.2f %6.2f %6.2f |        %02u\n",
                 p_pLandmark->uID,
@@ -218,11 +224,12 @@ public:
         {
             m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/detection_epipolar.txt", "w" );
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, "ID_FRAME | DETECTION_POINT | LANDMARKS_TOTAL LANDMARKS_ACTIVE LANDMARKS_VISIBLE\n" );
+            std::fprintf( m_pFile, "ID_FRAME | ID_DETECTION | LANDMARKS: TOTAL ACTIVE VISIBLE\n" );
         }
         static void addEntry( const uint64_t& p_uFrame, const UIDDetectionPoint& p_uID, const UIDLandmark& p_uNumberLandmarksTotal, const UIDLandmark& p_uNumberLandmarksActive, const UIDLandmark& p_uNumberLandmarksVisible )
         {
-            std::fprintf( m_pFile, "    %04lu | %06lu | %03lu %03lu %03lu\n", p_uFrame, p_uID, p_uNumberLandmarksTotal, p_uNumberLandmarksActive, p_uNumberLandmarksVisible );
+            assert( 0 != m_pFile );
+            std::fprintf( m_pFile, "    %04lu |       %06lu |              %03lu    %03lu     %03lu\n", p_uFrame, p_uID, p_uNumberLandmarksTotal, p_uNumberLandmarksActive, p_uNumberLandmarksVisible );
         }
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 
@@ -238,25 +245,24 @@ public:
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS REPROJECTIONS | ERROR_RSS |      X      Y      Z |  DELTA | MOTION |       RISK" );
         }
-        static void addEntry( const uint64_t& p_uFrame, const UIDLandmark& p_uNumberOfLandmarksInOptimization, const UIDLandmark& p_uNumberOfInliers, const UIDLandmark& p_uNumberOfReprojections, const double& p_dErrorCurrent  )
+        static void addEntryIteration( const uint64_t& p_uFrame, const uint8_t& p_uIteration, const UIDLandmark& p_uNumberOfLandmarksInOptimization, const UIDLandmark& p_uNumberOfInliers, const UIDLandmark& p_uNumberOfReprojections, const double& p_dErrorCurrent )
         {
+            assert( 0 != m_pFile );
+            std::fprintf( m_pFile, "\n    %04lu |         %01u |          %03lu     %03lu           %03lu | %9.2f |", p_uFrame, p_uIteration, p_uNumberOfLandmarksInOptimization, p_uNumberOfInliers, p_uNumberOfReprojections, p_dErrorCurrent );
+        }
+        static void addEntryInliers( const uint64_t& p_uFrame, const UIDLandmark& p_uNumberOfLandmarksInOptimization, const UIDLandmark& p_uNumberOfInliers, const UIDLandmark& p_uNumberOfReprojections, const double& p_dErrorCurrent )
+        {
+            assert( 0 != m_pFile );
             std::fprintf( m_pFile, "\n    %04lu |    INLIER |          %03lu     %03lu           %03lu | %9.2f |", p_uFrame, p_uNumberOfLandmarksInOptimization, p_uNumberOfInliers, p_uNumberOfReprojections, p_dErrorCurrent );
+        }
+        static void addEntryResult( const CPoint3DInWorldFrame& p_vecPosition, const double& p_dOptimizationDelta, const double& p_dMotionScaling, const double& p_dOptimizationRisk )
+        {
+            assert( 0 != m_pFile );
+            std::fprintf( m_pFile, " %6.2f %6.2f %6.2f | %6.4f |   %4.2f |     %6.4f", p_vecPosition.x( ), p_vecPosition.y( ), p_vecPosition.z( ), p_dOptimizationDelta, p_dMotionScaling, p_dOptimizationRisk );
         }
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 
     } CLogOptimizationOdometry;
-
-    static void closeOpenLogFiles( )
-    {
-        //ds close all open files
-        CLogLandmarkCreation::close( );
-        CLogLandmarkCreationMocked::close( );
-        CLogTrajectory::close( );
-        CLogLandmarkFinal::close( );
-        CLogLandmarkFinalOptimized::close( );
-        CLogDetectionEpipolar::close( );
-        CLogOptimizationOdometry::close( );
-    }
 
 };
 

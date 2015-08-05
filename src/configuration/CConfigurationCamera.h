@@ -53,7 +53,7 @@ public:
 
     static const double matTransformationIntialAlberto[16];
     static const double matTransformationIntialStandard[16];
-    static const double matRotationIMU[9];
+    static const double matRotationIMUtoLEFT[9];
     static const double matRotationToIMU[9];
 
 };
@@ -74,7 +74,7 @@ const double CConfigurationCamera::LEFT::vecTranslationToIMU[]       = {0.066691
 const double CConfigurationCamera::LEFT::matRectification[]          = {0.9999606380973329, -0.005153089493488114, -0.0072227366452659965, 0.005142607646202396, 0.9999856976355481, -0.0014690510348766648, 0.007230203494507346, 0.0014318495095343982, 0.9999728366132802};
 const double CConfigurationCamera::LEFT::matProjection[]             = {450.5097158071153, 0.0, 375.9431800842285, 0.0, 0.0, 450.5097158071153, 222.3379611968994, 0.0, 0.0, 0.0, 1.0, 0.0};
 
-const CPinholeCamera CConfigurationCamera::LEFT::cPinholeCamera = CPinholeCamera( "LEFT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, matRotationIMU, uWidth, uHeight, dFocalLengthMeters );
+const CPinholeCamera CConfigurationCamera::LEFT::cPinholeCamera = CPinholeCamera( "LEFT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, uWidth, uHeight, dFocalLengthMeters );
 
 
 
@@ -94,7 +94,7 @@ const double CConfigurationCamera::RIGHT::vecTranslationToIMU[]       = {-0.0434
 const double CConfigurationCamera::RIGHT::matRectification[]          = {0.999990753148139, 0.0005481502260720453, -0.004265342840574327, -0.0005419629065900193, 0.9999987995316526, 0.001451623732757562, 0.004266133428042508, -0.0014492986522044342, 0.9999898497679818};
 const double CConfigurationCamera::RIGHT::matProjection[]             = {450.5097158071153, 0.0, 375.9431800842285, -49.63250853439215, 0.0, 450.5097158071153, 222.3379611968994, 0.0, 0.0, 0.0, 1.0, 0.0};
 
-const CPinholeCamera CConfigurationCamera::RIGHT::cPinholeCamera = CPinholeCamera( "RIGHT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, matRotationIMU, uWidth, uHeight, dFocalLengthMeters );
+const CPinholeCamera CConfigurationCamera::RIGHT::cPinholeCamera = CPinholeCamera( "RIGHT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, uWidth, uHeight, dFocalLengthMeters );
 
 const double CConfigurationCamera::matTransformationIntialAlberto[] = { 0.994504,  0.0803288, 0.0671501, -3.14989,
                                                                         0.052872,  0.168259, -0.984324,   0.0468936,
@@ -105,9 +105,5 @@ const double CConfigurationCamera::matTransformationIntialStandard[] = { 1, 0,  
                                                                          0, 0, -1, 0,
                                                                          0, 1,  0, 0,
                                                                          0, 0,  0, 1 };
-
-const double CConfigurationCamera::matRotationIMU[] = { 1,  0,  0,
-                                                            0, -1,  0,
-                                                            0,  0, -1 };
 
 #endif //#define CCONFIGURATIONCAMERA_H_

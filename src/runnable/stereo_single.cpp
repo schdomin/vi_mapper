@@ -289,7 +289,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
 
         //ds fields
         Eigen::Vector3d vecAngularVelocity;
-        CLinearAccelerationInIMUFrame vecLinearAcceleration;
+        CLinearAccelerationIMU vecLinearAcceleration;
 
         //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
