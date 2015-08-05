@@ -24,8 +24,6 @@ uint64_t g_uFrameIDPose     = 0;
 
 const double dAngularVelocityNoise = 0.01;
 
-//ds nasty ghastly hacky function
-inline int8_t sign( const float& p_fNumber );
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
 
 //ds command line parsing (setting params IN/OUT)
@@ -317,28 +315,6 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //ds parse the values (order x/z/y) TODO align coordinate systems
         issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
 
-        //ds IMU messages are published with wrong signs (unsure about rotation)
-        vecLinearAcceleration.y( ) = -vecLinearAcceleration.y( );
-        vecLinearAcceleration.z( ) = -vecLinearAcceleration.z( );
-        //vecAngularVelocity.y( )    = -vecAngularVelocity.y( );
-        //vecAngularVelocity.z( )    = -vecAngularVelocity.z( );
-
-        //ds filter rotational noise
-        const double dAlpha = vecAngularVelocity.x( );
-        const double dBeta  = vecAngularVelocity.y( );
-        const double dGamma = vecAngularVelocity.z( );
-        const double dAbsoluteAlpha = std::fabs( dAlpha )-dAngularVelocityNoise;
-        const double dAbsoluteBeta  = std::fabs( dBeta )-dAngularVelocityNoise;
-        const double dAbsoluteGamma = std::fabs( dGamma )-dAngularVelocityNoise;
-
-        //ds noise free vector
-        Eigen::Vector3d vecAngularVelocityFiltered( Eigen::Vector3d::Zero( ) );
-
-        //ds update only if above zero
-        if( 0 < dAbsoluteAlpha ){ vecAngularVelocityFiltered.x( ) = sign( dAlpha )*dAbsoluteAlpha; }
-        if( 0 < dAbsoluteBeta ){ vecAngularVelocityFiltered.y( ) = sign( dBeta )*dAbsoluteBeta; }
-        if( 0 < dAbsoluteGamma ){ vecAngularVelocityFiltered.z( ) = sign( dGamma )*dAbsoluteGamma; }
-
         //ds add to interpolator
         //g_cInterpolator.addMeasurement( vecLinearAcceleration, vecAngularVelocity, dTimeSeconds );
 
@@ -346,7 +322,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //vecLinearAcceleration[1] += 9.80665;
 
         //ds set message fields
-        msgIMU.setAngularVelocity( vecAngularVelocityFiltered );
+        msgIMU.setAngularVelocity( vecAngularVelocity );
         msgIMU.setLinearAcceleration( vecLinearAcceleration );
 
         //ds pump it into the synchronizer
