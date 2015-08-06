@@ -157,13 +157,21 @@ int main( int argc, char **argv )
         //ds as soon as we have data in all the stacks - process
         if( 0 != pMessageCameraLEFT && 0 != pMessageCameraRIGHT && 0 != pMessageIMU )
         {
-            //ds synchronization expected
-            assert( pMessageCameraLEFT->timestamp( ) == pMessageCameraRIGHT->timestamp( ) );
-            assert( pMessageIMU->timestamp( )        == pMessageCameraLEFT->timestamp( ) );
-            assert( pMessageIMU->timestamp( )        == pMessageCameraRIGHT->timestamp( ) );
+            //ds check timestamp mismatch
+            if( pMessageCameraLEFT->timestamp( ) != pMessageCameraRIGHT->timestamp( ) )
+            {
+                std::printf( "(main) timestamp mismatch LEFT: %f RIGHT: %f - processing skipped\n", pMessageCameraLEFT->timestamp( ), pMessageCameraRIGHT->timestamp( ) );
+            }
+            else
+            {
+                //ds synchronization expected
+                assert( pMessageCameraLEFT->timestamp( ) == pMessageCameraRIGHT->timestamp( ) );
+                assert( pMessageIMU->timestamp( )        == pMessageCameraLEFT->timestamp( ) );
+                assert( pMessageIMU->timestamp( )        == pMessageCameraRIGHT->timestamp( ) );
 
-            //ds callback with triplet
-            cTracker.receivevDataVI( pMessageCameraLEFT, pMessageCameraRIGHT, pMessageIMU );
+                //ds callback with triplet
+                cTracker.receivevDataVI( pMessageCameraLEFT, pMessageCameraRIGHT, pMessageIMU );
+            }
 
             //ds reset holders
             pMessageCameraLEFT.reset( );
@@ -189,7 +197,7 @@ int main( int argc, char **argv )
     if( 1 < uFrameCount )
     {
         //ds generate full file names
-        const std::string strG2ODump( "/home/dominik/libs/g2o/bin/graphs/graph_" + CLogger::getTimestamp( ) );
+        const std::string strG2ODump( "g2o/graph_" + CLogger::getTimestamp( ) );
 
         //ds dump file
         cTracker.saveUVDepthOrDisparity( strG2ODump );

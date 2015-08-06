@@ -9,7 +9,7 @@
 class CIMUInterpolator
 {
 
-//ds ctor/dtor
+/*ds ctor/dtor
 public:
 
     CIMUInterpolator( const double& p_dMaximumDeltaTimeSeconds = 0.1 ): m_vecLastVelocityLinear( 0.0, 0.0, 0.0 ),
@@ -27,12 +27,12 @@ public:
     {
         m_mapTransformationsIMU.clear( );
         m_vecCalibration.clear( );
-    }
+    }*/
 
 //ds fields
 private:
 
-    std::map< double, Eigen::Isometry3d > m_mapTransformationsIMU;
+    /*std::map< double, Eigen::Isometry3d > m_mapTransformationsIMU;
 
     Eigen::Vector3d m_vecLastVelocityLinear;
     Eigen::Vector3d m_vecLastVelocityAngular;
@@ -41,15 +41,18 @@ private:
     Eigen::Vector3d m_vecOffsetAccelerationLinear; //ds TODO calibration
     Eigen::Vector3d m_vecOffsetVelocityAngular; //ds TODO calibration
 
-    double m_dLastTimestamp;
-    const double m_dMaximumDeltaTimeSeconds;
+    double m_dLastTimestamp;*/
 
     //ds IMU filtering (calibrated 2015-07-25)
-    static constexpr double m_dImprecisionAngularVelocity     = 0.2;
-    static constexpr double m_dImprecisionLinearAcceleration  = 0.25;
+    static constexpr double m_dImprecisionAngularVelocity     = 0.02;
+    static constexpr double m_dImprecisionLinearAcceleration  = 0.05;
     static constexpr double m_vecBiasLinearAccelerationXYZ[3] = { 0.0, 0.0, -9.80665 }; //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
 
-//ds accessors
+public:
+
+    static constexpr double dMaximumDeltaTimeSeconds = 0.11;
+
+/*ds accessors
 public:
 
     void addMeasurementCalibration( const Eigen::Vector3d& p_vecAccelerationLinear, const Eigen::Vector3d& p_vecVelocityAngular )
@@ -118,7 +121,7 @@ public:
     const Eigen::Isometry3d getTransformation( const double& p_dTimestampSeconds ) const
     {
         return m_mapTransformationsIMU.at( p_dTimestampSeconds );
-    }
+    }*/
 
 //ds statics
 public:

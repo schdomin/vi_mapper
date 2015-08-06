@@ -5,7 +5,7 @@
 
 #include "configuration/CConfigurationCamera.h"
 #include "configuration/CConfigurationOpenCV.h"
-#include "types/CIMUInterpolator.h"
+#include "utility/CIMUInterpolator.h"
 #include "exceptions/CExceptionPoseOptimization.h"
 #include "exceptions/CExceptionNoMatchFound.h"
 #include "utility/CCloudStreamer.h"
@@ -68,7 +68,7 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMo
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) descriptor extractor: %s\n", m_pExtractor->name( ).c_str( ) );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) descriptor matcher: %s\n", m_pMatcher->name( ).c_str( ) );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) descriptor size: %i bytes\n", m_pExtractor->descriptorSize( ) );
-    std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) minimum timestamp delta (IMU): %f\n", m_dMaximumDeltaTimestampSeconds );
+    std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) minimum timestamp delta (IMU): %f\n", CIMUInterpolator::dMaximumDeltaTimeSeconds );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> delta for optimization translation: %f\n", CLandmark::m_dDistanceDeltaForOptimizationMeters );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> delta for optimization rotation: %f\n", CLandmark::m_dAngleDeltaForOptimizationRadians );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> cap iterations: %u\n", CLandmark::m_uCapIterations );
@@ -129,7 +129,7 @@ void CTrackerStereoMotionModel::receivevDataVI( const std::shared_ptr< txt_io::P
     const Eigen::Vector3d vecRotationTotal( m_vecVelocityAngularFilteredLAST*dDeltaTimestampSeconds );
 
     //ds if the delta is acceptable
-    if( m_dMaximumDeltaTimestampSeconds > dDeltaTimestampSeconds )
+    if( CIMUInterpolator::dMaximumDeltaTimeSeconds > dDeltaTimestampSeconds )
     {
         //ds integrate imu input: overwrite rotation
         m_matTransformationLEFTLASTtoLEFTNOW.linear( ) = CMiniVisionToolbox::fromOrientationRodrigues( vecRotationTotal );
@@ -229,6 +229,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     CLogger::CLogTrajectory::addEntry( m_uFrameCount, m_vecPositionCurrent, Eigen::Quaterniond( matTransformationLEFTtoWORLD.linear( ) ) );
 
 
+
     //ds get currently visible landmarks (including landmarks already detected in the pose optimization)
     const std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecVisibleLandmarks( m_cMatcherEpipolar.getVisibleLandmarksFundamental( matDisplayLEFT, matDisplayRIGHT, m_uFrameCount, p_matImageLEFT, p_matImageRIGHT, matTransformationLEFTtoWORLD, p_vecRotationTotal, dMotionScaling ) );
 
@@ -288,7 +289,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
 
             //ds create file name
             char chBuffer[256];
-            std::snprintf( chBuffer, 256, "/home/dominik/workspace_catkin/src/vi_mapper/logs/g2o/keyframes_%06lu-%06lu", m_uIDProcessedKeyFrameLAST, uIDKeyFrameCurrent );
+            std::snprintf( chBuffer, 256, "g2o/local/keyframes_%06lu-%06lu", m_uIDProcessedKeyFrameLAST, uIDKeyFrameCurrent );
             const std::string strFilePrefix( chBuffer );
 
             //ds feed sub vector to g2o
@@ -407,9 +408,6 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereoMotionModel::_g
     CDescriptor matReferenceDescriptors;
     //m_pExtractor->compute( p_matImageLEFT, *vecKeyPoints, matReferenceDescriptors );
     m_pExtractor->compute( p_matImageLEFT, vecKeyPoints, matReferenceDescriptors );
-
-    //ds rightside keypoints buffer for descriptor computation
-    std::vector< cv::KeyPoint > vecKeyPointRIGHT( 1 );
 
     //ds process the keypoints and see if we can use them as landmarks
     for( uint32_t u = 0; u < vecKeyPoints.size( ); ++u )

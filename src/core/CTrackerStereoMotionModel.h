@@ -36,8 +36,7 @@ private:
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
     CAngularVelocityLEFT m_vecVelocityAngularFilteredLAST;
     CLinearAccelerationLEFT m_vecLinearAccelerationFilteredLAST;
-    const double m_dMaximumDeltaTimestampSeconds = 0.11;
-    double m_dTimestampLASTSeconds               = 0.0;
+    double m_dTimestampLASTSeconds = 0.0;
     CPoint3DWORLD m_vecTranslationLastKeyFrame;
     const double m_dTranslationDeltaForKeyFrameMetersSquaredNorm;
     CPoint3DWORLD m_vecPositionCurrent;

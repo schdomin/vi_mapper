@@ -44,7 +44,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_creation.txt", "w" );
+            m_pFile = std::fopen( "logs/landmarks_creation.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME | ID_LANDMARK |      X      Y      Z :  DEPTH | U_LEFT V_LEFT | U_RIGHT V_RIGHT | KEYPOINT_SIZE\n" );
         }
@@ -74,7 +74,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_creation_mocked.txt", "w" );
+            m_pFile = std::fopen( "logs/landmarks_creation_mocked.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "FRAME | ID_LANDMARK |      X      Y      Z :  DEPTH | U_LEFT V_LEFT : NOISE_U NOISE_V | U_RIGHT V_RIGHT : NOISE_U NOISE_V | KEYPOINT_SIZE\n" );
 
@@ -108,7 +108,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/trajectory.txt", "w" );
+            m_pFile = std::fopen( "logs/trajectory.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME |      X      Y      Z | QUAT_X QUAT_Y QUAT_Z\n" );
         }
@@ -134,7 +134,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_final.txt", "w" );
+            m_pFile = std::fopen( "logs/landmarks_final.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | MEASUREMENTS | OPTIMIZATIONS | MEAN_X MEAN_Y MEAN_Z | KEYFRAMES\n" );
         }
@@ -178,7 +178,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks_final_optimized.txt", "w" );
+            m_pFile = std::fopen( "logs/landmarks_final_optimized.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_LANDMARK | X_INITIAL Y_INITIAL Z_INITIAL | X_FINAL Y_FINAL Z_FINAL | DELTA_X DELTA_Y DELTA_Z DELTA_TOTAL | MEASUREMENTS | OPTIMIZATIONS | MEAN_X MEAN_Y MEAN_Z | KEYFRAMES\n" );
         }
@@ -222,7 +222,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/detection_epipolar.txt", "w" );
+            m_pFile = std::fopen( "logs/detection_epipolar.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME | ID_DETECTION | LANDMARKS: TOTAL ACTIVE VISIBLE\n" );
         }
@@ -241,7 +241,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/optimization_odometry.txt", "w" );
+            m_pFile = std::fopen( "logs/optimization_odometry.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS REPROJECTIONS | ERROR_RSS |      X      Y      Z |  DELTA | MOTION |       RISK" );
         }
@@ -270,7 +270,7 @@ public:
 
         static void open( )
         {
-            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/linear_acceleration.txt", "w" );
+            m_pFile = std::fopen( "logs/linear_acceleration.txt", "w" );
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME | ACCELERATION:     X      Y      Z | FILTERED:     X      Y      Z\n" );
         }

@@ -1317,8 +1317,8 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                         const Eigen::Vector3d vecCoefficients( matFundamental*pLandmark->vecUVReferenceLEFT );
 
                         //ds line length for this projection based on principal weighting
-                        const double dHalfLineLengthU = 10 + m_pCameraLEFT->getPrincipalWeightU( ptProjection )*dHalfLineLength;
-                        const double dHalfLineLengthV = 10 + m_pCameraLEFT->getPrincipalWeightV( ptProjection )*dHalfLineLength;
+                        const double dHalfLineLengthU = 15 + m_pCameraLEFT->getPrincipalWeightU( ptProjection )*dHalfLineLength;
+                        const double dHalfLineLengthV = 15 + m_pCameraLEFT->getPrincipalWeightV( ptProjection )*dHalfLineLength;
 
                         assert( 0.0 < dHalfLineLengthU );
                         assert( 0.0 < dHalfLineLengthV );

@@ -7,7 +7,7 @@
 #include "utility/CWrapperOpenCV.h"
 #include "exceptions/CExceptionNoMatchFound.h"
 #include "vision/CMiniVisionToolbox.h"
-#include "types/CIMUInterpolator.h"
+#include "utility/CIMUInterpolator.h"
 
 CMockedTrackerStereo::CMockedTrackerStereo( const EPlaybackMode& p_eMode,
                                   const std::string& p_strLandmarksMocked,

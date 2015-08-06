@@ -35,7 +35,6 @@ add_definitions(-O3 -march=native -Wall -pedantic -std=c++11)
 #ds include dirs
 include_directories(${EIGEN3_INCLUDE_DIR})
 include_directories(${OpenCV_INCLUDE_DIRS})
-#include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${G2O_INCLUDE_DIR})
 #include_directories(${CSPARSE_INCLUDE_DIR})
@@ -56,16 +55,17 @@ endforeach()
 
 #ds BINARIES
 set(SOURCEFILES
+src/configuration/CConfigurationCamera.cpp
 src/types/CLandmark.cpp
 src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
-src/core/CDetectorMonoTilewise.cpp
 src/core/CMatcherEpipolar.cpp
 src/optimization/CBridgeG2O.cpp
 src/gui/CViewerScene.cpp)
 
 set(SOURCEFILES_MOCKED
+src/configuration/CConfigurationCamera.cpp
 src/types/CLandmark.cpp
 src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
@@ -97,7 +97,8 @@ ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_TYPES_SBA})
 
-#add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
+add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
+add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
 #add_executable(stereo_detector_alberto_node src/main/stereo_detector_alberto_node.cpp src/core/CEpipolarDetectorBRIEF.cpp src/utility/CMiniVisionToolbox.cpp)
@@ -112,7 +113,8 @@ add_executable(stereo_fps src/runnable/stereo_fps.cpp src/core/CTrackerStereoMot
 #add_executable(republisher_node src/runnable/republisher_node.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
-#target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
+target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
+target_link_libraries(test_cloud_matching ${catkin_LIBRARIES})
 #target_link_libraries(stereo_detector_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_blocking_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_alberto_node ${LIBRARIES_GENERAL})

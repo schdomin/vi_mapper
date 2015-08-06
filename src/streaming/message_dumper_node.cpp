@@ -21,7 +21,7 @@ int main( int argc, char **argv )
     std::string strTopicCameraLEFT  = "/thin_visensor_node/camera_left/image_raw";
     std::string strTopicCameraRIGHT = "/thin_visensor_node/camera_right/image_raw";
     std::string strTopicIMU         = "/thin_visensor_node/imu_adis16448";
-    std::string strOutfileName      = "/home/dominik/ros_dumps/dump_"+CLogger::getTimestamp( )+".txt";
+    std::string strOutfileName      = "/home/n551jw/ros_dumps/dump_"+CLogger::getTimestamp( )+".txt";
 
     //ds if specific filename set TODO real parsing
     if( 2 == argc )

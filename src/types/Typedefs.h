@@ -26,8 +26,11 @@ typedef cv::Scalar      CColorCodeBGR;
 typedef cv::Mat         CDescriptor;
 typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
+typedef uint64_t        UIDDescriptor;
 typedef uint64_t        UIDDetectionPoint;
 typedef uint64_t        UIDKeyFrame;
+typedef uint64_t        UIDCloud;
+typedef uint64_t        UIDDescriptorPoint3D;
 typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
 typedef Eigen::Vector3d CLinearAccelerationIMU;
@@ -184,6 +187,31 @@ struct CMockedDetection
     ~CMockedDetection( )
     {
         //ds nothing to do
+    }
+};
+
+struct CDescriptorPoint3DWORLD
+{
+    const UIDDescriptorPoint3D uID;
+    const CPoint3DWORLD vecPointXYZWORLD;
+    const std::vector< CDescriptor > vecDescriptors;
+
+    CDescriptorPoint3DWORLD( const UIDDescriptorPoint3D& p_uID,
+                             const CPoint3DWORLD& p_vecPointXYZWORLD,
+                             const std::vector< CDescriptor >& p_vecDescriptors ): uID( p_uID ), vecPointXYZWORLD( p_vecPointXYZWORLD ), vecDescriptors( p_vecDescriptors )
+    {
+
+    }
+};
+
+struct CPointCloud
+{
+    const UIDCloud uID;
+    const std::vector< CDescriptorPoint3DWORLD > vecPoints;
+
+    CPointCloud( const UIDCloud& p_uID, const std::vector< CDescriptorPoint3DWORLD >& p_vecPoints ): uID( p_uID ), vecPoints( p_vecPoints )
+    {
+
     }
 };
 
