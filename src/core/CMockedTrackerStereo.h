@@ -37,7 +37,7 @@ private:
 
     //ds reference information
     uint64_t m_uFrameCount;
-    CPoint3DInWorldFrame m_vecTranslationKeyFrameLAST;
+    CPoint3DWORLD m_vecTranslationKeyFrameLAST;
     double m_dTranslationDeltaForMAPMeters;
 
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;

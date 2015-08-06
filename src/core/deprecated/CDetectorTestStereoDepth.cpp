@@ -226,7 +226,7 @@ void CDetectorTestStereoDepth::_localizeManual( const cv::Mat& p_matImageLeft, c
                     try
                     {
                         //ds point to triangulate
-                        CPoint3DInCameraFrame vecPointTriangulated;
+                        CPoint3DCAMERA vecPointTriangulated;
 
                         switch( iSelectedMethod )
                         {
@@ -265,7 +265,7 @@ void CDetectorTestStereoDepth::_localizeManual( const cv::Mat& p_matImageLeft, c
                             const CPoint2DInCameraFrameHomogenized vecPointNormalized( m_pCameraLEFT->getHomogenized( cKeyPoint ) );
 
                             //ds compute triangulated point in world frame
-                            const CPoint3DInWorldFrame vecPointTriangulatedWorld( p_matCurrentTransformation*vecPointTriangulated );
+                            const CPoint3DWORLD vecPointTriangulatedWorld( p_matCurrentTransformation*vecPointTriangulated );
 
                             //ds draw detected point
                             cv::line( matDisplayUpper, ptCurrent, cv::Point2f( ptCurrent.x+m_uImageCols, ptCurrent.y ), CColorCodeBGR( 175, 175, 175 ) );

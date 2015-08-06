@@ -40,7 +40,7 @@ private:
 
     //ds reference information
     uint64_t m_uFrameCount;
-    CPoint3DInWorldFrame m_vecTranslationLast;
+    CPoint3DWORLD m_vecTranslationLast;
     double m_dTranslationDeltaForMAPMeters;
 
     //ds feature related

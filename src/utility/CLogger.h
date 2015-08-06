@@ -112,7 +112,7 @@ public:
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME |      X      Y      Z | QUAT_X QUAT_Y QUAT_Z\n" );
         }
-        static void addEntry( const uint64_t& p_uFrame, const CPoint3DInWorldFrame& p_vecPosition, const Eigen::Quaterniond& p_vecQuaternion )
+        static void addEntry( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecPosition, const Eigen::Quaterniond& p_vecQuaternion )
         {
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "    %04lu | %6.2f %6.2f %6.2f | %6.3f %6.3f %6.3f\n",
@@ -255,7 +255,7 @@ public:
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "\n    %04lu |    INLIER |          %03lu     %03lu           %03lu | %9.2f |", p_uFrame, p_uNumberOfLandmarksInOptimization, p_uNumberOfInliers, p_uNumberOfReprojections, p_dErrorCurrent );
         }
-        static void addEntryResult( const CPoint3DInWorldFrame& p_vecPosition, const double& p_dOptimizationDelta, const double& p_dMotionScaling, const double& p_dOptimizationRisk )
+        static void addEntryResult( const CPoint3DWORLD& p_vecPosition, const double& p_dOptimizationDelta, const double& p_dMotionScaling, const double& p_dOptimizationRisk )
         {
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, " %6.2f %6.2f %6.2f | %6.4f |   %4.2f |     %6.4f", p_vecPosition.x( ), p_vecPosition.y( ), p_vecPosition.z( ), p_dOptimizationDelta, p_dMotionScaling, p_dOptimizationRisk );
@@ -263,6 +263,25 @@ public:
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 
     } CLogOptimizationOdometry;
+
+    static struct CLogLinearAcceleration
+    {
+        static std::FILE* m_pFile;
+
+        static void open( )
+        {
+            m_pFile = std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/linear_acceleration.txt", "w" );
+            assert( 0 != m_pFile );
+            std::fprintf( m_pFile, "ID_FRAME | ACCELERATION:     X      Y      Z | FILTERED:     X      Y      Z\n" );
+        }
+        static void addEntry( const uint64_t& p_uFrame, const CLinearAccelerationWORLD& p_vecLinearAcceleration, const CLinearAccelerationWORLD& p_vecLinearAccelerationFiltered )
+        {
+            assert( 0 != m_pFile );
+            std::fprintf( m_pFile, "    %04lu |              %6.2f %6.2f %6.2f |          %6.2f %6.2f %6.2f\n", p_uFrame, p_vecLinearAcceleration.x( ), p_vecLinearAcceleration.y( ), p_vecLinearAcceleration.z( ), p_vecLinearAccelerationFiltered.x( ), p_vecLinearAccelerationFiltered.y( ), p_vecLinearAccelerationFiltered.z( ) );
+        }
+        static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
+
+    } CLogLinearAcceleration;
 
 };
 

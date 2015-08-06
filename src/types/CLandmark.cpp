@@ -5,12 +5,12 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
            const CDescriptor& p_matDescriptorLEFT,
            const CDescriptor& p_matDescriptorRIGHT,
            const double& p_dKeyPointSize,
-           const CPoint3DInWorldFrame& p_vecPointXYZ,
+           const CPoint3DWORLD& p_vecPointXYZ,
            const CPoint2DHomogenized& p_vecUVLEFTReference,
            const cv::Point2d& p_ptUVLEFT,
            const cv::Point2d& p_ptUVRIGHT,
-           const CPoint3DInCameraFrame& p_vecPointXYZCAMERA,
-           const CPoint3DInWorldFrame& p_vecCameraPosition,
+           const CPoint3DCAMERA& p_vecPointXYZCAMERA,
+           const CPoint3DWORLD& p_vecCameraPosition,
            const Eigen::Vector3d& p_vecCameraOrientation,
            //const Eigen::Matrix3d& p_matKRotation,
            //const Eigen::Vector3d& p_vecKTranslation,
@@ -41,7 +41,7 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
     //std::fprintf( m_pFilePositionOptimization, "ID_FRAME | ID_LANDMARK | ITERATION MEASUREMENTS INLIERS | ERROR_ARSS | DELTA_XYZ |      X      Y      Z\n" );
 
     //ds add this position
-    addMeasurement( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCAMERA, vecPointXYZInitial, p_vecCameraPosition, p_vecCameraOrientation, p_matProjectionWORLDtoLEFT );
+    addMeasurement( p_uFrame, p_ptUVLEFT, p_ptUVRIGHT, p_vecPointXYZCAMERA, vecPointXYZInitial, p_vecCameraPosition, p_vecCameraOrientation, p_matProjectionWORLDtoLEFT, p_matDescriptorLEFT );
 }
 
 CLandmark::~CLandmark( )
@@ -59,13 +59,14 @@ CLandmark::~CLandmark( )
 void CLandmark::addMeasurement( const uint64_t& p_uFrame,
                                 const cv::Point2d& p_ptUVLEFT,
                                 const cv::Point2d& p_ptUVRIGHT,
-                                const CPoint3DInCameraFrame& p_vecXYZLEFT,
-                                const CPoint3DInWorldFrame& p_vecXYZWORLD,
-                                const CPoint3DInWorldFrame& p_vecCameraPosition,
+                                const CPoint3DCAMERA& p_vecXYZLEFT,
+                                const CPoint3DWORLD& p_vecXYZWORLD,
+                                const CPoint3DWORLD& p_vecCameraPosition,
                                 const Eigen::Vector3d& p_vecCameraOrientation,
                                 //const Eigen::Matrix3d& p_matKRotation,
                                 //const Eigen::Vector3d& p_vecKTranslation,
-                                const MatrixProjection& p_matProjectionWORLDtoLEFT )
+                                const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                                const CDescriptor& p_matDescriptorLEFT )
 {
     //ds input validation
     assert( p_ptUVLEFT.y == p_ptUVRIGHT.y );
@@ -93,10 +94,10 @@ void CLandmark::addMeasurement( const uint64_t& p_uFrame,
     }
 
     //ds add the measurement to structure
-    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecXYZLEFT, p_vecXYZWORLD, vecPointXYZOptimized, p_vecCameraPosition, p_matProjectionWORLDtoLEFT ) );
+    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecXYZLEFT, p_vecXYZWORLD, vecPointXYZOptimized, p_vecCameraPosition, p_matProjectionWORLDtoLEFT, p_matDescriptorLEFT ) );
 }
 
-const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkKLMA( const uint64_t& p_uFrame, const CPoint3DInWorldFrame& p_vecInitialGuess )
+const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
@@ -160,7 +161,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkKLMA( const uint64_t&
         }
 
         //ds solve constrained system (since x(3) = 0.0)
-        const CPoint3DInWorldFrame vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
+        const CPoint3DWORLD vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
 
         //ds update x solution
         vecX.block< 3, 1 >(0,0) += vecDeltaX;
@@ -216,7 +217,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkKLMA( const uint64_t&
     return p_vecInitialGuess;
 }
 
-const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t& p_uFrame, const CPoint3DInWorldFrame& p_vecInitialGuess )
+const CPoint3DWORLD CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
@@ -260,7 +261,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
         }
 
         //ds solve constrained system H*dx=-b (since dx(3) = 0.0)
-        const CPoint3DInWorldFrame vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
+        const CPoint3DWORLD vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
 
         //ds update x solution
         vecX.block< 3, 1 >(0,0) += vecDeltaX;
@@ -304,7 +305,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t
     return p_vecInitialGuess;
 }
 
-const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkKRDLMA( const uint64_t& p_uFrame, const CPoint3DInWorldFrame& p_vecInitialGuess )
+const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKRDLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
@@ -373,7 +374,7 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkKRDLMA( const uint64_
         }
 
         //ds solve constrained system H*dx=-b (since dx(3) = 0.0)
-        const CPoint3DInWorldFrame vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
+        const CPoint3DWORLD vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
 
         //ds update x solution
         vecX.block< 3, 1 >(0,0) += vecDeltaX;
@@ -430,10 +431,10 @@ const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkKRDLMA( const uint64_
     return p_vecInitialGuess;
 }
 
-const CPoint3DInWorldFrame CLandmark::_getOptimizedLandmarkIDWA( )
+const CPoint3DWORLD CLandmark::_getOptimizedLandmarkIDWA( )
 {
     //ds return vector
-    CPoint3DInWorldFrame vecPointXYZWORLD( Eigen::Vector3d::Zero( ) );
+    CPoint3DWORLD vecPointXYZWORLD( Eigen::Vector3d::Zero( ) );
 
     //ds total accumulated depth
     double dInverseDepthAccumulated = 0.0;

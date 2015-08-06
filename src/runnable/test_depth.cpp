@@ -87,15 +87,15 @@ void computeDepth( const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT
         cv::circle( matDisplayLEFT, ptLandmarkLEFT, 2, CColorCodeBGR( 255, 0, 0 ), -1 );
 
         //ds triangulations - set on success else null
-        const CPoint3DInCameraFrame* vecPointTriangulatedSTEREOSVDLS( 0 );
-        const CPoint3DInCameraFrame* vecPointTriangulatedSTEREOQRLS( 0 );
-        const CPoint3DInCameraFrame* vecPointTriangulatedSTEREOEDS( 0 );
-        const CPoint3DInCameraFrame* vecPointTriangulatedSTEREOSVDDLT( 0 );
+        const CPoint3DCAMERA* vecPointTriangulatedSTEREOSVDLS( 0 );
+        const CPoint3DCAMERA* vecPointTriangulatedSTEREOQRLS( 0 );
+        const CPoint3DCAMERA* vecPointTriangulatedSTEREOEDS( 0 );
+        const CPoint3DCAMERA* vecPointTriangulatedSTEREOSVDDLT( 0 );
 
         try
         {
             //ds triangulate the point
-            vecPointTriangulatedSTEREOSVDLS = new CPoint3DInCameraFrame( g_pTriangulator->getPointTriangulatedLimitedSVDLS( matDisplayRIGHT, matPreprocessedRIGHT, cKeyPoint, matReferenceDescriptorLEFT ) );
+            vecPointTriangulatedSTEREOSVDLS = new CPoint3DCAMERA( g_pTriangulator->getPointTriangulatedLimitedSVDLS( matDisplayRIGHT, matPreprocessedRIGHT, cKeyPoint, matReferenceDescriptorLEFT ) );
         }
         catch( const CExceptionNoMatchFound& p_cException )
         {

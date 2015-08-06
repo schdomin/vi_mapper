@@ -15,7 +15,7 @@
 
 //ds readability
 typedef Eigen::Vector2d CPoint2DInCameraFrame;
-typedef Eigen::Vector3d CPoint3DInCameraFrame;
+typedef Eigen::Vector3d CPoint3DCAMERA;
 typedef cv::Scalar      CColorCodeBGR;
 typedef cv::Mat         CDescriptor;
 
@@ -57,7 +57,7 @@ private:
     Eigen::Isometry3d m_matTransformationLeft;
 
     //ds slam points
-    std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR > > m_vecReferencePoints;
+    std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DCAMERA, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR > > m_vecReferencePoints;
 
     //ds feature related
     cv::SurfFeatureDetector m_cDetectorSURF;

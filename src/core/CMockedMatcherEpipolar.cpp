@@ -66,7 +66,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
     std::vector< CDetectionPoint > vecMeasurementPointsActive;
 
     //ds initial translation
-    const CPoint3DInWorldFrame vecTranslationEstimate( p_matTransformationLEFTtoWORLD.translation( ) );
+    const CPoint3DWORLD vecTranslationEstimate( p_matTransformationLEFTtoWORLD.translation( ) );
 
     //ds vectors for pose solver
     gtools::Vector3dVector vecLandmarksWORLD;
@@ -84,7 +84,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
         for( CLandmark* pLandmarkReference: *cMeasurementPoint.vecLandmarks )
         {
             //ds projection from triangulation to estimate epipolar line drawing TODO: remove cast
-            const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DInWorldFrame >( matTransformationWORLDtoLEFT*pLandmarkReference->vecPointXYZOptimized ) ) );
+            const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DWORLD >( matTransformationWORLDtoLEFT*pLandmarkReference->vecPointXYZOptimized ) ) );
 
             //ds draw last position
             cv::circle( p_matDisplayLEFT, pLandmarkReference->getLastDetectionLEFT( ), 2, CColorCodeBGR( 255, 0, 0 ), -1 );
@@ -95,7 +95,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
                 const CMockedDetection cDetection( mapVisibleLandmarks.at( static_cast< UIDLandmark >( pLandmarkReference->dKeyPointSize ) ) );
 
                 //ds triangulate point
-                const CPoint3DInCameraFrame vecPointTriangulatedLEFT( CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( cDetection.ptUVLEFT,
+                const CPoint3DCAMERA vecPointTriangulatedLEFT( CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( cDetection.ptUVLEFT,
                                                                                                                                   cDetection.ptUVRIGHT,
                                                                                                                                   m_pCameraLEFT->m_matProjection,
                                                                                                                                   m_pCameraRIGHT->m_matProjection ) );
@@ -105,7 +105,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
                 pLandmarkReference->matDescriptorLASTLEFT      = CDescriptor( );
                 pLandmarkReference->matDescriptorLASTRIGHT     = CDescriptor( );
                 pLandmarkReference->uFailedSubsequentTrackings = 0;
-                pLandmarkReference->addMeasurement( p_uFrame, cDetection.ptUVLEFT, cDetection.ptUVRIGHT, vecPointTriangulatedLEFT, static_cast< CPoint3DInWorldFrame >( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT ), matTransformationWORLDtoLEFT.translation( ), Eigen::Vector3d( 0.0, 0.0, 0.0 ), matProjectionWORLDtoLEFT );
+                pLandmarkReference->addMeasurement( p_uFrame, cDetection.ptUVLEFT, cDetection.ptUVRIGHT, vecPointTriangulatedLEFT, static_cast< CPoint3DWORLD >( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT ), matTransformationWORLDtoLEFT.translation( ), Eigen::Vector3d( 0.0, 0.0, 0.0 ), matProjectionWORLDtoLEFT );
 
                 //ds register measurement
                 vecVisibleLandmarksPerMeasurementPoint.push_back( pLandmarkReference->getLastMeasurement( ) );

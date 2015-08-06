@@ -263,7 +263,7 @@ QString CViewerScene::helpString( ) const
 void CViewerScene::addFrame( const std::pair< bool, Eigen::Isometry3d > p_prFrame )
 {
     //ds position
-    const CPoint3DInWorldFrame vecPosition( p_prFrame.second.translation( ) );
+    const CPoint3DWORLD vecPosition( p_prFrame.second.translation( ) );
     const Eigen::Quaterniond vecQuaternion( p_prFrame.second.linear( ) );
 
     //ds setup the new frame

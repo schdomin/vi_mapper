@@ -19,8 +19,8 @@ typedef Eigen::Vector3d CPoint2DHomogenized;
 typedef Eigen::Vector3d CPoint2DInCameraFrameHomogenized;
 typedef Eigen::Vector4d CPoint3DHomogenized;
 typedef Eigen::Vector2d CPoint2DInCameraFrame;
-typedef Eigen::Vector3d CPoint3DInCameraFrame;
-typedef Eigen::Vector3d CPoint3DInWorldFrame;
+typedef Eigen::Vector3d CPoint3DCAMERA;
+typedef Eigen::Vector3d CPoint3DWORLD;
 typedef Eigen::Vector4d CPoint3DInWorldFrameHomogenized;
 typedef cv::Scalar      CColorCodeBGR;
 typedef cv::Mat         CDescriptor;
@@ -32,8 +32,8 @@ typedef Eigen::Matrix< double, 3, 4 > MatrixProjection;
 typedef Eigen::Matrix< double, 1, 3 > Vector3dT;
 typedef Eigen::Vector3d CLinearAccelerationIMU;
 typedef Eigen::Vector3d CLinearAccelerationLEFT;
-typedef Eigen::Vector3d CAngularVelocityInIMUFrame;
-typedef Eigen::Vector3d CAngularVelocityInCameraFrame;
+typedef Eigen::Vector3d CAngularVelocityIMU;
+typedef Eigen::Vector3d CAngularVelocityLEFT;
 typedef Eigen::Vector3d CAngularVelocityWORLD;
 typedef Eigen::Vector3d CLinearAccelerationWORLD;
 
@@ -42,24 +42,26 @@ struct CMeasurementLandmark
     const UIDLandmark uID;
     const cv::Point2d ptUVLEFT;
     const cv::Point2d ptUVRIGHT;
-    const CPoint3DInCameraFrame vecPointXYZLEFT;
-    const CPoint3DInWorldFrame  vecPointXYZWORLD;
-    const CPoint3DInWorldFrame  vecPointXYZWORLDOptimized;
+    const CPoint3DCAMERA vecPointXYZLEFT;
+    const CPoint3DWORLD  vecPointXYZWORLD;
+    const CPoint3DWORLD  vecPointXYZWORLDOptimized;
     const Eigen::Vector3d vecCameraPosition;
     //const Eigen::Matrix3d matPRotationWORLDtoLEFT;
     //const Eigen::Vector3d vecPTranslationWORLDtoLEFT;
     const MatrixProjection matProjectionWORLDtoLEFT;
+    const CDescriptor matDescriptorLEFT;
 
     CMeasurementLandmark( const UIDLandmark& p_uID,
                           const cv::Point2d& p_ptUVLEFT,
                           const cv::Point2d& p_ptUVRIGHT,
-                          const CPoint3DInCameraFrame& p_vecPointXYZ,
-                          const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
-                          const CPoint3DInWorldFrame& p_vecPointXYZWORLDOptimized,
+                          const CPoint3DCAMERA& p_vecPointXYZ,
+                          const CPoint3DWORLD& p_vecPointXYZWORLD,
+                          const CPoint3DWORLD& p_vecPointXYZWORLDOptimized,
                           const Eigen::Vector3d& p_vecCameraPosition,
                           //const Eigen::Matrix3d& p_matKRotation,
                           //const Eigen::Vector3d& p_vecKTranslation,
-                          const MatrixProjection& p_matProjectionWORLDtoLEFT ): uID( p_uID ),
+                          const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                          const CDescriptor& p_matDescriptorLEFT ): uID( p_uID ),
                                                                       ptUVLEFT( p_ptUVLEFT ),
                                                                       ptUVRIGHT( p_ptUVRIGHT ),
                                                                       vecPointXYZLEFT( p_vecPointXYZ ),
@@ -68,7 +70,8 @@ struct CMeasurementLandmark
                                                                       vecCameraPosition( p_vecCameraPosition ),
                                                                       //matPRotationWORLDtoLEFT( p_matKRotation ),
                                                                       //vecPTranslationWORLDtoLEFT( p_vecKTranslation ),
-                                                                      matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT )
+                                                                      matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT ),
+                                                                      matDescriptorLEFT( p_matDescriptorLEFT )
     {
         //ds nothing to do
     }
@@ -108,11 +111,11 @@ struct CMatchTracking
 
 struct CMatchTriangulation
 {
-    const CPoint3DInCameraFrame vecPointXYZCAMERA;
+    const CPoint3DCAMERA vecPointXYZCAMERA;
     const cv::Point2f ptUVCAMERA;
     const CDescriptor matDescriptorCAMERA;
 
-    CMatchTriangulation( const CPoint3DInCameraFrame& p_vecPointXYZCAMERA,
+    CMatchTriangulation( const CPoint3DCAMERA& p_vecPointXYZCAMERA,
                          const cv::Point2f& p_ptUVCAMERA,
                          const CDescriptor& p_matDescriptorCAMERA ): vecPointXYZCAMERA( p_vecPointXYZCAMERA ),
                                                                      ptUVCAMERA( p_ptUVCAMERA ),
@@ -129,13 +132,13 @@ struct CMatchTriangulation
 struct CMockedLandmark
 {
     const UIDLandmark uID;
-    const CPoint3DInWorldFrame vecPointXYZWORLD;
+    const CPoint3DWORLD vecPointXYZWORLD;
     const cv::Rect cRangeVisible;
     const double dNoiseMean;
     const double dNoiseStandardDeviation;
 
     CMockedLandmark( const UIDLandmark& p_uID,
-                     const CPoint3DInWorldFrame& p_vecPointXYZWORLD,
+                     const CPoint3DWORLD& p_vecPointXYZWORLD,
                      const double& p_dULCornerX,
                      const double& p_dULCornerY,
                      const double& p_dLRCornerX,

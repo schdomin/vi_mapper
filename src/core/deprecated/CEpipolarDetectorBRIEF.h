@@ -35,7 +35,7 @@ private:
     //ds reference information
     uint64_t m_uFrameCount;
     Eigen::Isometry3d m_matPreviousTransformationLeft;
-    CPoint3DInWorldFrame m_vecTranslationLast;
+    CPoint3DWORLD m_vecTranslationLast;
     double m_dTranslationDeltaForMAPMeters;
 
     //ds feature related
@@ -107,7 +107,7 @@ private:
 
     const std::vector< CLandmark > _getLandmarksGFTT( cv::Mat& p_matDisplay, const cv::Mat& p_matImageLEFT, const cv::Mat& p_matImageRIGHT, const uint32_t& p_uTileNumberBase, const Eigen::Isometry3d& p_matTransformation );
 
-    const CPoint3DInCameraFrame _getPointTriangulated( const cv::Mat& p_matImageRight,
+    const CPoint3DCAMERA _getPointTriangulated( const cv::Mat& p_matImageRight,
                                                        const cv::KeyPoint& p_cKeyPoint,
                                                        const CDescriptor& p_matReferenceDescriptor,
                                                        const cv::DescriptorExtractor& p_cExtractor,

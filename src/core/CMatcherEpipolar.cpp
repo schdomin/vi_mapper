@@ -34,14 +34,8 @@ CMatcherEpipolar::CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTr
                                                                               m_cSearchROI( cv::Point2i( m_iSearchUMin, m_iSearchVMin ), cv::Point2i( m_iSearchUMax, m_iSearchVMax ) ),
                                                                               m_uMaximumFailedSubsequentTrackingsPerLandmark( p_uMaximumFailedSubsequentTrackingsPerLandmark ),
                                                                               m_cSolverPoseProjection( m_pCameraLEFT->m_matProjection ),
-                                                                              m_cSolverPoseSTEREO( m_pCameraSTEREO ),
-                                                                              m_pFileOdometryOptimization( std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/optimization_odometry.txt", "w" ) ),
-                                                                              m_pFileEpipolarDetection( std::fopen( "/home/dominik/workspace_catkin/src/vi_mapper/logs/epipolar_detection.txt", "w" ) )
+                                                                              m_cSolverPoseSTEREO( m_pCameraSTEREO )
 {
-    //ds dump file format
-    std::fprintf( m_pFileOdometryOptimization, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS REPROJECTIONS | ERROR_RSS |      X      Y      Z |  DELTA | MOTION |       RISK" );
-    std::fprintf( m_pFileEpipolarDetection, "ID_FRAME | DETECTION_POINT | LANDMARKS_TOTAL LANDMARKS_ACTIVE LANDMARKS_VISIBLE\n" );
-
     CLogger::openBox( );
     std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) descriptor extractor: %s\n", m_pExtractor->name( ).c_str( ) );
     std::printf( "<CMatcherEpipolar>(CMatcherEpipolar) descriptor matcher: %s\n", m_pMatcher->name( ).c_str( ) );
@@ -56,8 +50,8 @@ CMatcherEpipolar::CMatcherEpipolar( const std::shared_ptr< CTriangulator > p_pTr
 
 CMatcherEpipolar::~CMatcherEpipolar( )
 {
-    std::fclose( m_pFileOdometryOptimization );
-    std::fclose( m_pFileEpipolarDetection );
+    CLogger::CLogDetectionEpipolar::close( );
+    CLogger::CLogOptimizationOdometry::close( );
     std::printf( "<CMatcherEpipolar>(~CMatcherEpipolar) instance deallocated\n" );
 }
 
@@ -117,10 +111,10 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p
         for( CLandmark* pLandmarkReference: *cDetectionPoint.vecLandmarks )
         {
             //ds world position
-            const CPoint3DInWorldFrame vecPointXYZ( pLandmarkReference->vecPointXYZOptimized );
+            const CPoint3DWORLD vecPointXYZ( pLandmarkReference->vecPointXYZOptimized );
 
             //ds compute current reprojection point with the prior
-            const cv::Point2d ptUVLEFTEstimate( m_pCameraLEFT->getProjection( static_cast< CPoint3DInCameraFrame >( p_matTransformationEstimateWORLDtoLEFT*vecPointXYZ ) ) );
+            const cv::Point2d ptUVLEFTEstimate( m_pCameraLEFT->getProjection( static_cast< CPoint3DCAMERA >( p_matTransformationEstimateWORLDtoLEFT*vecPointXYZ ) ) );
 
             //ds check if in visible range
             if( m_cSearchROI.contains( ptUVLEFTEstimate ) )
@@ -223,13 +217,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p
             uint32_t uInliersCurrent             = m_cSolverPoseProjection.num_inliers;
 
             //ds log the error evolution
-            std::fprintf( m_pFileOdometryOptimization, "    %04lu |         %01u |          %03lu     %03u           %03u |   %7.2f\n",
-                                                 p_uFrame,
-                                                 uIteration,
-                                                 vecLandmarksWORLD.size( ),
-                                                 uInliersCurrent,
-                                                 m_cSolverPoseProjection.num_reprojected_points,
-                                                 dErrorSolverPoseCurrent );
+            CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uIteration, vecLandmarksWORLD.size( ), uInliersCurrent,  m_cSolverPoseProjection.num_reprojected_points, dErrorSolverPoseCurrent );
 
             //ds check convergence (triggers another last loop)
             if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorPrevious-dErrorSolverPoseCurrent ) )
@@ -241,12 +229,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p
                     const double dErrorSolverPoseCurrent = m_cSolverPoseProjection.oneRoundInliersOnly( );
 
                     //ds log the error evolution
-                    std::fprintf( m_pFileOdometryOptimization, "    %04lu |    INLIER |          %03lu     %03u           %03u |   %7.2f\n",
-                                                         p_uFrame,
-                                                         vecLandmarksWORLD.size( ),
-                                                         m_cSolverPoseProjection.num_inliers,
-                                                         m_cSolverPoseProjection.num_reprojected_points,
-                                                         dErrorSolverPoseCurrent );
+                    CLogger::CLogOptimizationOdometry::addEntryInliers( p_uFrame,vecLandmarksWORLD.size( ), m_cSolverPoseProjection.num_inliers, m_cSolverPoseProjection.num_reprojected_points, dErrorSolverPoseCurrent );
                 }
                 else
                 {
@@ -307,7 +290,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
     std::vector< CMatchPoseOptimizationSTEREO > vecLandmarkMatches;
 
     //ds initial translation
-    const CPoint3DInWorldFrame vecTranslationEstimate( p_matTransformationEstimateWORLDtoLEFT.inverse( ).translation( ) );
+    const CPoint3DWORLD vecTranslationEstimate( p_matTransformationEstimateWORLDtoLEFT.inverse( ).translation( ) );
 
     //ds active measurements
     for( const CDetectionPoint cDetectionPoint: m_vecDetectionPointsActive )
@@ -316,8 +299,8 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
         {
             //ds project into camera
-            const CPoint3DInWorldFrame vecPointXYZ( pLandmark->vecPointXYZOptimized );
-            const CPoint3DInCameraFrame vecPointXYZCAMERA( p_matTransformationEstimateWORLDtoLEFT*vecPointXYZ );
+            const CPoint3DWORLD vecPointXYZ( pLandmark->vecPointXYZOptimized );
+            const CPoint3DCAMERA vecPointXYZCAMERA( p_matTransformationEstimateWORLDtoLEFT*vecPointXYZ );
 
             //ds compute current reprojection point
             const cv::Point2d ptUVEstimateLEFT( m_pCameraLEFT->getProjection( vecPointXYZCAMERA ) );
@@ -555,13 +538,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
             uint32_t uInliersCurrent             = m_cSolverPoseSTEREO.uNumberOfInliers;
 
             //ds log the error evolution
-            std::fprintf( m_pFileOdometryOptimization, "\n    %04lu |         %01u |          %03lu     %03u           %03u | %9.2f |",
-                                                 p_uFrame,
-                                                 uIteration,
-                                                 vecLandmarksWORLD.size( ),
-                                                 uInliersCurrent,
-                                                 m_cSolverPoseSTEREO.uNumberOfReprojections,
-                                                 dErrorSolverPoseCurrent );
+            CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uIteration, vecLandmarksWORLD.size( ), uInliersCurrent, m_cSolverPoseSTEREO.uNumberOfReprojections, dErrorSolverPoseCurrent );
 
             //ds check convergence (triggers another last loop)
             if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorPrevious-dErrorSolverPoseCurrent ) )
@@ -573,12 +550,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
                     const double dErrorSolverPoseCurrentInliers = m_cSolverPoseSTEREO.oneRoundInliersOnly( );
 
                     //ds log the error evolution
-                    std::fprintf( m_pFileOdometryOptimization, "\n    %04lu |    INLIER |          %03lu     %03u           %03u | %9.2f |",
-                                                         p_uFrame,
-                                                         vecLandmarksWORLD.size( ),
-                                                         m_cSolverPoseSTEREO.uNumberOfInliers,
-                                                         m_cSolverPoseSTEREO.uNumberOfReprojections,
-                                                         dErrorSolverPoseCurrentInliers );
+                    CLogger::CLogOptimizationOdometry::addEntryInliers( p_uFrame, vecLandmarksWORLD.size( ), m_cSolverPoseSTEREO.uNumberOfInliers, m_cSolverPoseSTEREO.uNumberOfReprojections, dErrorSolverPoseCurrentInliers );
                 }
                 else
                 {
@@ -599,7 +571,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
         const double dOptimizationCovariance = dDeltaOptimization/p_dMotionScaling;
 
         //ds log resulting trajectory and delta to initial
-        std::fprintf( m_pFileOdometryOptimization, " %6.2f %6.2f %6.2f | %6.4f |   %4.2f |     %6.4f", matTransformationLEFTtoWORLD.translation( ).x( ), matTransformationLEFTtoWORLD.translation( ).y( ), matTransformationLEFTtoWORLD.translation( ).z( ), dDeltaOptimization, p_dMotionScaling, dOptimizationCovariance );
+        CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dDeltaOptimization, p_dMotionScaling, dOptimizationCovariance );
 
         //ds check if acceptable
         if( 0.5 > dOptimizationCovariance )
@@ -675,7 +647,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         for( CLandmark* pLandmarkReference: *cKeyFrame.vecLandmarks )
         {
             //ds projection from triangulation to estimate epipolar line drawing TODO: remove cast
-            const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DInWorldFrame >( matTransformationWORLDtoLEFT*pLandmarkReference->vecPointXYZOptimized ) ) );
+            const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DWORLD >( matTransformationWORLDtoLEFT*pLandmarkReference->vecPointXYZOptimized ) ) );
 
             //ds compute maximum and minimum points (from top to bottom line)
             const int32_t iULastDetection( ptProjection.x );
@@ -789,8 +761,8 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                 assert( m_cSearchROI.contains( ptUVLEFT ) );
 
                 //ds triangulate point
-                const CPoint3DInCameraFrame vecPointTriangulatedLEFT( m_pTriangulator->getPointTriangulatedLimited( p_matImageRIGHT, pMatchLEFT->cKeyPoint, pMatchLEFT->matDescriptor ) );
-                const CPoint3DInWorldFrame vecPointXYZ( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
+                const CPoint3DCAMERA vecPointTriangulatedLEFT( m_pTriangulator->getPointTriangulatedLimited( p_matImageRIGHT, pMatchLEFT->cKeyPoint, pMatchLEFT->matDescriptor ) );
+                const CPoint3DWORLD vecPointXYZ( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
 
                 //ds depth
                 const double& dDepthMeters = vecPointTriangulatedLEFT.z( );
@@ -823,7 +795,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                 pLandmarkReference->matDescriptorLASTLEFT      = pMatchLEFT->matDescriptor; //( pMatchLEFT->matDescriptor + pLandmarkReference->matDescriptorLastLEFT )/2.0;
                 pLandmarkReference->matDescriptorLASTRIGHT     = matDescriptorRIGHT;
                 pLandmarkReference->uFailedSubsequentTrackings = 0;
-                pLandmarkReference->addMeasurement( p_uFrame, ptUVLEFT, ptUVRIGHT, vecPointTriangulatedLEFT, vecPointXYZ, vecCameraPosition, p_vecCameraOrientation, matProjectionWORLDtoLEFT );
+                pLandmarkReference->addMeasurement( p_uFrame, ptUVLEFT, ptUVRIGHT, vecPointTriangulatedLEFT, vecPointXYZ, vecCameraPosition, p_vecCameraOrientation, matProjectionWORLDtoLEFT, pMatchLEFT->matDescriptor );
 
                 //ds register measurement
                 vecVisibleLandmarksPerKeyFrame.push_back( pLandmarkReference->getLastMeasurement( ) );
@@ -867,7 +839,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         }
 
         //ds log
-        std::fprintf( m_pFileEpipolarDetection, "%04lu %03lu %02lu %02lu %02lu\n", p_uFrame, cKeyFrame.uID, cKeyFrame.vecLandmarks->size( ), vecActiveLandmarksPerKeyFrame->size( ), vecVisibleLandmarksPerKeyFrame.size( ) );
+        CLogger::CLogDetectionEpipolar::addEntry( p_uFrame, cKeyFrame.uID, cKeyFrame.vecLandmarks->size( ), vecActiveLandmarksPerKeyFrame->size( ), vecVisibleLandmarksPerKeyFrame.size( ) );
 
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerKeyFrame->empty( ) )
@@ -912,13 +884,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
             const uint32_t uInliersCurrent       = m_cSolverPoseSTEREO.uNumberOfInliers;
 
             //ds log the error evolution
-            std::fprintf( m_pFileOdometryOptimization, "    %04lu |         %01u |          %03lu     %03u           %03u | %7.2f\n",
-                                                 p_uFrame,
-                                                 uIteration,
-                                                 vecLandmarksWORLD.size( ),
-                                                 uInliersCurrent,
-                                                 m_cSolverPoseSTEREO.uNumberOfReprojections,
-                                                 dErrorSolverPoseCurrent );
+            CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uIteration, vecLandmarksWORLD.size( ), uInliersCurrent, m_cSolverPoseSTEREO.uNumberOfReprojections, dErrorSolverPoseCurrent );
 
             //ds check convergence (triggers another last loop)
             if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorPrevious-dErrorSolverPoseCurrent ) )
@@ -930,12 +896,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                     const double dErrorSolverPoseCurrentIO = m_cSolverPoseSTEREO.oneRoundInliersOnly( );
 
                     //ds log the error evolution
-                    std::fprintf( m_pFileOdometryOptimization, "    %04lu |    INLIER |          %03lu     %03u           %03u | %7.2f\n",
-                                                         p_uFrame,
-                                                         vecLandmarksWORLD.size( ),
-                                                         m_cSolverPoseSTEREO.uNumberOfInliers,
-                                                         m_cSolverPoseSTEREO.uNumberOfReprojections,
-                                                         dErrorSolverPoseCurrentIO );
+                    CLogger::CLogOptimizationOdometry::addEntryInliers( p_uFrame, vecLandmarksWORLD.size( ), m_cSolverPoseSTEREO.uNumberOfInliers, m_cSolverPoseSTEREO.uNumberOfReprojections, dErrorSolverPoseCurrentIO );
                 }
                 else
                 {
@@ -992,7 +953,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
 
         //ds check relative transform
         const Eigen::Isometry3d matTransformationToNow( matTransformationWORLDtoLEFT*cDetectionPoint.matTransformationLEFTtoWORLD );
-        const CPoint3DInWorldFrame vecTranslationToNow( matTransformationToNow.translation( ) );
+        const CPoint3DWORLD vecTranslationToNow( matTransformationToNow.translation( ) );
 
         //ds compute essential matrix for this detection point
         const Eigen::Matrix3d matEssential( matTransformationToNow.linear( )*CMiniVisionToolbox::getSkew( vecTranslationToNow ) );
@@ -1031,7 +992,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                 else
                 {
                     //ds projection from triangulation to estimate epipolar line drawing TODO: remove cast
-                    const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DInWorldFrame >( matTransformationWORLDtoLEFT*pLandmark->vecPointXYZOptimized ) ) );
+                    const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DWORLD >( matTransformationWORLDtoLEFT*pLandmark->vecPointXYZOptimized ) ) );
 
                     //ds compute maximum and minimum points (from top to bottom line)
                     const int32_t iULastDetection( ptProjection.x );
@@ -1180,7 +1141,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         }
 
         //ds log
-        std::fprintf( m_pFileEpipolarDetection, "%04lu %03lu %02lu %02lu %02lu\n", p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
+        CLogger::CLogDetectionEpipolar::addEntry( p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
 
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerDetectionPoint->empty( ) )
@@ -1232,7 +1193,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
         {
             //ds projection from triangulation to estimate epipolar line drawing TODO: remove cast
-            const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DInWorldFrame >( matTransformationWORLDtoLEFT*pLandmark->vecPointXYZOptimized ) ) );
+            const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DWORLD >( matTransformationWORLDtoLEFT*pLandmark->vecPointXYZOptimized ) ) );
 
             cv::circle( p_matDisplayLEFT, ptProjection, 6, CColorCodeBGR( 0, 0, 255 ), 1 );
 
@@ -1241,7 +1202,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         }
 
         //ds log
-        std::fprintf( m_pFileEpipolarDetection, "%04lu %03lu %02lu %02lu %02lu\n", p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
+        CLogger::CLogDetectionEpipolar::addEntry(  p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
 
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerDetectionPoint->empty( ) )
@@ -1306,7 +1267,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         const Eigen::Matrix3d matRotation( matTransformationToNow.linear( ) );
         const Eigen::Vector3d vecTranslation( matTransformationToNow.translation( ) );
         const Eigen::Matrix3d matEssential( matRotation*CMiniVisionToolbox::getSkew( vecTranslation ) );
-        const Eigen::Matrix3d matFundamental( m_pCameraLEFT->m_matIntrinsicInverseTransposed*matEssential*m_pCameraLEFT->m_matIntrinsicInverse );
+        const Eigen::Matrix3d matFundamental( m_pCameraLEFT->m_matIntrinsicPInverseTransposed*matEssential*m_pCameraLEFT->m_matIntrinsicPInverse );
 
         //ds loop over the points for the current scan
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
@@ -1342,7 +1303,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
                 else
                 {
                     //ds projection from triangulation to estimate epipolar line drawing TODO: remove cast
-                    const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DInWorldFrame >( matTransformationWORLDtoLEFT*pLandmark->vecPointXYZOptimized ) ) );
+                    const cv::Point2d ptProjection( m_pCameraLEFT->getProjection( static_cast< CPoint3DWORLD >( matTransformationWORLDtoLEFT*pLandmark->vecPointXYZOptimized ) ) );
 
                     try
                     {
@@ -1520,7 +1481,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         }
 
         //ds log
-        std::fprintf( m_pFileEpipolarDetection, "%04lu %03lu %02lu %02lu %02lu\n", p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
+        CLogger::CLogDetectionEpipolar::addEntry( p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
 
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerDetectionPoint->empty( ) )
@@ -2106,7 +2067,7 @@ void CMatcherEpipolar::_addMeasurementToLandmarkLEFT( const uint64_t p_uFrame,
 
     //ds triangulate point
     const CMatchTriangulation cMatch( m_pTriangulator->getPointTriangulatedCompactInRIGHT( p_matImageRIGHT, p_cKeyPoint, p_matDescriptorNew ) );
-    const CPoint3DInCameraFrame vecPointXYZLEFT( cMatch.vecPointXYZCAMERA );
+    const CPoint3DCAMERA vecPointXYZLEFT( cMatch.vecPointXYZCAMERA );
     const cv::Point2f ptUVRIGHT( cMatch.ptUVCAMERA );
 
     //ds depth
@@ -2132,7 +2093,8 @@ void CMatcherEpipolar::_addMeasurementToLandmarkLEFT( const uint64_t p_uFrame,
                                  p_matTransformationLEFTtoWORLD*vecPointXYZLEFT,
                                  p_matTransformationLEFTtoWORLD.translation( ),
                                  p_vecCameraOrientation,
-                                 p_matProjectionWORLDtoLEFT );
+                                 p_matProjectionWORLDtoLEFT,
+                                 cMatch.matDescriptorCAMERA );
 }
 
 void CMatcherEpipolar::_addMeasurementToLandmarkSTEREO( const uint64_t p_uFrame,
@@ -2159,7 +2121,8 @@ void CMatcherEpipolar::_addMeasurementToLandmarkSTEREO( const uint64_t p_uFrame,
                                               p_matTransformationLEFTtoWORLD*p_cMatchSTEREO.vecPointXYZLEFT,
                                               p_matTransformationLEFTtoWORLD.translation( ),
                                               p_vecCameraOrientation,
-                                              p_matProjectionWORLDtoLEFT );
+                                              p_matProjectionWORLDtoLEFT,
+                                              p_cMatchSTEREO.matDescriptorLEFT );
 }
 
 const double CMatcherEpipolar::_getCurveEssentialX( const Eigen::Vector3d& p_vecCoefficients, const double& p_dY ) const

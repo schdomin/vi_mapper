@@ -45,9 +45,9 @@ private:
     const double m_dMaximumDeltaTimeSeconds;
 
     //ds IMU filtering (calibrated 2015-07-25)
-    static constexpr double m_dImprecisionAngularVelocity    = 0.2;
-    static constexpr double m_dImprecisionLinearAcceleration = 0.5;
-    static constexpr double m_vecBiasLinearAcceleration[3]   = { 0.0, 0.0, -9.80665 }; //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
+    static constexpr double m_dImprecisionAngularVelocity     = 0.2;
+    static constexpr double m_dImprecisionLinearAcceleration  = 0.25;
+    static constexpr double m_vecBiasLinearAccelerationXYZ[3] = { 0.0, 0.0, -9.80665 }; //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
 
 //ds accessors
 public:
@@ -125,9 +125,12 @@ public:
 
     static const CLinearAccelerationWORLD getLinearAccelerationFiltered( const CLinearAccelerationWORLD& p_vecLinearAcceleration )
     {
-        const double dAccelerationX = p_vecLinearAcceleration.x( )-CIMUInterpolator::m_vecBiasLinearAcceleration[0];
-        const double dAccelerationY = p_vecLinearAcceleration.y( )-CIMUInterpolator::m_vecBiasLinearAcceleration[1];
-        const double dAccelerationZ = p_vecLinearAcceleration.z( )-CIMUInterpolator::m_vecBiasLinearAcceleration[2];
+        //ds sanity check
+        assert( 0.0 > p_vecLinearAcceleration.z( ) );
+
+        const double dAccelerationX = p_vecLinearAcceleration.x( )-CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[0];
+        const double dAccelerationY = p_vecLinearAcceleration.y( )-CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[1];
+        const double dAccelerationZ = p_vecLinearAcceleration.z( )-CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[2];
 
         const double dAbsoluteAccelerationX = std::fabs( dAccelerationX )-CIMUInterpolator::m_dImprecisionLinearAcceleration;
         const double dAbsoluteAccelerationY = std::fabs( dAccelerationY )-CIMUInterpolator::m_dImprecisionLinearAcceleration;
@@ -142,7 +145,7 @@ public:
         return vecLinearAccelerationFiltered;
     }
 
-    static const CAngularVelocityInIMUFrame getAngularVelocityFiltered( const CAngularVelocityInIMUFrame& p_vecAngularVelocity )
+    static const CAngularVelocityIMU getAngularVelocityFiltered( const CAngularVelocityIMU& p_vecAngularVelocity )
     {
         //ds filter imprecision and bias
         const double dRotationX = p_vecAngularVelocity.x( );
@@ -153,7 +156,7 @@ public:
         const double dAbsoluteRotationZ = std::fabs( dRotationZ )-CIMUInterpolator::m_dImprecisionAngularVelocity;
 
         //ds noise free vectors
-        CAngularVelocityInCameraFrame vecAngularVelocityFiltered( 0.0, 0.0, 0.0 );
+        CAngularVelocityLEFT vecAngularVelocityFiltered( 0.0, 0.0, 0.0 );
 
         //ds update only if meaningful
         if( 0 < dAbsoluteRotationX ){ vecAngularVelocityFiltered.x( ) = CIMUInterpolator::sign( dRotationX )*dAbsoluteRotationX; }
@@ -164,7 +167,7 @@ public:
     }
 
     //ds nasty ghastly hacky function
-    inline static int8_t sign( const double& p_fNumber )
+    inline static const int8_t sign( const double& p_fNumber )
     {
         assert( 0.0 != p_fNumber );
 

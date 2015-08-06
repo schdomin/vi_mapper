@@ -198,7 +198,7 @@ void CTrackerStereo::receivevDataVIWithPose( const std::shared_ptr< txt_io::Pinh
     matTransformationIMUToWORLD.linear( )      = p_cPose->getOrientationMatrix( );
 
     //ds compute LEFT camera transformation
-    const Eigen::Isometry3d matTransformationLEFTToWORLD( matTransformationIMUToWORLD*m_pCameraLEFT->m_matTransformationLEFTtoIMU );
+    const Eigen::Isometry3d matTransformationLEFTToWORLD( matTransformationIMUToWORLD*m_pCameraLEFT->m_matTransformationCAMERAtoIMU );
 
     //ds process images
     _trackLandmarks( matPreprocessedLEFT, matPreprocessedRIGHT, matTransformationLEFTToWORLD, p_cIMU.getAngularVelocity( ), p_cIMU.getLinearAcceleration( ) );
@@ -214,7 +214,7 @@ void CTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                                       const Eigen::Vector3d& p_vecLinearAcceleration )
 {
     //ds current translation
-    const CPoint3DInWorldFrame vecTranslationCurrent( p_matTransformationLEFTtoWORLD.translation( ) );
+    const CPoint3DWORLD vecTranslationCurrent( p_matTransformationLEFTtoWORLD.translation( ) );
     const cv::Point2d ptPositionXY( vecTranslationCurrent.x( ), vecTranslationCurrent.y( ) );
 
     //ds draw position on trajectory mat
@@ -389,7 +389,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
         try
         {
             //ds triangulate the point
-            const CPoint3DInCameraFrame vecPointTriangulatedLEFT( m_pTriangulator->getPointTriangulatedLimited( p_matImageRIGHT, cKeyPointLEFT, matDescriptorLEFT ) );
+            const CPoint3DCAMERA vecPointTriangulatedLEFT( m_pTriangulator->getPointTriangulatedLimited( p_matImageRIGHT, cKeyPointLEFT, matDescriptorLEFT ) );
             //const CPoint3DInCameraFrame vecPointTriangulatedRIGHT( m_pCameraSTEREO->m_matTransformLEFTtoRIGHT*vecPointTriangulatedLEFT );
 
             const double& dDepthMeters( vecPointTriangulatedLEFT.z( ) );
@@ -398,7 +398,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereo::_getNewLandma
             if( m_dMinimumDepthMeters < dDepthMeters && m_dMaximumDepthMeters > dDepthMeters )
             {
                 //ds compute triangulated point in world frame
-                const CPoint3DInWorldFrame vecPointTriangulatedWORLD( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
+                const CPoint3DWORLD vecPointTriangulatedWORLD( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
 
                 //ds draw reprojection of triangulation
                 cv::Point2d ptLandmarkRIGHT( m_pCameraRIGHT->getProjection( vecPointTriangulatedLEFT ) );

@@ -444,7 +444,7 @@ void CStereoDetector::_localizeAuto( const cv::Mat& p_matImageLeft, const cv::Ma
             const cv::KeyPoint cKeyPoint( vecKeyPoints[u] );
 
             //ds add the point to structure
-            m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame >( CWrapperOpenCV::fromCVVector( cKeyPoint.pt ),
+            m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DCAMERA, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame >( CWrapperOpenCV::fromCVVector( cKeyPoint.pt ),
                                                                                                                                                                      Eigen::Vector3d( 0, 0, 0 ),
                                                                                                                                                                      cKeyPoint,
                                                                                                                                                                      matReferenceDescriptors.row( u ),
@@ -515,7 +515,7 @@ void CStereoDetector::_localizeAuto( const cv::Mat& p_matImageLeft, const cv::Ma
 void CStereoDetector::_drawProjectedEpipolarLineEssential( const Eigen::Isometry3d& p_matCurrentTransformation, cv::Mat& p_matDisplay, cv::Mat& p_matImage, const double& p_dLineLength )
 {
     //ds for all the registered points
-    for( std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame > >::iterator vecReferencePoint = m_vecReferencePoints.begin( ); vecReferencePoint != m_vecReferencePoints.end( ); ++vecReferencePoint )
+    for( std::vector< std::tuple< CPoint2DInCameraFrame, CPoint3DCAMERA, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame > >::iterator vecReferencePoint = m_vecReferencePoints.begin( ); vecReferencePoint != m_vecReferencePoints.end( ); ++vecReferencePoint )
     {
 
     //for( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptorSURF, Eigen::Isometry3d, CColorCode, CPoint2DInCameraFrame >& vecReferencePoint: m_vecReferencePoints )
@@ -738,7 +738,7 @@ void CStereoDetector::_triangulatePointSURF( const cv::Mat& p_matImageLeft, cons
     std::printf( "<CEpilinearStereoDetector>(_triangulatePointSURF) absolute deviation: %f %%\n", dAbsoluteDeviation );
 
     //ds add the coordinates to the reference structure
-    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DInCameraFrame, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
+    m_vecReferencePoints.push_back( std::tuple< CPoint2DInCameraFrame, CPoint3DCAMERA, cv::KeyPoint, CDescriptor, Eigen::Isometry3d, CColorCodeBGR, CPoint2DInCameraFrame >( CPoint2DInCameraFrame( ptReference.x, ptReference.y ),
                                                                                                                                                              vec3DReferencePointSVDLS,
                                                                                                                                                              vecReferenceKeyPoints[0],
                                                                                                                                                              matReferenceDescriptor,

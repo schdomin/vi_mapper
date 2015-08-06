@@ -29,7 +29,7 @@ CTriangulator::~CTriangulator( )
     std::printf( "<CTriangulator>(~CTriangulator) instance deallocated\n" );
 }
 
-const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedFull( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
+const CPoint3DCAMERA CTriangulator::getPointTriangulatedFull( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
 {
     //ds buffer keypoint size
     const float& fKeyPointSize( p_cKeyPointLEFT.size );
@@ -86,7 +86,7 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedFull( const cv::M
     }
 }
 
-const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimited( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
+const CPoint3DCAMERA CTriangulator::getPointTriangulatedLimited( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
 {
     //ds left references
     const int32_t iUReference( p_cKeyPointLEFT.pt.x );
@@ -143,7 +143,7 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimited( const cv
     }
 }
 
-const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedAdaptive( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
+const CPoint3DCAMERA CTriangulator::getPointTriangulatedAdaptive( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
 {
     //ds buffer keypoint size
     const float& fKeyPointSize( p_cKeyPointLEFT.size );
@@ -331,7 +331,7 @@ const CMatchTriangulation CTriangulator::getPointTriangulatedCompactInRIGHT( con
     }
 }
 
-const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimitedSVDLS( cv::Mat& p_matDisplayRIGHT, const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
+const CPoint3DCAMERA CTriangulator::getPointTriangulatedLimitedSVDLS( cv::Mat& p_matDisplayRIGHT, const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
 {
     //ds left references
     const int32_t& iUReference( p_cKeyPointLEFT.pt.x );
@@ -390,7 +390,7 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimitedSVDLS( cv:
     }
 }
 
-const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimitedQRLS( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
+const CPoint3DCAMERA CTriangulator::getPointTriangulatedLimitedQRLS( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
 {
     //ds left references
     const int32_t& iUReference( p_cKeyPointLEFT.pt.x );
@@ -437,7 +437,7 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimitedQRLS( cons
     if( m_fMatchingDistanceCutoff > vecMatches[0].distance )
     {
         //ds precheck for nans
-        const CPoint3DInCameraFrame vecTriangulatedPoint( CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( p_cKeyPointLEFT.pt,
+        const CPoint3DCAMERA vecTriangulatedPoint( CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( p_cKeyPointLEFT.pt,
                                                                                                                      vecPoolKeyPoints[vecMatches[0].trainIdx].pt,
                                                                                                                      m_pCameraSTEREO->m_pCameraLEFT->m_matProjection,
                                                                                                                      m_pCameraSTEREO->m_pCameraRIGHT->m_matProjection ) );
@@ -458,7 +458,7 @@ const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimitedQRLS( cons
     }
 }
 
-const CPoint3DInCameraFrame CTriangulator::getPointTriangulatedLimitedSVDDLT( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
+const CPoint3DCAMERA CTriangulator::getPointTriangulatedLimitedSVDDLT( const cv::Mat& p_matImageRIGHT, const cv::KeyPoint& p_cKeyPointLEFT, const CDescriptor& p_matReferenceDescriptorLEFT ) const
 {
     //ds left references
     const int32_t& iUReference( p_cKeyPointLEFT.pt.x );

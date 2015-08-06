@@ -107,7 +107,7 @@ void CMockedTrackerStereo::receivevDataVIWithPose( const std::shared_ptr< txt_io
     matTransformationIMUtoWORLD.translation( ) = p_pPose->getPosition( );
 
     //ds compute to left to world transformation
-    const Eigen::Isometry3d matTransformationLEFTtoWORLD( matTransformationIMUtoWORLD*m_pCameraLEFT->m_matTransformationLEFTtoIMU );
+    const Eigen::Isometry3d matTransformationLEFTtoWORLD( matTransformationIMUtoWORLD*m_pCameraLEFT->m_matTransformationCAMERAtoIMU );
 
     //ds process images (fed with IMU prior pose)
     _trackLandmarks( matPreprocessedLEFT,
@@ -125,7 +125,7 @@ void CMockedTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                                       const CLinearAccelerationIMU& p_vecLinearAcceleration )
 {
     //ds current translation
-    const CPoint3DInWorldFrame vecTranslationCurrent( p_matTransformationLEFTtoWORLD.translation( ) );
+    const CPoint3DWORLD vecTranslationCurrent( p_matTransformationLEFTtoWORLD.translation( ) );
     m_ptPositionXY = cv::Point2d( vecTranslationCurrent.x( ), vecTranslationCurrent.y( ) );
 
     //ds draw position on trajectory mat
@@ -153,7 +153,7 @@ void CMockedTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     m_cMatcherEpipolar.resetVisibilityActiveLandmarks( );
 
     //ds estimate acceleration in current WORLD frame to compensate gravity component (WORLDtoLEFTLAST is WORLDtoLEFT now)
-    const Eigen::Isometry3d matTransformationIMUtoWORLD( p_matTransformationLEFTtoWORLD*m_pCameraLEFT->m_matTransformationIMUtoLEFT );
+    const Eigen::Isometry3d matTransformationIMUtoWORLD( p_matTransformationLEFTtoWORLD*m_pCameraLEFT->m_matTransformationIMUtoCAMERA );
     const CLinearAccelerationWORLD vecLinearAccelerationWORLD( matTransformationIMUtoWORLD.linear( )*p_vecLinearAcceleration );
     const CLinearAccelerationWORLD vecLinearAccelerationFiltered( CIMUInterpolator::getLinearAccelerationFiltered( vecLinearAccelerationWORLD ) );
 
@@ -288,7 +288,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
         const cv::Point2d& ptLandmarkLEFT( cDetection.second.ptUVLEFT );
 
         //ds triangulate the point
-        const CPoint3DInCameraFrame vecPointTriangulatedLEFT( CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( cDetection.second.ptUVLEFT,
+        const CPoint3DCAMERA vecPointTriangulatedLEFT( CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( cDetection.second.ptUVLEFT,
                                                                                                                           cDetection.second.ptUVRIGHT,
                                                                                                                           m_pCameraLEFT->m_matProjection,
                                                                                                                           m_pCameraRIGHT->m_matProjection ) );
@@ -299,7 +299,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CMockedTrackerStereo::_getNew
         if( m_dMinimumDepthMeters < dDepthMeters && m_dMaximumDepthMeters > dDepthMeters )
         {
             //ds compute triangulated point in world frame
-            const CPoint3DInWorldFrame vecPointTriangulatedWORLD( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
+            const CPoint3DWORLD vecPointTriangulatedWORLD( p_matTransformationLEFTtoWORLD*vecPointTriangulatedLEFT );
 
             //ds draw reprojection of triangulation
             cv::Point2d ptLandmarkRIGHT( cDetection.second.ptUVRIGHT );

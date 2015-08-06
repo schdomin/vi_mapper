@@ -47,8 +47,8 @@ public:
     static const Eigen::Matrix3d getEssentialPrecomputed( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationToInverse );
     static const Eigen::Matrix3d getFundamental( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationTo, const Eigen::Matrix3d& p_matIntrinsic );
 
-    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationSVDLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight );
-    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationQRLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight );
+    static const CPoint3DCAMERA getPointStereoLinearTriangulationSVDLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight );
+    static const CPoint3DCAMERA getPointStereoLinearTriangulationQRLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight );
     static const Eigen::Vector4d getPointHomogeneousStereoLinearTriangulationLU( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight );
     static const double getEpipolarSquaredNormDistance( const Eigen::Vector2d& p_vecPointFrom, const Eigen::Vector2d& p_vecPointTo, const Eigen::Matrix3d& p_matEssential );
 
@@ -81,13 +81,13 @@ public:
 //ds wrapping functions
 public:
 
-    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight );
-    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight );
+    static const CPoint3DCAMERA getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight );
+    static const CPoint3DCAMERA getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight );
     static const Eigen::Vector4d getPointHomogeneousStereoLinearTriangulationLU( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight );
 
-    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
-    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
-    static const CPoint3DInCameraFrame getPointStereoLinearTriangulationSVDDLT( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
+    static const CPoint3DCAMERA getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
+    static const CPoint3DCAMERA getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
+    static const CPoint3DCAMERA getPointStereoLinearTriangulationSVDDLT( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT );
 };
 
 #endif //#define CMINIVISIONTOOLBOX_H_

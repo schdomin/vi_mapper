@@ -57,7 +57,7 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoCAMERA );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -219,7 +219,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoCAMERA );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -375,7 +375,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoCAMERA );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -530,7 +530,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoCAMERA );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -640,7 +640,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
                 g2o::VertexPointXYZ* pVertexLandmark = dynamic_cast< g2o::VertexPointXYZ* >( itLandmark->second );
 
                 //ds get optimized landmark into current pose
-                const CPoint3DInCameraFrame vecPointOptimized( pVertexPoseCurrent->estimate( ).inverse( )*pVertexLandmark->estimate( ) );
+                const CPoint3DCAMERA vecPointOptimized( pVertexPoseCurrent->estimate( ).inverse( )*pVertexLandmark->estimate( ) );
 
                 //ds get key values
                 const double dDisparity   = pMeasurementLandmark->ptUVLEFT.x-pMeasurementLandmark->ptUVRIGHT.x;
@@ -717,7 +717,7 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
 
     //ds imu offset (as IMU to LEFT)
     g2o::ParameterSE3Offset* pOffsetIMUtoLEFT = new g2o::ParameterSE3Offset( );
-    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoLEFT );
+    pOffsetIMUtoLEFT->setOffset( p_cStereoCamera.m_pCameraLEFT->m_matTransformationIMUtoCAMERA );
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
@@ -827,7 +827,7 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
                 g2o::VertexPointXYZ* pVertexLandmark = dynamic_cast< g2o::VertexPointXYZ* >( itLandmark->second );
 
                 //ds get optimized landmark into current pose
-                const CPoint3DInCameraFrame vecPointOptimized( pVertexPoseCurrent->estimate( ).inverse( )*pVertexLandmark->estimate( ) );
+                const CPoint3DCAMERA vecPointOptimized( pVertexPoseCurrent->estimate( ).inverse( )*pVertexLandmark->estimate( ) );
 
                 //ds current depth
                 //const double dDepthMeters = pMeasurementLandmark->vecPointXYZLEFT.z( );
@@ -895,7 +895,7 @@ const bool CBridgeG2O::isKeyFramed( const CLandmark* p_pLandmark )
 g2o::EdgeSE3PointXYZ* CBridgeG2O::_getEdgePointXYZ( g2o::VertexSE3* p_pVertexPose,
                                                g2o::VertexPointXYZ* p_pVertexLandmark,
                                                const EG2OParameterID& p_eParameterIDOriginWORLD,
-                                               const CPoint3DInWorldFrame& p_vecPointXYZ )
+                                               const CPoint3DWORLD& p_vecPointXYZ )
 {
     g2o::EdgeSE3PointXYZ* pEdgePointXYZ( new g2o::EdgeSE3PointXYZ( ) );
 

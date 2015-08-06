@@ -19,7 +19,7 @@
 //ds readability
 typedef Eigen::Vector3d CPoint2DNormalized;
 typedef Eigen::Vector2d CPoint2DInCameraFrame;
-typedef Eigen::Vector3d CPoint3DInCameraFrame;
+typedef Eigen::Vector3d CPoint3DCAMERA;
 typedef cv::Scalar      CColorCodeBGR;
 typedef cv::Mat         CDescriptor;
 

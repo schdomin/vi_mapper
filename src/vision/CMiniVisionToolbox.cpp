@@ -331,7 +331,7 @@ const Eigen::Matrix3d CMiniVisionToolbox::getFundamental( const Eigen::Isometry3
     return matIntrinsicInverse.transpose( )*matEssential*matIntrinsicInverse;
 }
 
-const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight )
+const CPoint3DCAMERA CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight )
 {
     //ds A matrix for system: A*X=0
     Eigen::Matrix< double, 4 , 4 > matAHomogeneous;
@@ -350,7 +350,7 @@ const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulatio
     return matAInhomogeneous.jacobiSvd( Eigen::ComputeFullU | Eigen::ComputeFullV ).solve( vecRHS );
 }
 
-const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight )
+const CPoint3DCAMERA CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( const Eigen::Vector2d& p_vecPointLeft, const Eigen::Vector2d& p_vecPointRight, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLeft, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRight )
 {
     //ds A matrix for system: A*X=0
     Eigen::Matrix< double, 4 , 4 > matAHomogeneous;
@@ -423,7 +423,7 @@ const double CMiniVisionToolbox::getTransformationDelta( const Eigen::Isometry3d
     return ( std::fabs( vecDifference(0) ) + std::fabs( vecDifference(1) ) + std::fabs( vecDifference(2) ) )/dNorm;
 }
 
-const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight )
+const CPoint3DCAMERA CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight )
 {
     //ds wrap the input
     return CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( CWrapperOpenCV::fromCVVector< double, 2 >( p_vecPointLeft ),
@@ -432,7 +432,7 @@ const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulatio
                                                                      CWrapperOpenCV::fromCVMatrix< double, 3, 4 >( p_matProjectionRight ) );
 }
 
-const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight )
+const CPoint3DCAMERA CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_vecPointLeft, const cv::Point2d& p_vecPointRight, const cv::Mat& p_matProjectionLeft, const cv::Mat& p_matProjectionRight )
 {
     //ds wrap the input
     return CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( CWrapperOpenCV::fromCVVector< double, 2 >( p_vecPointLeft ),
@@ -450,7 +450,7 @@ const Eigen::Vector4d CMiniVisionToolbox::getPointHomogeneousStereoLinearTriangu
                                                                              CWrapperOpenCV::fromCVMatrix< double, 3, 4 >( p_matProjectionRight ) );
 }
 
-const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
+const CPoint3DCAMERA CMiniVisionToolbox::getPointStereoLinearTriangulationSVDLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
 {
     //ds A matrix for system: A*X=0
     Eigen::Matrix< double, 4 , 4 > matAHomogeneous;
@@ -469,7 +469,7 @@ const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulatio
     return matAInhomogeneous.jacobiSvd( Eigen::ComputeFullU | Eigen::ComputeFullV ).solve( vecRHS );
 }
 
-const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
+const CPoint3DCAMERA CMiniVisionToolbox::getPointStereoLinearTriangulationQRLS( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
 {
     //ds A matrix for system: A*X=0
     Eigen::Matrix< double, 4 , 4 > matAHomogeneous;
@@ -488,7 +488,7 @@ const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulatio
     return matAInhomogeneous.fullPivHouseholderQr( ).solve( vecRHS );
 }
 
-const CPoint3DInCameraFrame CMiniVisionToolbox::getPointStereoLinearTriangulationSVDDLT( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
+const CPoint3DCAMERA CMiniVisionToolbox::getPointStereoLinearTriangulationSVDDLT( const cv::Point2d& p_ptPointLEFT, const cv::Point2d& p_ptPointRIGHT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionLEFT, const Eigen::Matrix< double, 3, 4 >& p_matProjectionRIGHT )
 {
     //ds A matrix for system: A*X=0
     Eigen::Matrix4d matAHomogeneous;

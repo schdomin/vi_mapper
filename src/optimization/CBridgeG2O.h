@@ -59,7 +59,7 @@ private:
     static g2o::EdgeSE3PointXYZ* _getEdgePointXYZ( g2o::VertexSE3* p_pVertexPose,
                                                    g2o::VertexPointXYZ* p_pVertexLandmark,
                                                    const EG2OParameterID& p_eParameterIDOriginWORLD,
-                                                   const CPoint3DInWorldFrame& p_vecPointXYZ );
+                                                   const CPoint3DWORLD& p_vecPointXYZ );
     static g2o::EdgeSE3PointXYZDepth* _getEdgeUVDepth( g2o::VertexSE3* p_pVertexPose,
                                                        g2o::VertexPointXYZ* p_pVertexLandmark,
                                                        const EG2OParameterID& p_eParameterIDCamera,

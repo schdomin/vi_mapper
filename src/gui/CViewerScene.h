@@ -16,8 +16,8 @@ class CViewerScene: public QGLViewer
     struct CLandmarkInScene
     {
         CLandmarkInScene( const UIDLandmark& p_uID,
-                          const CPoint3DInWorldFrame& p_vecPositionXYZOriginal,
-                          const CPoint3DInWorldFrame& p_vecPositionXYZOptimized ): uID( p_uID ),
+                          const CPoint3DWORLD& p_vecPositionXYZOriginal,
+                          const CPoint3DWORLD& p_vecPositionXYZOptimized ): uID( p_uID ),
                                                                              vecPositionXYZOriginal( p_vecPositionXYZOriginal.x( ), p_vecPositionXYZOriginal.y( ), p_vecPositionXYZOriginal.z( ) ),
                                                                              vecPositionXYZOptimized( p_vecPositionXYZOptimized.x( ), p_vecPositionXYZOptimized.y( ), p_vecPositionXYZOptimized.z( ) )
         {

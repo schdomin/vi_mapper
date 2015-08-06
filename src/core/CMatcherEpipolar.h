@@ -63,14 +63,14 @@ private:
     struct CMatchPoseOptimizationSTEREO
     {
         CLandmark* pLandmark;
-        const CPoint3DInCameraFrame vecPointXYZLEFT;
+        const CPoint3DCAMERA vecPointXYZLEFT;
         const cv::Point2f ptUVLEFT;
         const cv::Point2f ptUVRIGHT;
         const CDescriptor matDescriptorLEFT;
         const CDescriptor matDescriptorRIGHT;
 
         CMatchPoseOptimizationSTEREO( CLandmark* p_pLandmark,
-                                      const CPoint3DInCameraFrame& p_vecPointXYZLEFT,
+                                      const CPoint3DCAMERA& p_vecPointXYZLEFT,
                                       const cv::Point2f& p_ptUVLEFT,
                                       const cv::Point2f& p_ptUVRIGHT,
                                       const CDescriptor& p_matDescriptorLEFT,
@@ -134,7 +134,7 @@ private:
     const cv::Rect m_cSearchROI;
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uRecursionLimitEpipolarLines      = 3;
-    const uint8_t m_uRecursionStepSize                = 2;
+    const uint8_t m_uRecursionStepSize                = 1;
     UIDLandmark m_uNumberOfInvalidLandmarksTotal      = 0;
     UIDLandmark m_uNumberOfDetectionsPoseOptimization = 0;
     UIDLandmark m_uNumberOfDetectionsEpipolar         = 0;
@@ -150,8 +150,6 @@ private:
     //gtools::CPositSolver m_cSolverPose;
     gtools::CPositSolverProjection m_cSolverPoseProjection;
     gtools::CPositSolverStereo m_cSolverPoseSTEREO;
-    std::FILE* m_pFileOdometryOptimization;
-    std::FILE* m_pFileEpipolarDetection;
 
 //ds api
 public:

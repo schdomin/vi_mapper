@@ -36,7 +36,7 @@ public:
             {
                 //ds push back the current landmark
                 m_vecLandmarksMocked.push_back( CMockedLandmark( m_uAvailableMockedLandmarkID,
-                                                                 CPoint3DInWorldFrame( dPositionX, dPositionY, dPositionZ ),
+                                                                 CPoint3DWORLD( dPositionX, dPositionY, dPositionZ ),
                                                                  dULCornerX, dULCornerY, dLRCornerX, dLRCornerY,
                                                                  dNoiseMean,
                                                                  dNoiseVariance ) );
@@ -95,7 +95,7 @@ public:
             if( cLandmark.cRangeVisible.contains( p_ptPositionXY ) )
             {
                 //ds get point into left camera frame
-                const CPoint3DInCameraFrame vecPointXYZLEFT( p_matTransformationWORLDtoLEFT*cLandmark.vecPointXYZWORLD );
+                const CPoint3DCAMERA vecPointXYZLEFT( p_matTransformationWORLDtoLEFT*cLandmark.vecPointXYZWORLD );
 
                 //ds check if visible
                 if( 0 < vecPointXYZLEFT.z( ) )

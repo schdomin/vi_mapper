@@ -22,7 +22,7 @@ int main( int argc, char **argv )
     std::printf( "(main) launched: %s\n", argv[0] );
 
     //ds defaults
-    std::string strMode              = "stepwise";
+    std::string strMode              = "benchmark";
     std::string strInfileMessageDump = "/home/dominik/ros_dumps/dump_printer_room_sideways.txt";
 
     //ds get params
@@ -82,6 +82,15 @@ int main( int argc, char **argv )
         return 1;
     }
 
+    //ds allocated loggers
+    CLogger::CLogDetectionEpipolar::open( );
+    CLogger::CLogLandmarkCreation::open( );
+    CLogger::CLogLandmarkFinal::open( );
+    CLogger::CLogLandmarkFinalOptimized::open( );
+    CLogger::CLogOptimizationOdometry::open( );
+    CLogger::CLogTrajectory::open( );
+    CLogger::CLogLinearAcceleration::open( );
+
     //ds log configuration
     std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
     std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
@@ -107,6 +116,8 @@ int main( int argc, char **argv )
     //ds playback the dump
     while( cMessageReader.good( ) && !cTracker.isShutdownRequested( ) )
     {
+        std::fflush( stdout );
+
         //ds check if viewer is still active
         if( cViewer.isVisible( ) )
         {

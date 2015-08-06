@@ -227,7 +227,7 @@ void CEpipolarDetectorBRIEF::_trackLandmarksAuto( cv::Mat& p_matImageLEFT, const
     ++m_uFrameCount;
 
     //ds current translation
-    const CPoint3DInWorldFrame vecTranslationCurrent( p_matTransformation.translation( ) );
+    const CPoint3DWORLD vecTranslationCurrent( p_matTransformation.translation( ) );
 
     //ds get delta to evaluate precision
     const double dTransformationDelta( CMiniVisionToolbox::getTransformationDelta( m_matPreviousTransformationLeft, p_matTransformation ) );
@@ -336,7 +336,7 @@ void CEpipolarDetectorBRIEF::_trackLandmarksManual( cv::Mat& p_matImageLEFT, con
     ++m_uFrameCount;
 
     //ds current translation
-    const CPoint3DInWorldFrame vecTranslationCurrent( p_matTransformation.translation( ) );
+    const CPoint3DWORLD vecTranslationCurrent( p_matTransformation.translation( ) );
 
     //ds get delta to evaluate precision
     const double dTransformationDelta( CMiniVisionToolbox::getTransformationDelta( m_matPreviousTransformationLeft, p_matTransformation ) );
@@ -764,7 +764,7 @@ const std::vector< CLandmark > CEpipolarDetectorBRIEF::_getLandmarksGFTT( cv::Ma
                     try
                     {
                         //ds triangulate the point
-                        const CPoint3DInCameraFrame vecPointTriangulated( _getPointTriangulated( p_matImageRIGHT, vecKeyPoint[0], matReferenceDescriptor, m_cExtractorBRIEF, m_cMatcherBRIEF, m_fMatchingDistanceCutoffTriangulation ) );
+                        const CPoint3DCAMERA vecPointTriangulated( _getPointTriangulated( p_matImageRIGHT, vecKeyPoint[0], matReferenceDescriptor, m_cExtractorBRIEF, m_cMatcherBRIEF, m_fMatchingDistanceCutoffTriangulation ) );
 
                         //ds check if point is in front of camera an not more than a defined distance away
                         if( 0 < vecPointTriangulated(2) && m_dMaximumDepthMeters > vecPointTriangulated(2) )
@@ -776,7 +776,7 @@ const std::vector< CLandmark > CEpipolarDetectorBRIEF::_getLandmarksGFTT( cv::Ma
                             vecLandmarksTracking.push_back( CLandmark( m_uAvailableLandmarkID, vecKeyPoint[0], matReferenceDescriptor, vecPointNormalized ) );
 
                             //ds compute triangulated point in world frame
-                            const CPoint3DInWorldFrame vecPointTriangulatedWorld( p_matTransformation*vecPointTriangulated );
+                            const CPoint3DWORLD vecPointTriangulatedWorld( p_matTransformation*vecPointTriangulated );
 
                             //ds register landmark in total vector (only touched in here)
                             m_vecLandmarks.push_back( CLandmarkInWorldFrame( m_uAvailableLandmarkID, vecPointTriangulatedWorld ) );
@@ -830,7 +830,7 @@ const std::vector< CLandmark > CEpipolarDetectorBRIEF::_getLandmarksGFTT( cv::Ma
     return vecLandmarksTracking;
 }
 
-const CPoint3DInCameraFrame CEpipolarDetectorBRIEF::_getPointTriangulated( const cv::Mat& p_matImageRIGHT,
+const CPoint3DCAMERA CEpipolarDetectorBRIEF::_getPointTriangulated( const cv::Mat& p_matImageRIGHT,
                                                                            const cv::KeyPoint& p_cKeyPoint,
                                                                            const CDescriptor& p_matReferenceDescriptor,
                                                                            const cv::DescriptorExtractor& p_cExtractor,
