@@ -3,6 +3,7 @@
 
 #include <chrono>
 #include "types/CLandmark.h"
+#include "types/TypesMocked.h"
 
 class CLogger
 {

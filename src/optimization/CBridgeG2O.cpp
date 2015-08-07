@@ -85,7 +85,7 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveXYZ) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
+    //std::printf( "<CBridgeG2O>(saveXYZ) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
 
     const uint64_t uMeasurements = p_vecLandmarks.size( )-uDroppedLandmarks;
 
@@ -178,7 +178,7 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveXYZ) stored measurements EdgeSE3PointXYZ: %lu/%lu\n", uMeasurementsStoredXYZ, uMeasurements );
+    //std::printf( "<CBridgeG2O>(saveXYZ) stored measurements EdgeSE3PointXYZ: %lu/%lu\n", uMeasurementsStoredXYZ, uMeasurements );
 
     cGraph.save( strOutfile.c_str( ) );
 
@@ -247,7 +247,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveUVDepth) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
+    //std::printf( "<CBridgeG2O>(saveUVDepth) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
 
     //ds g2o element identifier
     uint64_t uNextAvailableUID( p_vecLandmarks.back( )->uID+1 );
@@ -339,7 +339,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveUVDepth) stored measurements EdgeSE3PointXYZDepth: %lu\n", uMeasurementsStoredDepth );
+    //std::printf( "<CBridgeG2O>(saveUVDepth) stored measurements EdgeSE3PointXYZDepth: %lu\n", uMeasurementsStoredDepth );
 
     cGraph.save( strOutfile.c_str( ) );
 }
@@ -403,7 +403,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveUVDisparity) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
+    //std::printf( "<CBridgeG2O>(saveUVDisparity) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
 
     //ds g2o element identifier
     uint64_t uNextAvailableUID( p_vecLandmarks.back( )->uID+1 );
@@ -494,7 +494,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveUVDisparity) stored measurements EdgeSE3PointXYZDisparity: %lu\n", uMeasurementsStoredDisparity );
+    //std::printf( "<CBridgeG2O>(saveUVDisparity) stored measurements EdgeSE3PointXYZDisparity: %lu\n", uMeasurementsStoredDisparity );
 
     cGraph.save( strOutfile.c_str( ) );
 }
@@ -558,7 +558,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveUVDepthOrDisparity) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
+    //std::printf( "<CBridgeG2O>(saveUVDepthOrDisparity) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
 
     //ds g2o element identifier
     uint64_t uNextAvailableUID( p_vecLandmarks.back( )->uID+1 );
@@ -674,8 +674,8 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveUVDepthOrDisparity) stored measurements EdgeSE3PointXYZDepth: %lu\n", uMeasurementsStoredDepth );
-    std::printf( "<CBridgeG2O>(saveUVDepthOrDisparity) stored measurements EdgeSE3PointXYZDisparity: %lu\n", uMeasurementsStoredDisparity );
+    //std::printf( "<CBridgeG2O>(saveUVDepthOrDisparity) stored measurements EdgeSE3PointXYZDepth: %lu\n", uMeasurementsStoredDepth );
+    //std::printf( "<CBridgeG2O>(saveUVDepthOrDisparity) stored measurements EdgeSE3PointXYZDisparity: %lu\n", uMeasurementsStoredDisparity );
 
     cGraph.save( strOutfile.c_str( ) );
 }
@@ -744,7 +744,7 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveCOMBO) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
+    //std::printf( "<CBridgeG2O>(saveCOMBO) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
 
     //ds g2o element identifier
     uint64_t uNextAvailableUID( p_vecLandmarks.back( )->uID+1 );
@@ -868,9 +868,9 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
         }
     }
 
-    std::printf( "<CBridgeG2O>(saveCOMBO) stored measurements EdgeSE3PointXYZ: %lu\n", uMeasurementsStoredPointXYZ );
-    std::printf( "<CBridgeG2O>(saveCOMBO) stored measurements EdgeSE3PointXYZDepth: %lu\n", uMeasurementsStoredUVDepth );
-    std::printf( "<CBridgeG2O>(saveCOMBO) stored measurements EdgeSE3PointXYZDisparity: %lu\n", uMeasurementsStoredUVDisparity );
+    //std::printf( "<CBridgeG2O>(saveCOMBO) stored measurements EdgeSE3PointXYZ: %lu\n", uMeasurementsStoredPointXYZ );
+    //std::printf( "<CBridgeG2O>(saveCOMBO) stored measurements EdgeSE3PointXYZDepth: %lu\n", uMeasurementsStoredUVDepth );
+    //std::printf( "<CBridgeG2O>(saveCOMBO) stored measurements EdgeSE3PointXYZDisparity: %lu\n", uMeasurementsStoredUVDisparity );
 
     cGraph.save( strOutfile.c_str( ) );
 

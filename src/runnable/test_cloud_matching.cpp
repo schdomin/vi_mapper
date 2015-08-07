@@ -39,6 +39,8 @@ int main( int argc, char** argv )
     }
 
     std::printf( "(main) successfully loaded %lu clouds\n", vecClouds.size( ) );
+    const double dWeightEuclidian        = 100.0;
+    const double dMatchingDistanceCutoff = 25.0;
 
     //ds match the query clouds
     const CDescriptorPointCloud& cCloudQuery = vecClouds.back( );
@@ -64,7 +66,7 @@ int main( int argc, char** argv )
                 for( const CDescriptorPoint3DWORLD cPointTrain: cCloudTrain.vecPoints )
                 {
                     //ds compute current matching distance against training point - EUCLIDIAN
-                    double dMatchingDistance = CCloudstreamer::dWeightEuclidian*( cPointQuery.vecPointXYZWORLD-cPointTrain.vecPointXYZWORLD ).squaredNorm( );
+                    double dMatchingDistance = dWeightEuclidian*( cPointQuery.vecPointXYZWORLD-cPointTrain.vecPointXYZWORLD ).squaredNorm( );
 
                     //ds get start and end iterators of training descriptors
                     std::vector< CDescriptor >::const_iterator itDescriptorTrainStart( cPointTrain.vecDescriptors.begin( ) );
@@ -120,7 +122,7 @@ int main( int argc, char** argv )
                 }
 
                 //ds check if match
-                if( CCloudstreamer::dMatchingDistanceCutoff > dMatchingDistanceBest )
+                if( dMatchingDistanceCutoff > dMatchingDistanceBest )
                 {
                     ++uMatches;
                 }

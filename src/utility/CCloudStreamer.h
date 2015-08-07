@@ -4,16 +4,11 @@
 #include <fstream>
 
 #include "types/CLandmark.h"
+#include "types/TypesCloud.h"
 #include "exceptions/CExceptionInvalidFile.h"
 
 class CCloudstreamer
 {
-
-//ds fields
-public:
-
-    static constexpr double dWeightEuclidian        = 100.0;
-    static constexpr double dMatchingDistanceCutoff = 150.0;
 
 public:
 

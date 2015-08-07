@@ -71,7 +71,7 @@ private:
 public:
 
     //ds optimization configuration (shared among all landmarks)
-    static constexpr double m_dDistanceDeltaForOptimizationMeters = 0.25; //ds squared measurement
+    static constexpr double m_dDistanceDeltaForOptimizationMeters = 0.1; //ds squared measurement
     static constexpr double m_dAngleDeltaForOptimizationRadians   = 0.5; //ds squared measurement
     static constexpr uint32_t m_uCapIterations                    = 500;
     static constexpr double m_dLevenbergDamping                   = 5.0;

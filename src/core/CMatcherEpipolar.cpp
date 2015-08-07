@@ -90,7 +90,7 @@ void CMatcherEpipolar::setKeyFrameToVisibleLandmarks( )
     }
 }
 
-const std::shared_ptr< const std::vector< CLandmark* > > CMatcherEpipolar::getVisibleLandmarks( ) const
+const std::shared_ptr< const std::vector< CLandmark* > > CMatcherEpipolar::getVisibleOptimizedLandmarks( ) const
 {
     //ds return vector
     std::shared_ptr< std::vector< CLandmark* > > vecVisibleLandmarks( std::make_shared< std::vector< CLandmark* > >( ) );
@@ -101,7 +101,7 @@ const std::shared_ptr< const std::vector< CLandmark* > > CMatcherEpipolar::getVi
         //ds loop over the points for the current scan
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
         {
-            if( pLandmark->bIsCurrentlyVisible )
+            if( pLandmark->bIsCurrentlyVisible && CBridgeG2O::isOptimized( pLandmark ) )
             {
                 vecVisibleLandmarks->push_back( pLandmark );
             }
@@ -1514,7 +1514,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMatcherEpip
         }
         else
         {
-            std::printf( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) erased detection point [%06lu]\n", cDetectionPoint.uID );
+            //std::printf( "<CMatcherEpipolar>(getVisibleLandmarksFundamental) erased detection point [%06lu]\n", cDetectionPoint.uID );
         }
     }
 

@@ -1,7 +1,7 @@
 #ifndef CCLOUDMATCHER_H
 #define CCLOUDMATCHER_H
 
-#include "types/Types.h"
+#include "types/TypesCloud.h"
 
 class CCloudMatcher
 {
@@ -10,7 +10,7 @@ class CCloudMatcher
 private:
 
     static constexpr double m_dWeightEuclidian        = 100.0;
-    static constexpr double m_dMatchingDistanceCutoff = 5.0;
+    static constexpr double m_dMatchingDistanceCutoff = 200.0;
 
 public:
 
@@ -30,7 +30,7 @@ public:
             for( const CDescriptorPoint3DWORLD& cPointReference: p_pCloudReference->vecPoints )
             {
                 //ds compute current matching distance against training point - EUCLIDIAN
-                double dMatchingDistance = CCloudstreamer::dWeightEuclidian*( cPointQuery.vecPointXYZWORLD-cPointReference.vecPointXYZWORLD ).squaredNorm( );
+                double dMatchingDistance = CCloudMatcher::m_dWeightEuclidian*( cPointQuery.vecPointXYZWORLD-cPointReference.vecPointXYZWORLD ).squaredNorm( );
 
                 //ds get start and end iterators of training descriptors
                 std::vector< CDescriptor >::const_iterator itDescriptorTrainStart( cPointReference.vecDescriptors.begin( ) );
@@ -86,7 +86,7 @@ public:
             }
 
             //ds check if match
-            if( CCloudstreamer::dMatchingDistanceCutoff > dMatchingDistanceBest )
+            if( CCloudMatcher::m_dMatchingDistanceCutoff > dMatchingDistanceBest )
             {
                 vecMatches->push_back( CMatchCloud( cPointQuery.uID, uIDMatchBest ) );
             }

@@ -164,7 +164,7 @@ public:
     void setKeyFrameToVisibleLandmarks( );
 
     //ds returns a handle to all currently visible landmarks
-    const std::shared_ptr< const std::vector< CLandmark* > > getVisibleLandmarks( ) const;
+    const std::shared_ptr< const std::vector< CLandmark* > > getVisibleOptimizedLandmarks( ) const;
 
     const Eigen::Isometry3d getPoseOptimizedLEFT( const uint64_t p_uFrame,
                                               cv::Mat& p_matDisplayLEFT,

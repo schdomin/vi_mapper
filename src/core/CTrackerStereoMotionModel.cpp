@@ -9,7 +9,6 @@
 #include "exceptions/CExceptionPoseOptimization.h"
 #include "exceptions/CExceptionNoMatchFound.h"
 #include "utility/CCloudStreamer.h"
-#include "utility/CCloudMatcher.h"
 
 CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
                                                       const uint32_t& p_uWaitKeyTimeoutMS ): m_uWaitKeyTimeoutMS( p_uWaitKeyTimeoutMS ),
@@ -174,6 +173,8 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                                                  const CLinearAccelerationIMU& p_vecLinearAcceleration,
                                                  const Eigen::Vector3d& p_vecRotationTotal )
 {
+    m_uWaitKeyTimeoutMS = 1;
+
     //ds get images into triple channel mats (display only)
     cv::Mat matDisplayLEFT;
     cv::Mat matDisplayRIGHT;
@@ -204,7 +205,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     }
     catch( const CExceptionPoseOptimization& p_cException )
     {
-        std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) pose optimization failed: '%s' trying parallel damped transform\n", p_cException.what( ) );
+        std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) pose optimization failed: '%s' trying parallel transform\n", p_cException.what( ) );
         try
         {
             //ds get the optimized pose on damped motion
@@ -287,9 +288,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         m_bIsFrameAvailable  = true;
 
         //ds current "id"
-        const UIDKeyFrame uIDKeyFrameCurrent = m_vecKeyFrames.size( )-1;
-
-        std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) adding keyframe: %06lu matching.. ", uIDKeyFrameCurrent );
+        const int64_t uIDKeyFrameCurrent = m_vecKeyFrames.size( )-1;
 
         //ds check if optimization is required
         if( m_uIDDeltaKeyFrameForProcessing < uIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST )
@@ -314,44 +313,51 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         }
 
         //ds save to cloudfile
-        CCloudstreamer::saveLandmarksToCloudFile( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, m_cMatcherEpipolar.getVisibleLandmarks( ) );
+        //CCloudstreamer::saveLandmarksToCloudFile( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, m_cMatcherEpipolar.getVisibleLandmarks( ) );
 
         //ds retrieve current point cloud
-        const CDescriptorPointCloud* pCloudCurrent( CCloudstreamer::getCloud( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, m_cMatcherEpipolar.getVisibleLandmarks( ) ) );
+        const CDescriptorPointCloud* pCloudCurrent( CCloudstreamer::getCloud( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, m_cMatcherEpipolar.getVisibleOptimizedLandmarks( ) ) );
 
         //ds match buffers
-        std::shared_ptr< const std::vector< CMatchCloud > > p_vecMatchesFirst( 0 );
+        std::shared_ptr< const std::vector< CMatchCloud > > p_vecMatchesBest( 0 );
         UIDLandmark uBestMatches    = 0;
         UIDKeyFrame uIDKeyFrameBest = 0;
 
-        //ds compare current cloud against previous ones to enable loop closure
-        for( const CDescriptorPointCloud* pCloudReference: *m_vecClouds )
+        //std::printf( "\n points: %lu\n", pCloudCurrent->vecPoints.size( ) );
+
+        //ds compare current cloud against previous ones to enable loop closure (skipping the keyframes just before)
+        for( int64_t u = 0; u < uIDKeyFrameCurrent-3; ++u )
         {
-            std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( CCloudMatcher::getMatches( pCloudCurrent, pCloudReference ) );
+            std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( CCloudMatcher::getMatches( pCloudCurrent, m_vecClouds->at( u ) ) );
 
             const UIDLandmark uNumberOfMatches = vecMatches->size( );
+
+            //std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) cloud [%02lu] > [%02lu] matches: %03lu\n", pCloudCurrent->uID, pCloudReference->uID, uNumberOfMatches );
 
             //ds if we have a suffient amount of matches
             if( m_uMinimumNumberOfMatches < uNumberOfMatches )
             {
-                //std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) cloud [%02lu] > [%02lu] matches: %03lu\n", pCloudCurrent->uID, pCloudReference->uID, uNumberOfMatches );
-
                 if( uBestMatches < uNumberOfMatches )
                 {
-                    p_vecMatchesFirst = vecMatches;
-                    uIDKeyFrameBest   = pCloudReference->uID;
+                    p_vecMatchesBest = vecMatches;
+                    uIDKeyFrameBest   = m_vecClouds->at( u )->uID;
                     uBestMatches      = uNumberOfMatches;
                 }
             }
         }
 
+        //ds if we got a match
         if( 0 < uBestMatches )
         {
-            std::printf( "%06lu (points: %06lu)\n", uIDKeyFrameBest, uBestMatches );
-        }
-        else
-        {
-            std::printf( "no other keyframe\n" );
+            std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) found loop closure for keyframes: %06lu -> %06lu (points: %lu)\n", uIDKeyFrameCurrent, uIDKeyFrameBest, uBestMatches );
+
+            /*ds draw matches
+            for( const CMatchCloud& cMatch: *p_vecMatchesBest )
+            {
+                cv::circle( matDisplayLEFT, m_vecLandmarks->at( cMatch.uIDQuery )->getLastDetectionLEFT( ), 3, CColorCodeBGR( 255, 0, 255 ), -1 );
+            }
+
+            m_uWaitKeyTimeoutMS = 0;*/
         }
 
         //ds push cloud

@@ -9,6 +9,7 @@
 #include "optimization/CBridgeG2O.h"
 #include "CTriangulator.h"
 #include "CMatcherEpipolar.h"
+#include "utility/CCloudMatcher.h"
 
 class CTrackerStereoMotionModel
 {
@@ -25,7 +26,7 @@ public:
 private:
 
     //ds vision setup
-    const uint32_t m_uWaitKeyTimeoutMS;
+    uint32_t m_uWaitKeyTimeoutMS;
     const std::shared_ptr< CPinholeCamera > m_pCameraLEFT;
     const std::shared_ptr< CPinholeCamera > m_pCameraRIGHT;
     const std::shared_ptr< CStereoCamera > m_pCameraSTEREO;
@@ -73,7 +74,7 @@ private:
     uint32_t m_uOptimizationsG2O                      = 0;
 
     //ds loop closing
-    const UIDLandmark m_uMinimumNumberOfMatches = 50;
+    const UIDLandmark m_uMinimumNumberOfMatches = 25;
 
     //ds control
     const EPlaybackMode m_eMode;
