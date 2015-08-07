@@ -23,7 +23,7 @@ int main( int argc, char **argv )
 
     //ds defaults
     std::string strMode              = "benchmark";
-    std::string strInfileMessageDump = "/home/dominik/ros_dumps/dump_printer_room_sideways.txt";
+    std::string strInfileMessageDump = "/home/n551jw/ros_dumps/dump_printer_room_sideways.txt";
 
     //ds get params
     setParametersNaive( argc, argv, strMode, strInfileMessageDump );

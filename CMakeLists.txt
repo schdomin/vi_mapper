@@ -20,6 +20,14 @@ find_package(G2O REQUIRED)
 find_package(Qt4 REQUIRED)
 find_package(QGLViewer REQUIRED)
 
+#ds kdtree NN search
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(FLANN flann)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(FLANN  DEFAULT_MSG
+                                  FLANN_LIBRARY 
+                                  FLANN_INCLUDE_DIR)
+
 #ds log found packages
 message("using OpenCV version: ${OpenCV_VERSION}")
 
@@ -85,7 +93,8 @@ ${QGLVIEWER_LIBRARY}
 ${QT_QTXML_LIBRARY} 
 ${QT_QTOPENGL_LIBRARY} 
 ${QT_QTGUI_LIBRARY} 
-${QT_QTCORE_LIBRARY})
+${QT_QTCORE_LIBRARY}
+${FLANN_LIBRARIES})
 
 set(LIBRARIES_MOCKED
 ${catkin_LIBRARIES} 

@@ -30,6 +30,9 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
                                                        m_vecCameraPositionLAST( p_vecCameraPosition ),
                                                        m_vecCameraOrientationAccumulated( 0.0, 0.0, 0.0 )
 {
+    vecDescriptorsLEFT.clear( );
+    m_vecMeasurements.clear( );
+
     //ds construct filestring and open dump file
     //char chBuffer[256];
     //std::snprintf( chBuffer, 256, "/home/dominik/workspace_catkin/src/vi_mapper/logs/landmarks/landmark%06lu.txt", uID );
@@ -93,8 +96,11 @@ void CLandmark::addMeasurement( const uint64_t& p_uFrame,
         //vecPointXYZCalibrated = _getOptimizedLandmarkIDWA( );
     }
 
+    //ds register descriptor
+    vecDescriptorsLEFT.push_back( p_matDescriptorLEFT );
+
     //ds add the measurement to structure
-    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecXYZLEFT, p_vecXYZWORLD, vecPointXYZOptimized, p_vecCameraPosition, p_matProjectionWORLDtoLEFT, p_matDescriptorLEFT ) );
+    m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecXYZLEFT, p_vecXYZWORLD, vecPointXYZOptimized, p_vecCameraPosition, p_matProjectionWORLDtoLEFT ) );
 }
 
 const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )

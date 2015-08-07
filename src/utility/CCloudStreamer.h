@@ -9,28 +9,57 @@
 class CCloudstreamer
 {
 
+//ds fields
 public:
 
-    static void saveLandmarksToCloud( const UIDKeyFrame& p_uIDKeyFrame, const std::vector< CLandmark* >& p_vecLandmarks )
+    static constexpr double dWeightEuclidian        = 100.0;
+    static constexpr double dMatchingDistanceCutoff = 150.0;
+
+public:
+
+    static CDescriptorPointCloud* getCloud( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
+    {
+        //ds points in the cloud
+        std::vector< CDescriptorPoint3DWORLD > vecPoints;
+
+        //ds for all these points
+        for( const CLandmark* pLandmark: *p_vecVisibleLandmarks )
+        {
+            vecPoints.push_back( CDescriptorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->vecDescriptorsLEFT ) );
+        }
+
+        return new CDescriptorPointCloud( p_uIDKeyFrame, p_matPose, vecPoints );
+    }
+
+    static void saveLandmarksToCloudFile( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
     {
         //ds construct filestring and open dump file
         char chBuffer[256];
         std::snprintf( chBuffer, 256, "clouds/keyframe_%06lu.cloud", p_uIDKeyFrame );
         std::ofstream ofCloud( chBuffer, std::ofstream::out );
-        CCloudstreamer::writeDatum( ofCloud, p_vecLandmarks.size( ) );
+
+        //ds dump pose and number of points information
+        for( uint8_t u = 0; u < 4; ++u )
+        {
+            for( uint8_t v = 0; v < 4; ++v )
+            {
+                CCloudstreamer::writeDatum( ofCloud, p_matPose(u,v) );
+            }
+        }
+        CCloudstreamer::writeDatum( ofCloud, p_vecVisibleLandmarks->size( ) );
 
         char chBufferFPS[256];
         std::snprintf( chBufferFPS, 256, "clouds/keyframe_%06lu.cloud_fps", p_uIDKeyFrame );
         std::ofstream ofCloudFPS( chBufferFPS, std::ofstream::out );
-        CCloudstreamer::writeDatum( ofCloudFPS, p_vecLandmarks.size( ) );
+        CCloudstreamer::writeDatum( ofCloudFPS, p_vecVisibleLandmarks->size( ) );
 
-        for( const CLandmark* pLandmark: p_vecLandmarks )
+        for( const CLandmark* pLandmark: *p_vecVisibleLandmarks )
         {
             //ds dump position and descriptor number info
             CCloudstreamer::writeDatum( ofCloud, pLandmark->vecPointXYZOptimized.x( ) );
             CCloudstreamer::writeDatum( ofCloud, pLandmark->vecPointXYZOptimized.y( ) );
             CCloudstreamer::writeDatum( ofCloud, pLandmark->vecPointXYZOptimized.z( ) );
-            CCloudstreamer::writeDatum( ofCloud, pLandmark->m_vecMeasurements.size( ) );
+            CCloudstreamer::writeDatum( ofCloud, pLandmark->vecDescriptorsLEFT.size( ) );
 
             //ds fps
             CCloudstreamer::writeDatum( ofCloudFPS, static_cast< float >( pLandmark->vecPointXYZOptimized.x( ) ) );
@@ -39,13 +68,13 @@ public:
             CCloudstreamer::writeDatum( ofCloudFPS, -1.0f );
             CCloudstreamer::writeDatum( ofCloudFPS, 0.0f );
             CCloudstreamer::writeDatum( ofCloudFPS, 0.0f );
-            CCloudstreamer::writeDatum( ofCloudFPS, 0.0f );
+            CCloudstreamer::writeDatum( ofCloudFPS, 1.0f );
 
             //ds dump all descriptors found so far
-            for( const CMeasurementLandmark* pMeasurement: pLandmark->m_vecMeasurements )
+            for( const CDescriptor& pDescriptorLEFT: pLandmark->vecDescriptorsLEFT )
             {
                 //ds buffer descriptor data
-                const uchar* pDescriptor = pMeasurement->matDescriptorLEFT.data;
+                const uchar* pDescriptor = pDescriptorLEFT.data;
 
                 //ds print the descriptor elements
                 for( uint8_t u = 0; u < 64; ++u ){ CCloudstreamer::writeDatum( ofCloud, pDescriptor[u] ); }
@@ -56,7 +85,7 @@ public:
         ofCloudFPS.close( );
     }
 
-    static CPointCloud loadCloud( const std::string& p_strFile, const UIDCloud& p_uID )
+    static CDescriptorPointCloud loadCloud( const std::string& p_strFile, const UIDCloud& p_uID )
     {
         //ds open the file
         std::ifstream ifMessages( p_strFile, std::ifstream::in );
@@ -65,6 +94,16 @@ public:
         if( !ifMessages.is_open( ) )
         {
             throw CExceptionInvalidFile( "<CCloudStreamer>(loadCloud) unable to open file: " + p_strFile );
+        }
+
+        //ds parse pose
+        Eigen::Isometry3d matPose( Eigen::Matrix4d::Identity( ) );
+        for( uint8_t u = 0; u < 4; ++u )
+        {
+            for( uint8_t v = 0; v < 4; ++v )
+            {
+                CCloudstreamer::readDatum( ifMessages, matPose(u,v) );
+            }
         }
 
         //ds parse number of points
@@ -112,7 +151,7 @@ public:
             vecPoints.push_back( CDescriptorPoint3DWORLD( u, vecPointXYZWORLD, vecDescriptors ) );
         }
 
-        return CPointCloud( p_uID, vecPoints );
+        return CDescriptorPointCloud( p_uID, matPose, vecPoints );
     }
 
 private:

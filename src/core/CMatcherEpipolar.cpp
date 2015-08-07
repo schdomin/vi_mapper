@@ -90,6 +90,27 @@ void CMatcherEpipolar::setKeyFrameToVisibleLandmarks( )
     }
 }
 
+const std::shared_ptr< const std::vector< CLandmark* > > CMatcherEpipolar::getVisibleLandmarks( ) const
+{
+    //ds return vector
+    std::shared_ptr< std::vector< CLandmark* > > vecVisibleLandmarks( std::make_shared< std::vector< CLandmark* > >( ) );
+
+    //ds active measurements
+    for( const CDetectionPoint& cDetectionPoint: m_vecDetectionPointsActive )
+    {
+        //ds loop over the points for the current scan
+        for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
+        {
+            if( pLandmark->bIsCurrentlyVisible )
+            {
+                vecVisibleLandmarks->push_back( pLandmark );
+            }
+        }
+    }
+
+    return vecVisibleLandmarks;
+}
+
 const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p_uFrame,
                                                             cv::Mat& p_matDisplayLEFT,
                                                             const cv::Mat& p_matImageLEFT,
@@ -554,7 +575,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
                 }
                 else
                 {
-                    std::printf( "<CMatcherEpipolar>(getPoseOptimizedSTEREO) unable to run loop on inliers only (%u not sufficient)\n", uInliersCurrent );
+                    //std::printf( "<CMatcherEpipolar>(getPoseOptimizedSTEREO) unable to run loop on inliers only (%u not sufficient)\n", uInliersCurrent );
                 }
                 break;
             }
@@ -591,13 +612,12 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
         }
         else
         {
-            throw CExceptionPoseOptimization( "<CMatcherEpipolar>(getPoseOptimizedSTEREO) unable to optimize pose (covariance: " + std::to_string( dOptimizationCovariance )+ ")" );
+            throw CExceptionPoseOptimization( "<CMatcherEpipolar>(getPoseOptimizedSTEREO) unable to optimize pose (RISK: " + std::to_string( dOptimizationCovariance )+ ")" );
         }
     }
     else
     {
-        //ds return damped estimate
-        throw CExceptionPoseOptimization( "<CMatcherEpipolar>(getPoseOptimizedSTEREO) unable to optimize pose (points: " + std::to_string( vecLandmarksWORLD.size( ) ) + ")" );
+        throw CExceptionPoseOptimization( "<CMatcherEpipolar>(getPoseOptimizedSTEREO) unable to optimize pose (insufficient number of points: " + std::to_string( vecLandmarksWORLD.size( ) ) + ")" );
     }
 }
 

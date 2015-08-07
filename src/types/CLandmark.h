@@ -1,7 +1,7 @@
 #ifndef CLANDMARK_H
 #define CLANDMARK_H
 
-#include "types/Typedefs.h"
+#include "types/Types.h"
 
 class CLandmark
 {
@@ -54,10 +54,12 @@ public:
     bool bIsCurrentlyVisible;
     uint32_t uNumberOfKeyFramePresences = 0;
 
-    //ds all measurements of this landmark
-    std::vector< CMeasurementLandmark* > m_vecMeasurements;
+    std::vector< CDescriptor > vecDescriptorsLEFT;
 
 private:
+
+    //ds all measurements of this landmark
+    std::vector< CMeasurementLandmark* > m_vecMeasurements;
 
     double m_dDepthLastOptimizationMeters;
 

@@ -9,6 +9,7 @@
 #include "exceptions/CExceptionPoseOptimization.h"
 #include "exceptions/CExceptionNoMatchFound.h"
 #include "utility/CCloudStreamer.h"
+#include "utility/CCloudMatcher.h"
 
 CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
                                                       const uint32_t& p_uWaitKeyTimeoutMS ): m_uWaitKeyTimeoutMS( p_uWaitKeyTimeoutMS ),
@@ -20,7 +21,7 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMo
                                                                            m_matTransformationLEFTLASTtoLEFTNOW( Eigen::Matrix4d::Identity( ) ),
                                                                            m_vecVelocityAngularFilteredLAST( 0.0, 0.0, 0.0 ),
                                                                            m_vecLinearAccelerationFilteredLAST( 0.0, 0.0, 0.0 ),
-                                                                           m_vecTranslationLastKeyFrame( -1.0, -1.0, -1.0 ),
+                                                                           m_vecTranslationLastKeyFrame( m_matTransformationWORLDtoLEFTLAST.inverse( ).translation( ) ),
                                                                            m_dTranslationDeltaForKeyFrameMetersSquaredNorm( 0.1 ),
                                                                            m_vecPositionCurrent( 0.0, 0.0, 0.0 ),
 
@@ -49,6 +50,7 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMo
                                                                            m_cMatcherEpipolar( m_pTriangulator, m_pDetector, m_dMinimumDepthMeters, m_dMaximumDepthMeters, m_dMatchingDistanceCutoffPoseOptimization, m_dMatchingDistanceCutoffTracking, m_uMaximumFailedSubsequentTrackingsPerLandmark ),
 
                                                                            m_vecLandmarks( std::make_shared< std::vector< CLandmark* > >( ) ),
+                                                                           m_vecClouds( std::make_shared< std::vector< const CDescriptorPointCloud* > >( ) ),
 
                                                                            m_eMode( p_eMode )
 {
@@ -91,6 +93,12 @@ CTrackerStereoMotionModel::~CTrackerStereoMotionModel( )
         if( CBridgeG2O::isOptimized( pLandmark ) && CBridgeG2O::isKeyFramed( pLandmark ) ){ CLogger::CLogLandmarkFinalOptimized::addEntry( pLandmark ); }
 
         delete pLandmark;
+    }
+
+    //ds free clouds
+    for( const CDescriptorPointCloud* pCloud: *m_vecClouds )
+    {
+        delete pCloud;
     }
 
     //ds close loggers
@@ -281,6 +289,8 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
         //ds current "id"
         const UIDKeyFrame uIDKeyFrameCurrent = m_vecKeyFrames.size( )-1;
 
+        std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) adding keyframe: %06lu matching.. ", uIDKeyFrameCurrent );
+
         //ds check if optimization is required
         if( m_uIDDeltaKeyFrameForProcessing < uIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST )
         {
@@ -303,8 +313,49 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
             ++m_uOptimizationsG2O;
         }
 
-        //ds save to cloud
-        CCloudstreamer::saveLandmarksToCloud( uIDKeyFrameCurrent, *m_vecLandmarks );
+        //ds save to cloudfile
+        CCloudstreamer::saveLandmarksToCloudFile( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, m_cMatcherEpipolar.getVisibleLandmarks( ) );
+
+        //ds retrieve current point cloud
+        const CDescriptorPointCloud* pCloudCurrent( CCloudstreamer::getCloud( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, m_cMatcherEpipolar.getVisibleLandmarks( ) ) );
+
+        //ds match buffers
+        std::shared_ptr< const std::vector< CMatchCloud > > p_vecMatchesFirst( 0 );
+        UIDLandmark uBestMatches    = 0;
+        UIDKeyFrame uIDKeyFrameBest = 0;
+
+        //ds compare current cloud against previous ones to enable loop closure
+        for( const CDescriptorPointCloud* pCloudReference: *m_vecClouds )
+        {
+            std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( CCloudMatcher::getMatches( pCloudCurrent, pCloudReference ) );
+
+            const UIDLandmark uNumberOfMatches = vecMatches->size( );
+
+            //ds if we have a suffient amount of matches
+            if( m_uMinimumNumberOfMatches < uNumberOfMatches )
+            {
+                //std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) cloud [%02lu] > [%02lu] matches: %03lu\n", pCloudCurrent->uID, pCloudReference->uID, uNumberOfMatches );
+
+                if( uBestMatches < uNumberOfMatches )
+                {
+                    p_vecMatchesFirst = vecMatches;
+                    uIDKeyFrameBest   = pCloudReference->uID;
+                    uBestMatches      = uNumberOfMatches;
+                }
+            }
+        }
+
+        if( 0 < uBestMatches )
+        {
+            std::printf( "%06lu (points: %06lu)\n", uIDKeyFrameBest, uBestMatches );
+        }
+        else
+        {
+            std::printf( "no other keyframe\n" );
+        }
+
+        //ds push cloud
+        m_vecClouds->push_back( pCloudCurrent );
     }
     else
     {
@@ -486,7 +537,7 @@ const std::shared_ptr< std::vector< CLandmark* > > CTrackerStereoMotionModel::_g
         }
     }
 
-    std::printf( "<CTrackerStereoMotionModel>(_getNewLandmarks) added new landmarks: %lu/%lu\n", vecNewLandmarks->size( ), vecKeyPoints.size( ) );
+    //std::printf( "<CTrackerStereoMotionModel>(_getNewLandmarks) added new landmarks: %lu/%lu\n", vecNewLandmarks->size( ), vecKeyPoints.size( ) );
 
     //ds return found landmarks
     return vecNewLandmarks;

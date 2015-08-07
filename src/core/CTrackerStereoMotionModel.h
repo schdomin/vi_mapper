@@ -64,12 +64,16 @@ private:
     UIDLandmark m_uAvailableLandmarkID          = 0;
     UIDLandmark m_uNumberofLastVisibleLandmarks = 0;
     std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
+    std::shared_ptr< std::vector< const CDescriptorPointCloud* > > m_vecClouds;
 
     //ds g2o data
     std::vector< CKeyFrame > m_vecKeyFrames;
     UIDKeyFrame m_uIDProcessedKeyFrameLAST            = 0;
     const UIDKeyFrame m_uIDDeltaKeyFrameForProcessing = 9;
     uint32_t m_uOptimizationsG2O                      = 0;
+
+    //ds loop closing
+    const UIDLandmark m_uMinimumNumberOfMatches = 50;
 
     //ds control
     const EPlaybackMode m_eMode;

@@ -52,7 +52,6 @@ struct CMeasurementLandmark
     //const Eigen::Matrix3d matPRotationWORLDtoLEFT;
     //const Eigen::Vector3d vecPTranslationWORLDtoLEFT;
     const MatrixProjection matProjectionWORLDtoLEFT;
-    const CDescriptor matDescriptorLEFT;
 
     CMeasurementLandmark( const UIDLandmark& p_uID,
                           const cv::Point2d& p_ptUVLEFT,
@@ -63,8 +62,7 @@ struct CMeasurementLandmark
                           const Eigen::Vector3d& p_vecCameraPosition,
                           //const Eigen::Matrix3d& p_matKRotation,
                           //const Eigen::Vector3d& p_vecKTranslation,
-                          const MatrixProjection& p_matProjectionWORLDtoLEFT,
-                          const CDescriptor& p_matDescriptorLEFT ): uID( p_uID ),
+                          const MatrixProjection& p_matProjectionWORLDtoLEFT ): uID( p_uID ),
                                                                       ptUVLEFT( p_ptUVLEFT ),
                                                                       ptUVRIGHT( p_ptUVRIGHT ),
                                                                       vecPointXYZLEFT( p_vecPointXYZ ),
@@ -73,8 +71,7 @@ struct CMeasurementLandmark
                                                                       vecCameraPosition( p_vecCameraPosition ),
                                                                       //matPRotationWORLDtoLEFT( p_matKRotation ),
                                                                       //vecPTranslationWORLDtoLEFT( p_vecKTranslation ),
-                                                                      matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT ),
-                                                                      matDescriptorLEFT( p_matDescriptorLEFT )
+                                                                      matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT )
     {
         //ds nothing to do
     }
@@ -106,10 +103,6 @@ struct CMatchTracking
     {
         //ds nothing to do
     }
-    ~CMatchTracking( )
-    {
-        //ds nothing to do
-    }
 };
 
 struct CMatchTriangulation
@@ -123,10 +116,6 @@ struct CMatchTriangulation
                          const CDescriptor& p_matDescriptorCAMERA ): vecPointXYZCAMERA( p_vecPointXYZCAMERA ),
                                                                      ptUVCAMERA( p_ptUVCAMERA ),
                                                                      matDescriptorCAMERA( p_matDescriptorCAMERA )
-    {
-        //ds nothing to do
-    }
-    ~CMatchTriangulation( )
     {
         //ds nothing to do
     }
@@ -155,10 +144,6 @@ struct CMockedLandmark
     {
         //ds nothing to do
     }
-    ~CMockedLandmark( )
-    {
-        //ds nothing to do
-    }
 };
 
 struct CMockedDetection
@@ -184,10 +169,6 @@ struct CMockedDetection
     {
         //ds nothing to do
     }
-    ~CMockedDetection( )
-    {
-        //ds nothing to do
-    }
 };
 
 struct CDescriptorPoint3DWORLD
@@ -200,18 +181,30 @@ struct CDescriptorPoint3DWORLD
                              const CPoint3DWORLD& p_vecPointXYZWORLD,
                              const std::vector< CDescriptor >& p_vecDescriptors ): uID( p_uID ), vecPointXYZWORLD( p_vecPointXYZWORLD ), vecDescriptors( p_vecDescriptors )
     {
-
+        //ds nothing to do
     }
 };
 
-struct CPointCloud
+struct CDescriptorPointCloud
 {
     const UIDCloud uID;
+    const Eigen::Isometry3d matPose;
     const std::vector< CDescriptorPoint3DWORLD > vecPoints;
 
-    CPointCloud( const UIDCloud& p_uID, const std::vector< CDescriptorPoint3DWORLD >& p_vecPoints ): uID( p_uID ), vecPoints( p_vecPoints )
+    CDescriptorPointCloud( const UIDCloud& p_uID, const Eigen::Isometry3d& p_matPose, const std::vector< CDescriptorPoint3DWORLD >& p_vecPoints ): uID( p_uID ), matPose( p_matPose ), vecPoints( p_vecPoints )
     {
+        //ds nothing to do
+    }
+};
 
+struct CMatchCloud
+{
+    const UIDLandmark uIDQuery;
+    const UIDLandmark uIDMatch;
+
+    CMatchCloud( const UIDLandmark& p_uIDQuery, const UIDLandmark& p_uIDMatch ): uIDQuery( p_uIDQuery ), uIDMatch( p_uIDMatch )
+    {
+        //ds nothing to do
     }
 };
 
