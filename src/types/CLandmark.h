@@ -27,7 +27,7 @@ public:
                //const Eigen::Matrix3d& p_matKRotation,
                //const Eigen::Vector3d& p_vecKTranslation,
                const MatrixProjection& p_matProjectionWORLDtoLEFT,
-               const uint64_t& p_uFrame );
+               const UIDFrame& p_uFrame );
 
     ~CLandmark( );
 
@@ -82,12 +82,12 @@ public:
 private:
 
     //ds debug logging
-    std::FILE* m_pFilePositionOptimization;
+    //std::FILE* m_pFilePositionOptimization;
 
 public:
 
     //ds add detection
-    void addMeasurement( const uint64_t& p_uFrame,
+    void addMeasurement( const UIDFrame& p_uFrame,
                       const cv::Point2d& p_ptUVLEFT,
                       const cv::Point2d& p_ptUVRIGHT,
                       const CPoint3DCAMERA& p_vecPointXYZ,
@@ -102,14 +102,15 @@ public:
     const cv::Point2d getLastDetectionLEFT( ) const { return m_vecMeasurements.back( )->ptUVLEFT; }
     const cv::Point2d getLastDetectionRIGHT( ) const { return m_vecMeasurements.back( )->ptUVRIGHT; }
     const CMeasurementLandmark* getLastMeasurement( ) const { return m_vecMeasurements.back( ); }
+    const double getLastDepth( ) const { return m_vecMeasurements.back( )->vecPointXYZLEFT.z( ); }
     const std::vector< CMeasurementLandmark* >::size_type getNumberOfMeasurements( ) const { return m_vecMeasurements.size( ); }
 
 private:
 
     //ds calibrate 3d point
-    const CPoint3DWORLD _getOptimizedLandmarkKLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
-    const CPoint3DWORLD _getOptimizedLandmarkIDLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
-    const CPoint3DWORLD _getOptimizedLandmarkKRDLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
+    const CPoint3DWORLD _getOptimizedLandmarkKLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
+    const CPoint3DWORLD _getOptimizedLandmarkIDLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
+    const CPoint3DWORLD _getOptimizedLandmarkKRDLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
     const CPoint3DWORLD _getOptimizedLandmarkIDWA( );
 
 };

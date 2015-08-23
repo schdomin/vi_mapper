@@ -15,7 +15,7 @@ CLandmark::CLandmark( const UIDLandmark& p_uID,
            //const Eigen::Matrix3d& p_matKRotation,
            //const Eigen::Vector3d& p_vecKTranslation,
            const MatrixProjection& p_matProjectionWORLDtoLEFT,
-           const uint64_t& p_uFrame ): uID( p_uID ),
+           const UIDFrame& p_uFrame ): uID( p_uID ),
                                                        matDescriptorReferenceLEFT( p_matDescriptorLEFT ),
                                                        matDescriptorLASTLEFT( p_matDescriptorLEFT ),
                                                        matDescriptorLASTRIGHT( p_matDescriptorRIGHT ),
@@ -59,7 +59,7 @@ CLandmark::~CLandmark( )
     }
 }
 
-void CLandmark::addMeasurement( const uint64_t& p_uFrame,
+void CLandmark::addMeasurement( const UIDFrame& p_uFrame,
                                 const cv::Point2d& p_ptUVLEFT,
                                 const cv::Point2d& p_ptUVRIGHT,
                                 const CPoint3DCAMERA& p_vecXYZLEFT,
@@ -78,7 +78,7 @@ void CLandmark::addMeasurement( const uint64_t& p_uFrame,
     //ds update mean
     vecPointXYZMean = ( vecPointXYZMean+p_vecXYZWORLD )/2.0;
 
-    //ds accumulate position
+    //ds accumulate orientation
     m_vecCameraOrientationAccumulated += p_vecCameraOrientation;
 
     //ds check if we can recalibrate the 3d position
@@ -87,7 +87,7 @@ void CLandmark::addMeasurement( const uint64_t& p_uFrame,
     {
         //ds update last
         m_vecCameraPositionLAST           = p_vecCameraPosition;
-        m_vecCameraOrientationAccumulated = Eigen::Vector3d( 0.0, 0.0, 0.0 );
+        m_vecCameraOrientationAccumulated = Eigen::Vector3d::Zero( );
 
         //ds get calibrated point
         //vecPointXYZCalibrated = _getOptimizedLandmarkKLMA( p_uFrame, vecPointXYZCalibrated );
@@ -103,7 +103,7 @@ void CLandmark::addMeasurement( const uint64_t& p_uFrame,
     m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecXYZLEFT, p_vecXYZWORLD, vecPointXYZOptimized, p_vecCameraPosition, p_matProjectionWORLDtoLEFT ) );
 }
 
-const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
+const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
@@ -223,7 +223,7 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const uint64_t& p_uFra
     return p_vecInitialGuess;
 }
 
-const CPoint3DWORLD CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
+const CPoint3DWORLD CLandmark::_getOptimizedLandmarkIDLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
@@ -311,7 +311,7 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkIDLMA( const uint64_t& p_uFr
     return p_vecInitialGuess;
 }
 
-const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKRDLMA( const uint64_t& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
+const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKRDLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
@@ -376,7 +376,7 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKRDLMA( const uint64_t& p_uF
             vecB += dContribution*dRelativeDepthMeters*matJacobianTransposed*vecError;
 
             //ds update total for next run
-            dTotalRelativeDepthMeters += dRelativeDepthMeters;
+            dTotalRelativeDepthMeters += dContribution*dRelativeDepthMeters;
         }
 
         //ds solve constrained system H*dx=-b (since dx(3) = 0.0)
@@ -420,7 +420,7 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKRDLMA( const uint64_t& p_uF
             }
 
             //ds update last depth
-            m_dDepthLastOptimizationMeters /= dTotalRelativeDepthMeters;
+            m_dDepthLastOptimizationMeters = dTotalRelativeDepthMeters/m_vecMeasurements.size( );
 
             //ds average the measurement
             dCurrentAverageSquaredError = dSumSquaredErrors/m_vecMeasurements.size( );

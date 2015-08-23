@@ -8,6 +8,7 @@
 
 //ds custom
 #include "types/CLandmark.h"
+#include "types/CKeyFrame.h"
 
 class CViewerScene: public QGLViewer
 {
@@ -31,7 +32,8 @@ class CViewerScene: public QGLViewer
 
 public:
 
-    CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks );
+    CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks,
+                  const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames );
     ~CViewerScene( );
 
 protected:
@@ -45,6 +47,8 @@ public:
 
     //void addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks );
     void addFrame( const std::pair< bool, Eigen::Isometry3d > p_prFrame );
+    void addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD );
+    void manualDraw( );
 
 private:
 
@@ -54,12 +58,14 @@ private:
 private:
 
     std::vector< std::pair< bool, qglviewer::Frame > > m_vecFrames;
+    std::vector< CPoint3DWORLD > m_vecFramesSlidingWindow;
     //std::map< UIDLandmark, CPoint3DInWorldFrame > m_mapLandmarks;
 
     //std::shared_ptr< std::vector< const CMeasurementLandmark* > > m_pLiveMeasurements;
 
-    //ds landmarks
+    //ds references
     const std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
+    const std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
 
 };
 

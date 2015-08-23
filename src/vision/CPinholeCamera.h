@@ -217,13 +217,13 @@ public:
         //ds return uv point
         return cv::Point2d( vecProjectionInhomogeneous(0)/vecProjectionInhomogeneous(2), vecProjectionInhomogeneous(1)/vecProjectionInhomogeneous(2) );
     }
-    const CPoint2DInCameraFrame getUV( const CPoint3DCAMERA& p_vecPointXYZ ) const
+    const cv::Point2d getUV( const CPoint3DCAMERA& p_vecPointXYZ ) const
     {
         //ds compute inhomo projection
         const Eigen::Vector3d vecProjectionInhomogeneous( m_matProjection*CPoint3DHomogenized( p_vecPointXYZ.x( ), p_vecPointXYZ.y( ), p_vecPointXYZ.z( ), 1.0 ) );
 
         //ds return uv point
-        return CPoint2DInCameraFrame( vecProjectionInhomogeneous(0)/vecProjectionInhomogeneous(2), vecProjectionInhomogeneous(1)/vecProjectionInhomogeneous(2) );
+        return cv::Point2d( vecProjectionInhomogeneous(0)/vecProjectionInhomogeneous(2), vecProjectionInhomogeneous(1)/vecProjectionInhomogeneous(2) );
     }
 
     const double getPrincipalWeightU( const cv::Point2d& p_ptUV ) const

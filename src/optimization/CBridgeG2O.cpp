@@ -10,7 +10,7 @@
 void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
                           const CStereoCamera& p_cStereoCamera,
                           const std::vector< CLandmark* >& p_vecLandmarks,
-                          const std::vector< CKeyFrame >& p_vecKeyFrames )
+                          const std::vector< CKeyFrame* >& p_vecKeyFrames  )
 {
     //ds append postfix
     const std::string strOutfile( p_strOutfile+"_XYZ.g2o" );
@@ -61,10 +61,10 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
     pOffsetIMUtoLEFT->setId( EG2OParameterID::eOFFSET_IMUtoLEFT );
     cGraph.addParameter( pOffsetIMUtoLEFT );
 
-    //ds counter
-    uint64_t uDroppedLandmarks = 0;
+    //ds counters
+    UIDLandmark uDroppedLandmarks = 0;
 
-    //ds add landmarks
+    //ds add points first (identical landmarks will just overwrite the vertices)
     for( const CLandmark* pLandmark: p_vecLandmarks )
     {
         //ds check if calibration criteria is met
@@ -87,14 +87,12 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
 
     //std::printf( "<CBridgeG2O>(saveXYZ) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
 
-    const uint64_t uMeasurements = p_vecLandmarks.size( )-uDroppedLandmarks;
-
     //ds g2o element identifier
     uint64_t uNextAvailableUID( p_vecLandmarks.back( )->uID+1 );
 
     //ds add the first pose separately (there's no edge to the "previous" pose)
     g2o::VertexSE3 *pVertexPoseInitial = new g2o::VertexSE3( );
-    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( ).matTransformationLEFTtoWORLD );
+    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( )->matTransformationLEFTtoWORLD );
     pVertexPoseInitial->setId( uNextAvailableUID );
     pVertexPoseInitial->setFixed( true );
     cGraph.addVertex( pVertexPoseInitial );
@@ -104,7 +102,7 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
     g2o::EdgeSE3LinearAcceleration* pEdgeLinearAccelerationInitial = new g2o::EdgeSE3LinearAcceleration( );
 
     pEdgeLinearAccelerationInitial->setVertex( 0, pVertexPoseInitial );
-    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( ).vecLinearAccelerationNormalized );
+    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( )->vecLinearAccelerationNormalized );
     pEdgeLinearAccelerationInitial->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
     const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
     pEdgeLinearAccelerationInitial->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
@@ -114,11 +112,11 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
     //uint64_t uMeasurementsStoredDisparity = 0;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< CKeyFrame >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
+    for( std::vector< CKeyFrame* >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );
-        pVertexPoseCurrent->setEstimate( pKeyFrame->matTransformationLEFTtoWORLD );
+        pVertexPoseCurrent->setEstimate( ( *pKeyFrame )->matTransformationLEFTtoWORLD );
         pVertexPoseCurrent->setId( uNextAvailableUID );
         cGraph.addVertex( pVertexPoseCurrent );
 
@@ -150,14 +148,14 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
         g2o::EdgeSE3LinearAcceleration* pEdgeLinearAcceleration = new g2o::EdgeSE3LinearAcceleration( );
 
         pEdgeLinearAcceleration->setVertex( 0, pVertexPoseCurrent );
-        pEdgeLinearAcceleration->setMeasurement( pKeyFrame->vecLinearAccelerationNormalized );
+        pEdgeLinearAcceleration->setMeasurement( ( *pKeyFrame )->vecLinearAccelerationNormalized );
         pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
         const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
         pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
         cGraph.addEdge( pEdgeLinearAcceleration );
 
         //ds check visible landmarks and add the edges for the current pose
-        for( const CMeasurementLandmark* pMeasurementLandmark: *pKeyFrame->vecLandmarkMeasurements )
+        for( const CMeasurementLandmark* pMeasurementLandmark: ( *pKeyFrame )->vecMeasurements )
         {
             //ds find the corresponding landmark
             const g2o::HyperGraph::VertexIDMap::iterator itLandmark( cGraph.vertices( ).find( pMeasurementLandmark->uID ) );
@@ -191,7 +189,7 @@ void CBridgeG2O::saveXYZ( const std::string& p_strOutfile,
 void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
                               const CStereoCamera& p_cStereoCamera,
                               const std::vector< CLandmark* >& p_vecLandmarks,
-                              const std::vector< CKeyFrame >& p_vecKeyFrames )
+                              const std::vector< CKeyFrame* >& p_vecKeyFrames )
 {
     //ds append postfix
     const std::string strOutfile( p_strOutfile+"_UVDepth.g2o" );
@@ -254,7 +252,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
 
     //ds add the first pose separately (there's no edge to the "previous" pose)
     g2o::VertexSE3 *pVertexPoseInitial = new g2o::VertexSE3( );
-    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( ).matTransformationLEFTtoWORLD );
+    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( )->matTransformationLEFTtoWORLD );
     pVertexPoseInitial->setId( uNextAvailableUID );
     pVertexPoseInitial->setFixed( true );
     cGraph.addVertex( pVertexPoseInitial );
@@ -264,7 +262,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
     g2o::EdgeSE3LinearAcceleration* pEdgeLinearAccelerationInitial = new g2o::EdgeSE3LinearAcceleration( );
 
     pEdgeLinearAccelerationInitial->setVertex( 0, pVertexPoseInitial );
-    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( ).vecLinearAccelerationNormalized );
+    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( )->vecLinearAccelerationNormalized );
     pEdgeLinearAccelerationInitial->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
     const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
     pEdgeLinearAccelerationInitial->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
@@ -273,11 +271,11 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
     uint64_t uMeasurementsStoredDepth = 0;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< CKeyFrame >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
+    for( std::vector< CKeyFrame* >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );
-        pVertexPoseCurrent->setEstimate( pKeyFrame->matTransformationLEFTtoWORLD );
+        pVertexPoseCurrent->setEstimate( ( *pKeyFrame )->matTransformationLEFTtoWORLD );
         pVertexPoseCurrent->setId( uNextAvailableUID );
         cGraph.addVertex( pVertexPoseCurrent );
 
@@ -309,14 +307,14 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
         g2o::EdgeSE3LinearAcceleration* pEdgeLinearAcceleration = new g2o::EdgeSE3LinearAcceleration( );
 
         pEdgeLinearAcceleration->setVertex( 0, pVertexPoseCurrent );
-        pEdgeLinearAcceleration->setMeasurement( pKeyFrame->vecLinearAccelerationNormalized );
+        pEdgeLinearAcceleration->setMeasurement( ( *pKeyFrame )->vecLinearAccelerationNormalized );
         pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
         const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
         pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
         cGraph.addEdge( pEdgeLinearAcceleration );
 
         //ds check visible landmarks and add the edges for the current pose
-        for( const CMeasurementLandmark* pMeasurementLandmark: *pKeyFrame->vecLandmarkMeasurements )
+        for( const CMeasurementLandmark* pMeasurementLandmark: ( *pKeyFrame )->vecMeasurements )
         {
             //ds find the corresponding landmark
             const g2o::HyperGraph::VertexIDMap::iterator itLandmark( cGraph.vertices( ).find( pMeasurementLandmark->uID ) );
@@ -347,7 +345,7 @@ void CBridgeG2O::saveUVDepth( const std::string& p_strOutfile,
 void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
                                   const CStereoCamera& p_cStereoCamera,
                                   const std::vector< CLandmark* >& p_vecLandmarks,
-                                  const std::vector< CKeyFrame >& p_vecKeyFrames )
+                                  const std::vector< CKeyFrame* >& p_vecKeyFrames )
 {
     //ds append postfix
     const std::string strOutfile( p_strOutfile+"_UVDisparity.g2o" );
@@ -410,7 +408,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
 
     //ds add the first pose separately (there's no edge to the "previous" pose)
     g2o::VertexSE3 *pVertexPoseInitial = new g2o::VertexSE3( );
-    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( ).matTransformationLEFTtoWORLD );
+    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( )->matTransformationLEFTtoWORLD );
     pVertexPoseInitial->setId( uNextAvailableUID );
     pVertexPoseInitial->setFixed( true );
     cGraph.addVertex( pVertexPoseInitial );
@@ -420,7 +418,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
     g2o::EdgeSE3LinearAcceleration* pEdgeLinearAccelerationInitial = new g2o::EdgeSE3LinearAcceleration( );
 
     pEdgeLinearAccelerationInitial->setVertex( 0, pVertexPoseInitial );
-    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( ).vecLinearAccelerationNormalized );
+    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( )->vecLinearAccelerationNormalized );
     pEdgeLinearAccelerationInitial->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
     const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
     pEdgeLinearAccelerationInitial->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
@@ -429,11 +427,11 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
     uint64_t uMeasurementsStoredDisparity = 0;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< CKeyFrame >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
+    for( std::vector< CKeyFrame* >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );
-        pVertexPoseCurrent->setEstimate( pKeyFrame->matTransformationLEFTtoWORLD );
+        pVertexPoseCurrent->setEstimate( ( *pKeyFrame )->matTransformationLEFTtoWORLD );
         pVertexPoseCurrent->setId( uNextAvailableUID );
         cGraph.addVertex( pVertexPoseCurrent );
 
@@ -465,14 +463,14 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
         g2o::EdgeSE3LinearAcceleration* pEdgeLinearAcceleration = new g2o::EdgeSE3LinearAcceleration( );
 
         pEdgeLinearAcceleration->setVertex( 0, pVertexPoseCurrent );
-        pEdgeLinearAcceleration->setMeasurement( pKeyFrame->vecLinearAccelerationNormalized );
+        pEdgeLinearAcceleration->setMeasurement( ( *pKeyFrame )->vecLinearAccelerationNormalized );
         pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
         const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
         pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
         cGraph.addEdge( pEdgeLinearAcceleration );
 
         //ds check visible landmarks and add the edges for the current pose
-        for( const CMeasurementLandmark* pMeasurementLandmark: *pKeyFrame->vecLandmarkMeasurements )
+        for( const CMeasurementLandmark* pMeasurementLandmark: ( *pKeyFrame )->vecMeasurements )
         {
             //ds find the corresponding landmark
             const g2o::HyperGraph::VertexIDMap::iterator itLandmark( cGraph.vertices( ).find( pMeasurementLandmark->uID ) );
@@ -502,7 +500,7 @@ void CBridgeG2O::saveUVDisparity( const std::string& p_strOutfile,
 void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
                                           const CStereoCamera& p_cStereoCamera,
                                           const std::vector< CLandmark* >& p_vecLandmarks,
-                                          const std::vector< CKeyFrame >& p_vecKeyFrames )
+                                          const std::vector< CKeyFrame* >& p_vecKeyFrames )
 {
     //ds append postfix
     const std::string strOutfile( p_strOutfile+"_UVDepthOrDisparity.g2o" );
@@ -565,7 +563,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
 
     //ds add the first pose separately (there's no edge to the "previous" pose)
     g2o::VertexSE3 *pVertexPoseInitial = new g2o::VertexSE3( );
-    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( ).matTransformationLEFTtoWORLD );
+    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( )->matTransformationLEFTtoWORLD );
     pVertexPoseInitial->setId( uNextAvailableUID );
     pVertexPoseInitial->setFixed( true );
     cGraph.addVertex( pVertexPoseInitial );
@@ -575,7 +573,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
     g2o::EdgeSE3LinearAcceleration* pEdgeLinearAccelerationInitial = new g2o::EdgeSE3LinearAcceleration( );
 
     pEdgeLinearAccelerationInitial->setVertex( 0, pVertexPoseInitial );
-    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( ).vecLinearAccelerationNormalized );
+    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( )->vecLinearAccelerationNormalized );
     pEdgeLinearAccelerationInitial->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
     const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
     pEdgeLinearAccelerationInitial->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
@@ -585,11 +583,11 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
     uint64_t uMeasurementsStoredDisparity = 0;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< CKeyFrame >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
+    for( std::vector< CKeyFrame* >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );
-        pVertexPoseCurrent->setEstimate( pKeyFrame->matTransformationLEFTtoWORLD );
+        pVertexPoseCurrent->setEstimate( ( *pKeyFrame )->matTransformationLEFTtoWORLD );
         pVertexPoseCurrent->setId( uNextAvailableUID );
         cGraph.addVertex( pVertexPoseCurrent );
 
@@ -621,14 +619,14 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
         g2o::EdgeSE3LinearAcceleration* pEdgeLinearAcceleration = new g2o::EdgeSE3LinearAcceleration( );
 
         pEdgeLinearAcceleration->setVertex( 0, pVertexPoseCurrent );
-        pEdgeLinearAcceleration->setMeasurement( pKeyFrame->vecLinearAccelerationNormalized );
+        pEdgeLinearAcceleration->setMeasurement( ( *pKeyFrame )->vecLinearAccelerationNormalized );
         pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
         const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
         pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
         cGraph.addEdge( pEdgeLinearAcceleration );
 
         //ds check visible landmarks and add the edges for the current pose
-        for( const CMeasurementLandmark* pMeasurementLandmark: *pKeyFrame->vecLandmarkMeasurements )
+        for( const CMeasurementLandmark* pMeasurementLandmark: ( *pKeyFrame )->vecMeasurements )
         {
             //ds find the corresponding landmark based on its ID
             const g2o::HyperGraph::VertexIDMap::iterator itLandmark( cGraph.vertices( ).find( pMeasurementLandmark->uID ) );
@@ -683,7 +681,7 @@ void CBridgeG2O::saveUVDepthOrDisparity( const std::string& p_strOutfile,
 void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
                             const CStereoCamera& p_cStereoCamera,
                             const std::vector< CLandmark* >& p_vecLandmarks,
-                            const std::vector< CKeyFrame >& p_vecKeyFrames )
+                            const std::vector< CKeyFrame* >& p_vecKeyFrames )
 {
     //ds append postfix
     const std::string strOutfile( p_strOutfile+"_COMBO.g2o" );
@@ -744,14 +742,14 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
         }
     }
 
-    //std::printf( "<CBridgeG2O>(saveCOMBO) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
+    std::printf( "<CBridgeG2O>(saveCOMBO) dropped landmarks: %lu/%lu (%1.2f)\n", uDroppedLandmarks, p_vecLandmarks.size( ), static_cast< double >( uDroppedLandmarks )/p_vecLandmarks.size( ) );
 
     //ds g2o element identifier
     uint64_t uNextAvailableUID( p_vecLandmarks.back( )->uID+1 );
 
     //ds add the first pose separately (there's no edge to the "previous" pose)
     g2o::VertexSE3 *pVertexPoseInitial = new g2o::VertexSE3( );
-    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( ).matTransformationLEFTtoWORLD );
+    pVertexPoseInitial->setEstimate( p_vecKeyFrames.front( )->matTransformationLEFTtoWORLD );
     pVertexPoseInitial->setId( uNextAvailableUID );
     pVertexPoseInitial->setFixed( true );
     cGraph.addVertex( pVertexPoseInitial );
@@ -761,7 +759,7 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
     g2o::EdgeSE3LinearAcceleration* pEdgeLinearAccelerationInitial = new g2o::EdgeSE3LinearAcceleration( );
 
     pEdgeLinearAccelerationInitial->setVertex( 0, pVertexPoseInitial );
-    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( ).vecLinearAccelerationNormalized );
+    pEdgeLinearAccelerationInitial->setMeasurement( p_vecKeyFrames.front( )->vecLinearAccelerationNormalized );
     pEdgeLinearAccelerationInitial->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
     const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
     pEdgeLinearAccelerationInitial->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
@@ -772,11 +770,11 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
     uint64_t uMeasurementsStoredUVDisparity       = 0;
 
     //ds loop over the camera vertices vector (skipping the first one that we added before)
-    for( std::vector< CKeyFrame >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
+    for( std::vector< CKeyFrame* >::const_iterator pKeyFrame = p_vecKeyFrames.begin( )+1; pKeyFrame != p_vecKeyFrames.end( ); ++pKeyFrame )
     {
         //ds add current camera pose
         g2o::VertexSE3* pVertexPoseCurrent = new g2o::VertexSE3( );
-        pVertexPoseCurrent->setEstimate( pKeyFrame->matTransformationLEFTtoWORLD );
+        pVertexPoseCurrent->setEstimate( ( *pKeyFrame )->matTransformationLEFTtoWORLD );
         pVertexPoseCurrent->setId( uNextAvailableUID );
         cGraph.addVertex( pVertexPoseCurrent );
 
@@ -808,14 +806,14 @@ void CBridgeG2O::saveCOMBO( const std::string& p_strOutfile,
         g2o::EdgeSE3LinearAcceleration* pEdgeLinearAcceleration = new g2o::EdgeSE3LinearAcceleration( );
 
         pEdgeLinearAcceleration->setVertex( 0, pVertexPoseCurrent );
-        pEdgeLinearAcceleration->setMeasurement( pKeyFrame->vecLinearAccelerationNormalized );
+        pEdgeLinearAcceleration->setMeasurement( ( *pKeyFrame )->vecLinearAccelerationNormalized );
         pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
         const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
         pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
         cGraph.addEdge( pEdgeLinearAcceleration );
 
         //ds check visible landmarks and add the edges for the current pose
-        for( const CMeasurementLandmark* pMeasurementLandmark: *pKeyFrame->vecLandmarkMeasurements )
+        for( const CMeasurementLandmark* pMeasurementLandmark: ( *pKeyFrame )->vecMeasurements )
         {
             //ds find the corresponding landmark
             const g2o::HyperGraph::VertexIDMap::iterator itLandmark( cGraph.vertices( ).find( pMeasurementLandmark->uID ) );

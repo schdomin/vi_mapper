@@ -10,7 +10,7 @@ class CCloudMatcher
 private:
 
     static constexpr double m_dWeightEuclidian        = 100.0;
-    static constexpr double m_dMatchingDistanceCutoff = 200.0;
+    static constexpr double m_dMatchingDistanceCutoff = 100.0;
 
 public:
 

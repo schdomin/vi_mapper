@@ -51,6 +51,7 @@ public:
 private:
 
     friend class CMatcherEpipolar;
+    friend class CFundamentalMatcher;
 };
 
 #endif //#define CTRIANGULATOR_H

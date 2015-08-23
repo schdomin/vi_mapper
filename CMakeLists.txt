@@ -19,6 +19,7 @@ find_package(OpenCV REQUIRED )
 find_package(G2O REQUIRED)
 find_package(Qt4 REQUIRED)
 find_package(QGLViewer REQUIRED)
+find_package(Cholmod REQUIRED)
 
 #ds kdtree NN search
 find_package(PkgConfig REQUIRED)
@@ -46,7 +47,7 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${G2O_INCLUDE_DIR})
 #include_directories(${CSPARSE_INCLUDE_DIR})
-#include_directories(${CHOLMOD_INCLUDE_DIR})
+include_directories(${CHOLMOD_INCLUDE_DIR})
 include_directories(${QT_INCLUDES})
 include_directories(${QGLVIEWER_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -69,7 +70,9 @@ src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
 src/core/CMatcherEpipolar.cpp
+src/core/CFundamentalMatcher.cpp
 src/optimization/CBridgeG2O.cpp
+src/optimization/Cg2oOptimizer.cpp
 src/gui/CViewerScene.cpp)
 
 set(SOURCEFILES_MOCKED
@@ -81,18 +84,17 @@ src/core/CMockedMatcherEpipolar.cpp
 src/optimization/CBridgeG2O.cpp)
 
 set(LIBRARIES_GENERAL
-${catkin_LIBRARIES} 
-${OpenCV_LIBRARIES}     
-${G2O_OPENGL_HELPER_LIBRARY}
-${G2O_SOLVER_CSPARSE_EXTENSION}
-${G2O_TYPES_SLAM3D} 
-${G2O_CORE_LIBRARY} 
+${catkin_LIBRARIES}
+${OpenCV_LIBRARIES}
+${G2O_CORE_LIBRARY}
+${G2O_TYPES_SLAM3D}
+${G2O_SOLVER_CHOLMOD}
+${CHOLMOD_LIBRARY}
 ${G2O_STUFF_LIBRARY}
-${G2O_TYPES_SBA}
 ${QGLVIEWER_LIBRARY}
-${QT_QTXML_LIBRARY} 
-${QT_QTOPENGL_LIBRARY} 
-${QT_QTGUI_LIBRARY} 
+${QT_QTXML_LIBRARY}
+${QT_QTOPENGL_LIBRARY}
+${QT_QTGUI_LIBRARY}
 ${QT_QTCORE_LIBRARY}
 ${FLANN_LIBRARIES})
 
@@ -106,7 +108,7 @@ ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_TYPES_SBA})
 
-add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
+#add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
 add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
@@ -122,7 +124,7 @@ add_executable(stereo_fps src/runnable/stereo_fps.cpp src/core/CTrackerStereoMot
 #add_executable(republisher_node src/runnable/republisher_node.cpp ${SOURCEFILES})
 
 #ds link the binaries against catkin
-target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
+#target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
 target_link_libraries(test_cloud_matching ${catkin_LIBRARIES})
 #target_link_libraries(stereo_detector_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_blocking_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})

@@ -111,7 +111,7 @@ const std::shared_ptr< const std::vector< CLandmark* > > CMatcherEpipolar::getVi
     return vecVisibleLandmarks;
 }
 
-const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p_uFrame,
+/*const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p_uFrame,
                                                             cv::Mat& p_matDisplayLEFT,
                                                             const cv::Mat& p_matImageLEFT,
                                                             const cv::Mat& p_matImageRIGHT,
@@ -289,7 +289,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedLEFT( const uint64_t p
         std::printf( "<CMatcherEpipolar>(getPoseOptimizedLEFT) unable to optimize pose (%lu landmarks)\n", vecLandmarksWORLD.size( ) );
         return p_matTransformationEstimateWORLDtoLEFT;
     }
-}
+}*/
 
 const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t p_uFrame,
                                                                   cv::Mat& p_matDisplayLEFT,

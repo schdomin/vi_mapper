@@ -166,12 +166,12 @@ public:
     //ds returns a handle to all currently visible landmarks
     const std::shared_ptr< const std::vector< CLandmark* > > getVisibleOptimizedLandmarks( ) const;
 
-    const Eigen::Isometry3d getPoseOptimizedLEFT( const uint64_t p_uFrame,
+    /*const Eigen::Isometry3d getPoseOptimizedLEFT( const uint64_t p_uFrame,
                                               cv::Mat& p_matDisplayLEFT,
                                               const cv::Mat& p_matImageLEFT,
                                               const cv::Mat& p_matImageRIGHT,
                                               const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
-                                              const Eigen::Vector3d& p_vecCameraOrientation );
+                                              const Eigen::Vector3d& p_vecCameraOrientation );*/
 
     const Eigen::Isometry3d getPoseOptimizedSTEREO( const uint64_t p_uFrame,
                                                     cv::Mat& p_matDisplayLEFT,
@@ -237,9 +237,7 @@ public:
                                                                                                         const double& p_dMotionScaling );
 
     const std::vector< CDetectionPoint >::size_type getNumberOfDetectionPointsActive( ) const{ return m_vecDetectionPointsActive.size( ); }
-
     const UIDDetectionPoint getNumberOfDetectionPointsTotal( ) const { return m_uAvailableDetectionPointID; }
-
     const UIDLandmark getNumberOfInvalidLandmarksTotal( ) const { return m_uNumberOfInvalidLandmarksTotal; }
     const UIDLandmark getNumberOfDetectionsPoseOptimization( ) const { return m_uNumberOfDetectionsPoseOptimization; }
     const UIDLandmark getNumberOfDetectionsEpipolar( ) const { return m_uNumberOfDetectionsEpipolar; }

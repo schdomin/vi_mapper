@@ -45,7 +45,7 @@ private:
 
     //ds IMU filtering (calibrated 2015-07-25)
     static constexpr double m_dImprecisionAngularVelocity     = 0.02;
-    static constexpr double m_dImprecisionLinearAcceleration  = 0.5;
+    static constexpr double m_dImprecisionLinearAcceleration  = 0.05;
     static constexpr double m_vecBiasLinearAccelerationXYZ[3] = { 0.0, 0.0, -9.80665 }; //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
 
 public:

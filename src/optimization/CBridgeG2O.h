@@ -3,6 +3,7 @@
 
 #include "vision/CStereoCamera.h"
 #include "types/CLandmark.h"
+#include "types/CKeyFrame.h"
 
 #include "g2o/types/slam3d/types_slam3d.h"
 
@@ -29,27 +30,27 @@ public:
     static void saveXYZ( const std::string& p_strOutfile,
                          const CStereoCamera& p_cStereoCamera,
                          const std::vector< CLandmark* >& p_vecLandmarks,
-                         const std::vector< CKeyFrame >& p_vecKeyFrames );
+                         const std::vector< CKeyFrame* >& p_vecKeyFrames );
 
     static void saveUVDepth( const std::string& p_strOutfile,
                              const CStereoCamera& p_cStereoCamera,
                              const std::vector< CLandmark* >& p_vecLandmarks,
-                             const std::vector< CKeyFrame >& p_vecKeyFrames );
+                             const std::vector< CKeyFrame* >& p_vecKeyFrames );
 
     static void saveUVDisparity( const std::string& p_strOutfile,
                                  const CStereoCamera& p_cStereoCamera,
                                  const std::vector< CLandmark* >& p_vecLandmarks,
-                                 const std::vector< CKeyFrame >& p_vecKeyFrames );
+                                 const std::vector< CKeyFrame* >& p_vecKeyFrames );
 
     static void saveUVDepthOrDisparity( const std::string& p_strOutfile,
                                         const CStereoCamera& p_cStereoCamera,
                                         const std::vector< CLandmark* >& p_vecLandmarks,
-                                        const std::vector< CKeyFrame >& p_vecKeyFrames );
+                                        const std::vector< CKeyFrame* >& p_vecKeyFrames );
 
     static void saveCOMBO( const std::string& p_strOutfile,
                            const CStereoCamera& p_cStereoCamera,
                            const std::vector< CLandmark* >& p_vecLandmarks,
-                           const std::vector< CKeyFrame >& p_vecKeyFrames );
+                           const std::vector< CKeyFrame* >& p_vecKeyFrames );
 
     static const bool isOptimized( const CLandmark* p_pLandmark );
     static const bool isKeyFramed( const CLandmark* p_pLandmark );

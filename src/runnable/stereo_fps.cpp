@@ -101,7 +101,7 @@ int main( int argc, char **argv )
     CTrackerStereoMotionModel cTracker( eMode, uWaitKeyTimeout );
 
     //ds allocate a libqglviewer
-    CViewerScene cViewer( cTracker.getLandmarksHandle( ) );
+    CViewerScene cViewer( cTracker.getLandmarksHandle( ), cTracker.getKeyFramesHandle( ) );
     cViewer.setWindowTitle( "CViewerScene: WORLD" );
     cViewer.showMaximized( );
 
@@ -123,6 +123,8 @@ int main( int argc, char **argv )
         {
             //ds check for frames to update the viewer
             if( cTracker.isFrameAvailable( ) ){ cViewer.addFrame( cTracker.getFrameLEFTtoWORLD( ) ); }
+            if( cTracker.isFrameAvailableSlidingWindow( ) ){ cViewer.addFrame( cTracker.getFrameLEFTtoWORLDSlidingWindow( ) ); }
+            cViewer.manualDraw( );
         }
 
         //ds retrieve a message

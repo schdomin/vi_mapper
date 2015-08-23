@@ -5,7 +5,8 @@
 
 #include "optimization/CBridgeG2O.h"
 
-CViewerScene::CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks ): m_vecLandmarks( p_vecLandmarks )
+CViewerScene::CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks,
+                            const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames ): m_vecLandmarks( p_vecLandmarks ), m_vecKeyFrames( p_vecKeyFrames )
 {
     //ds nothing to do
 }
@@ -25,37 +26,101 @@ void CViewerScene::draw()
     glLineWidth( 1.0 );
     drawAxis( 0.5 );
 
-    //ds previous frame (always at origin)
-    qglviewer::Frame cFramePrevious;
+    //ds first keyframe to draw
+    CKeyFrame* pKeyFramePrevious( 0 );
 
-    //ds draw all keyframes
-    for( const std::pair< bool, qglviewer::Frame >& prFrame: m_vecFrames )
+    //ds buffer position
+    CPoint3DWORLD vecPositionXYZPrevious( 0.0, 0.0, 0.0 );
+
+    //ds draw a green dot to mark the start of the optimization
+    glLineWidth( 2.5 );
+    glPushMatrix( );
+    glColor3f( 0.0, 1.0, 0.0 );
+    glTranslatef( vecPositionXYZPrevious.x( ), vecPositionXYZPrevious.y( ), vecPositionXYZPrevious.z( ) );
+    glBegin( GL_POINTS );
+    glVertex3f( 0, 0, 0 );
+    glEnd( );
+    glPopMatrix( );
+
+    //ds current ID
+    UIDKeyFrame uCurrent = 0;
+
+    //ds while the key frames are optimized
+    while( m_vecKeyFrames->size( ) > uCurrent && m_vecKeyFrames->at( uCurrent )->bIsOptimized )
     {
-        //ds positions
-        const qglviewer::Vec vecPositionPrevious( cFramePrevious.position( ) );
-        const qglviewer::Vec vecPositionNow( prFrame.second.position( ) );
+        CKeyFrame* pKeyFrameCurrent( m_vecKeyFrames->at( uCurrent ) );
+
+        //ds buffer positions
+        const CPoint3DWORLD vecPositionXYZCurrent( pKeyFrameCurrent->matTransformationLEFTtoWORLD.translation( ) );
 
         //ds draw the line between the previous and current keyframe
         glColor3f( 0.25, 0.25, 1.0 );
-        glLineWidth( 2.5 );
-        glPushAttrib( GL_ENABLE_BIT );
-        glDisable( GL_LIGHTING );
+        glBegin( GL_LINES );
+        glVertex3f( vecPositionXYZPrevious.x( ), vecPositionXYZPrevious.y( ), vecPositionXYZPrevious.z( ) );
+        glVertex3f( vecPositionXYZCurrent.x( ), vecPositionXYZCurrent.y( ), vecPositionXYZCurrent.z( ) );
+        glEnd( );
+
+        //ds draw a dot to mark the keyframe
+        glPushMatrix( );
+        glColor3f( 0.0, 1.0, 1.0 );
+        glTranslatef( vecPositionXYZCurrent.x( ), vecPositionXYZCurrent.y( ), vecPositionXYZCurrent.z( ) );
+        glBegin( GL_POINTS );
+        glVertex3f( 0, 0, 0 );
+        glEnd( );
+        glPopMatrix( );
+
+        pKeyFramePrevious      = pKeyFrameCurrent;
+        vecPositionXYZPrevious = pKeyFramePrevious->matTransformationLEFTtoWORLD.translation( );
+        ++uCurrent;
+    }
+
+    //ds always draw loop closure lines
+    glLineWidth( 1.75 );
+    glColor3f( 0.0, 1.0, 1.0 );
+    glBegin( GL_LINES );
+    for( CKeyFrame* pKeyFrame: *m_vecKeyFrames )
+    {
+        //ds draw loop closing line if set
+        if( 0 != pKeyFrame->pLoopClosure )
+        {
+            const CPoint3DWORLD vecPositionXYZCurrent( pKeyFrame->matTransformationLEFTtoWORLD.translation( ) );
+            const CPoint3DWORLD vecPositionLoopClosure( pKeyFrame->pLoopClosure->matTransformationLEFTtoWORLD.translation( ) );
+            glVertex3f( vecPositionXYZCurrent.x( ), vecPositionXYZCurrent.y( ), vecPositionXYZCurrent.z( ) );
+            glVertex3f( vecPositionLoopClosure.x( ), vecPositionLoopClosure.y( ), vecPositionLoopClosure.z( ) );
+        }
+    }
+    glEnd( ); //GL_LINES
+
+    //ds frame drawing start
+    std::vector< std::pair< bool, qglviewer::Frame > >::size_type uStart = 0;
+
+    //ds if we registered already some keyframes we have to move the head
+    if( 0 != pKeyFramePrevious )
+    {
+        uStart = pKeyFramePrevious->uFrame;
+    }
+
+    //ds dodging if case for drawing the head coordinate frame
+    qglviewer::Frame cFrameCurrent;
+
+    glLineWidth( 2.5 );
+
+    //ds draw all frames
+    for( std::vector< std::pair< bool, qglviewer::Frame > >::size_type u = uStart+1; u < m_vecFrames.size( ); ++u )
+    {
+        //ds positions
+        const qglviewer::Vec vecPositionPrevious( m_vecFrames[u-1].second.position( ) );
+        const qglviewer::Vec vecPositionNow( m_vecFrames[u].second.position( ) );
+
+        //ds draw the line between the previous and current keyframe
+        glColor3f( 0.25, 0.25, 1.0 );
         glBegin( GL_LINES );
         glVertex3f( vecPositionPrevious.x, vecPositionPrevious.y, vecPositionPrevious.z );
         glVertex3f( vecPositionNow.x, vecPositionNow.y, vecPositionNow.z );
         glEnd( );
-        glPopAttrib( );
 
-        /*ds orientation
-        glColor3f( 1.0, 1.0, 1.0 );
-        glLineWidth( 1.0 );
-        glPushMatrix( );
-        glMultMatrixd( cFrame.matrix( ) );
-        drawAxis( 0.1 );
-        glPopMatrix( );*/
-
-        //ds draw a point for keyframes
-        if( prFrame.first )
+        //ds mark key frames
+        if( m_vecFrames[u].first )
         {
             glPushMatrix( );
             glColor3f( 0.0, 1.0, 1.0 );
@@ -66,15 +131,26 @@ void CViewerScene::draw()
             glPopMatrix( );
         }
 
-        //ds update previous
-        cFramePrevious = prFrame.second;
+        cFrameCurrent = m_vecFrames[u].second;
+    }
+
+    //ds draw sliding window frame boxes
+    glColor3f( 0.0, 1.0, 0.5 );
+    for( const CPoint3DWORLD vecKeyFrame: m_vecFramesSlidingWindow )
+    {
+        glPushMatrix( );
+        glTranslatef( vecKeyFrame.x( ), vecKeyFrame.y( ), vecKeyFrame.z( ) );
+        glBegin( GL_POINTS );
+        glVertex3f( 0, 0, 0 );
+        glEnd( );
+        glPopMatrix( );
     }
 
     //ds orientation for head only
     glColor3f( 1.0, 1.0, 1.0 );
     glLineWidth( 1.5 );
     glPushMatrix( );
-    glMultMatrixd( cFramePrevious.matrix( ) );
+    glMultMatrixd( cFrameCurrent.matrix( ) );
     drawAxis( 0.25 );
     glPopMatrix( );
 
@@ -218,6 +294,7 @@ void CViewerScene::init( )
 {
     //ds initialize
     m_vecFrames.clear( );
+    m_vecFramesSlidingWindow.clear( );
     //m_mapLandmarks.clear( );
     //restoreStateFromFile( );
     setSceneRadius( 25.0 );
@@ -273,8 +350,16 @@ void CViewerScene::addFrame( const std::pair< bool, Eigen::Isometry3d > p_prFram
 
     //ds add it to the vector
     m_vecFrames.push_back( std::pair< bool, qglviewer::Frame >( p_prFrame.first, cFrameNew ) );
+}
 
-    //ds force redraw
+void CViewerScene::addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD )
+{
+    //ds add it to the vector
+    m_vecFramesSlidingWindow.push_back( p_matTransformationLEFTtoWORLD.translation( ) );
+}
+
+void CViewerScene::manualDraw( )
+{
     draw( );
     updateGL( );
 }
