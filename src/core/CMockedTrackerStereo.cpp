@@ -186,10 +186,10 @@ void CMockedTrackerStereo::_trackLandmarks( const cv::Mat& p_matImageLEFT,
             const std::string strFilePrefix( chBuffer );
 
             //ds feed sub vector to g2o
-            CBridgeG2O::saveCOMBO( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
-            CBridgeG2O::saveUVDepthOrDisparity( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
-            CBridgeG2O::saveUVDepth( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
-            CBridgeG2O::saveXYZ( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
+            //CBridgeG2O::saveCOMBO( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
+            //CBridgeG2O::saveUVDepthOrDisparity( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
+            //CBridgeG2O::saveUVDepth( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
+            //CBridgeG2O::saveXYZ( strFilePrefix, *m_pCameraSTEREO, *m_vecLandmarks, vecKeyFrameChunkForOptimization );
 
             //ds update last
             m_uIDProcessedKeyFrameLAST = uIDKeyFrameCurrent;

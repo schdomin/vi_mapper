@@ -25,7 +25,7 @@ find_package(Cholmod REQUIRED)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(FLANN flann)
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(FLANN  DEFAULT_MSG
+find_package_handle_standard_args(FLANN DEFAULT_MSG
                                   FLANN_LIBRARY 
                                   FLANN_INCLUDE_DIR)
 
@@ -73,7 +73,8 @@ src/core/CMatcherEpipolar.cpp
 src/core/CFundamentalMatcher.cpp
 src/optimization/CBridgeG2O.cpp
 src/optimization/Cg2oOptimizer.cpp
-src/gui/CViewerScene.cpp)
+src/gui/CViewerScene.cpp
+src/types/C67DTree.cpp)
 
 set(SOURCEFILES_MOCKED
 src/configuration/CConfigurationCamera.cpp
@@ -108,7 +109,7 @@ ${G2O_CORE_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${G2O_TYPES_SBA})
 
-#add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
+add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
 add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
@@ -121,10 +122,10 @@ add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp)
 #add_executable(stereo_single src/runnable/stereo_single.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 #add_executable(stereo_parallel src/runnable/stereo_parallel.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 add_executable(stereo_fps src/runnable/stereo_fps.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
-#add_executable(republisher_node src/runnable/republisher_node.cpp ${SOURCEFILES})
+add_executable(republisher_node src/runnable/republisher_node.cpp)
 
 #ds link the binaries against catkin
-#target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
+target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
 target_link_libraries(test_cloud_matching ${catkin_LIBRARIES})
 #target_link_libraries(stereo_detector_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_blocking_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
@@ -134,6 +135,6 @@ target_link_libraries(test_cloud_matching ${catkin_LIBRARIES})
 #target_link_libraries(stereo_single ${LIBRARIES_GENERAL})
 #target_link_libraries(stereo_parallel ${LIBRARIES_GENERAL})
 target_link_libraries(stereo_fps ${LIBRARIES_GENERAL})
-#target_link_libraries(republisher_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(republisher_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 message("--------------------------------------------------------------------")

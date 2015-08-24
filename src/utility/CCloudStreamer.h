@@ -5,6 +5,7 @@
 
 #include "types/CLandmark.h"
 #include "types/TypesCloud.h"
+#include "types/C67DTree.h"
 #include "exceptions/CExceptionInvalidFile.h"
 
 class CCloudstreamer
@@ -15,15 +16,58 @@ public:
     static CDescriptorPointCloud* getCloud( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
     {
         //ds points in the cloud
-        std::vector< CDescriptorPoint3DWORLD > vecPoints;
+        std::vector< CDescriptorVectorPoint3DWORLD > vecPoints;
 
         //ds for all these points
         for( const CLandmark* pLandmark: *p_vecVisibleLandmarks )
         {
-            vecPoints.push_back( CDescriptorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->vecDescriptorsLEFT ) );
+            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->vecDescriptorsLEFT ) );
         }
 
         return new CDescriptorPointCloud( p_uIDKeyFrame, p_matPose, vecPoints );
+    }
+
+    static C67DTree* getTree( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
+    {
+        //ds count points
+        UIDDescriptorPoint3D uPoints = 0;
+
+        //ds count total atomic points
+        for( const CLandmark* pLandmark: *p_vecVisibleLandmarks )
+        {
+            uPoints += pLandmark->vecDescriptorsLEFT.size( );
+        }
+
+        //ds allocate final structure (will be freed internally)
+        float* arrData = new float[uPoints*67];
+
+        //ds current point
+        UIDDescriptorPoint3D uCurrentPoint = 0;
+
+        //ds set points
+        for( const CLandmark* pLandmark: *p_vecVisibleLandmarks )
+        {
+            //ds for all descriptors
+            for( const CDescriptor& cDescriptor: pLandmark->vecDescriptorsLEFT )
+            {
+                const UIDDescriptorPoint3D uCurrentPosition = uCurrentPoint*67;
+
+                arrData[uCurrentPosition] = pLandmark->vecPointXYZOptimized.x( );
+                arrData[uCurrentPosition+1] = pLandmark->vecPointXYZOptimized.y( );
+                arrData[uCurrentPosition+2] = pLandmark->vecPointXYZOptimized.z( );
+
+                //ds add the descriptor
+                for( uint8_t u = 0; u < 64; ++u )
+                {
+                    arrData[uCurrentPosition+3+u] = cDescriptor.at< uchar >( u );
+                }
+
+                //ds added a point
+                ++uCurrentPoint;
+            }
+        }
+
+        return new C67DTree( p_uIDKeyFrame, p_matPose, uPoints, arrData );
     }
 
     static void saveLandmarksToCloudFile( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
@@ -106,7 +150,7 @@ public:
         CCloudstreamer::readDatum( ifMessages, uNumberOfPoints );
 
         //ds points in the cloud (preallocation ignored since const elements)
-        std::vector< CDescriptorPoint3DWORLD > vecPoints;
+        std::vector< CDescriptorVectorPoint3DWORLD > vecPoints;
 
         //ds for all these points
         for( std::vector< CLandmark* >::size_type u = 0; u < uNumberOfPoints; ++u )
@@ -143,7 +187,7 @@ public:
             }
 
             //ds set vector
-            vecPoints.push_back( CDescriptorPoint3DWORLD( u, vecPointXYZWORLD, vecDescriptors ) );
+            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( u, vecPointXYZWORLD, vecDescriptors ) );
         }
 
         return CDescriptorPointCloud( p_uID, matPose, vecPoints );

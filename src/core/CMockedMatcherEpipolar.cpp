@@ -222,7 +222,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CMockedMatch
         const double dOptimizationCovariance = dDeltaOptimization/p_dMotionScaling;
 
         //ds log resulting trajectory and delta to initial
-        CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLDCorrected.translation( ), dDeltaOptimization, p_dMotionScaling, dOptimizationCovariance );
+        CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLDCorrected.translation( ), dDeltaOptimization, dOptimizationCovariance );
 
         const cv::Point2d ptPositionXY( matTransformationLEFTtoWORLDCorrected.translation( ).x( ), matTransformationLEFTtoWORLDCorrected.translation( ).y( ) );
         cv::circle( p_matDisplayTrajectory, cv::Point2d( 180+ptPositionXY.x*10, 360-ptPositionXY.y*10 ), 2, CColorCodeBGR( 0, 0, 255 ), -1 );

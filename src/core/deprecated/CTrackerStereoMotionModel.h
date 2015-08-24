@@ -75,12 +75,21 @@ private:
     //ds g2o data
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
     UIDKeyFrame m_uIDProcessedKeyFrameLAST              = 0;
-    UIDLandmark m_uIDProcessedLandmarkLAST              = 0;
+    UIDFrame m_uIDFrameOfKeyFrameLAST                   = 0;
     const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 9;
     Cg2oOptimizer m_cOptimizer;
 
+    //ds sliding window, minimum size of 10 (TODO simplify/secure configuration)
+    uint8_t m_uFrameToWindowRatio                 = 10; //ds for ratio=1 every frame is added to the window (PERFORMANCE)
+    UIDFrame m_uMinimumFrameDeltaForKeyFrame      = 10;
+    const UIDKeyFrame m_uBufferSizeSlidingWindow  = 8192;
+    std::pair< CPoint3DWORLD, CKeyFrame* >* m_arrFramesSlidingWindow;
+    uint8_t m_uIndexSlidingWindow                 = 9;
+    const double m_dDeltaSlidingWindowRelative    = 0.05;
+    const double m_dDeltaSlidingWindowAbsolute    = 0.1;
+
     //ds loop closing
-    const UIDKeyFrame m_uLoopClosingKeyFrameDistance       = 10;
+    const UIDKeyFrame m_uLoopClosingKeyFrameDistance       = 5;
     const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure = 25;
     std::shared_ptr< std::vector< const C67DTree* > > m_vecTrees;
 
@@ -91,6 +100,7 @@ private:
     //ds info display
     bool m_bIsFrameAvailable       = false;
     std::pair< bool, Eigen::Isometry3d > m_prFrameLEFTtoWORLD;
+    bool m_bIsFrameAvailableSlidingWindow = false;
     uint32_t m_uFramesCurrentCycle        = 0;
     double m_dPreviousFrameRate           = 0.0;
     double m_dPreviousFrameTime           = 0.0;
@@ -107,7 +117,9 @@ public:
     const std::shared_ptr< std::vector< CLandmark* > > getLandmarksHandle( ) const { return m_vecLandmarks; }
     const std::shared_ptr< std::vector< CKeyFrame* > > getKeyFramesHandle( ) const { return m_vecKeyFrames; }
     const bool isFrameAvailable( ) const { return m_bIsFrameAvailable; }
+    const bool isFrameAvailableSlidingWindow( ) const { return m_bIsFrameAvailableSlidingWindow; }
     const std::pair< bool, Eigen::Isometry3d > getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_prFrameLEFTtoWORLD; }
+    const UIDFrame getFrameLEFTtoWORLDSlidingWindow( ){ m_bIsFrameAvailableSlidingWindow = false; return m_uIDFrameOfKeyFrameLAST; }
 
     //ds postprocessing
     void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
@@ -139,8 +151,7 @@ private:
                           const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
                           const Eigen::Isometry3d& p_matTransformationEstimateParallelWORLDtoLEFT,
                           const CLinearAccelerationIMU& p_vecLinearAcceleration,
-                          const Eigen::Vector3d& p_vecRotationTotal,
-                          const Eigen::Vector3d& p_vecTranslationTotal );
+                          const Eigen::Vector3d& p_vecRotationTotal );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const UIDFrame& p_uFrame,
                                                       cv::Mat& p_matDisplay,
@@ -152,7 +163,6 @@ private:
 
     //ds loop closing
     const CKeyFrame* _getLoopClosureKeyFrame( const int64_t& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, cv::Mat& p_matDisplayLEFT );
-    const CKeyFrame* _getLoopClosureKeyFrameFCFS( const int64_t& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, cv::Mat& p_matDisplayLEFT );
 
     //ds sliding window keyframe detection
     const bool _containsSlidingWindowKeyFrame( ) const;

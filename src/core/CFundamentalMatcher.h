@@ -116,10 +116,11 @@ private:
 
     //ds posit solving
     const uint8_t m_uSearchBlockSizePoseOptimization   = 15;
-    const uint8_t m_uMinimumPointsForPoseOptimization  = 50;
+    const uint8_t m_uMinimumPointsForPoseOptimization  = 30;
     const uint8_t m_uMinimumInliersForPoseOptimization = 10;
     const uint8_t m_uCapIterationsPoseOptimization     = 10;
     const double m_dConvergenceDeltaPoseOptimization   = 1e-5;
+    const double m_dMaximumRISK                        = 0.05;
 
     //ds posit solving
     gtools::CPositSolverStereo m_cSolverPoseSTEREO;
@@ -145,10 +146,11 @@ public:
                                                     const cv::Mat& p_matImageLEFT,
                                                     const cv::Mat& p_matImageRIGHT,
                                                     const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
-                                                    const Eigen::Vector3d& p_vecCameraOrientation,
+                                                    const Eigen::Vector3d& p_vecRotationTotal,
+                                                    const Eigen::Vector3d& p_vecTranslationTotal,
                                                     const double& p_dMotionScaling );
 
-    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getVisibleLandmarksDummy( cv::Mat& p_matDisplayLEFT,
+    const std::shared_ptr< std::vector< const CMeasurementLandmark* > > getMeasurementsDummy( cv::Mat& p_matDisplayLEFT,
                                                                                                    cv::Mat& p_matDisplayRIGHT,
                                                                                                    const UIDFrame p_uFrame,
                                                                                                    const cv::Mat& p_matImageLEFT,
@@ -174,7 +176,7 @@ public:
     //ds draws currently visible landmarks to the screen
     void drawVisibleLandmarks( cv::Mat& p_matDisplayLEFT, cv::Mat& p_matDisplayRIGHT, const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT ) const;
 
-    //ds returns copy of the vector holding the currently active landmarks
+    //ds returns copy of the vector holding the currently visible landmarks
     const std::vector< CLandmark* > getVisibleLandmarks( ) const { return m_vecVisibleLandmarks; }
 
     //ds informative

@@ -134,18 +134,6 @@ void CViewerScene::draw()
         cFrameCurrent = m_vecFrames[u].second;
     }
 
-    //ds draw sliding window frame boxes
-    glColor3f( 0.0, 1.0, 0.5 );
-    for( const CPoint3DWORLD vecKeyFrame: m_vecFramesSlidingWindow )
-    {
-        glPushMatrix( );
-        glTranslatef( vecKeyFrame.x( ), vecKeyFrame.y( ), vecKeyFrame.z( ) );
-        glBegin( GL_POINTS );
-        glVertex3f( 0, 0, 0 );
-        glEnd( );
-        glPopMatrix( );
-    }
-
     //ds orientation for head only
     glColor3f( 1.0, 1.0, 1.0 );
     glLineWidth( 1.5 );
@@ -294,7 +282,6 @@ void CViewerScene::init( )
 {
     //ds initialize
     m_vecFrames.clear( );
-    m_vecFramesSlidingWindow.clear( );
     //m_mapLandmarks.clear( );
     //restoreStateFromFile( );
     setSceneRadius( 25.0 );
@@ -352,10 +339,10 @@ void CViewerScene::addFrame( const std::pair< bool, Eigen::Isometry3d > p_prFram
     m_vecFrames.push_back( std::pair< bool, qglviewer::Frame >( p_prFrame.first, cFrameNew ) );
 }
 
-void CViewerScene::addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD )
+void CViewerScene::updateFrame( const UIDFrame& p_uID, const bool& p_bIsKeyFrame )
 {
-    //ds add it to the vector
-    m_vecFramesSlidingWindow.push_back( p_matTransformationLEFTtoWORLD.translation( ) );
+    //ds modify the vector
+    m_vecFrames[p_uID].first = p_bIsKeyFrame;
 }
 
 void CViewerScene::manualDraw( )

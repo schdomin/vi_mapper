@@ -592,7 +592,7 @@ const Eigen::Isometry3d CMatcherEpipolar::getPoseOptimizedSTEREO( const uint64_t
         const double dOptimizationCovariance = dDeltaOptimization/p_dMotionScaling;
 
         //ds log resulting trajectory and delta to initial
-        CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dDeltaOptimization, p_dMotionScaling, dOptimizationCovariance );
+        CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dDeltaOptimization, dOptimizationCovariance );
 
         //ds check if acceptable
         if( 0.5 > dOptimizationCovariance )

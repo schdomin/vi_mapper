@@ -7,9 +7,23 @@ struct CDescriptorPoint3DWORLD
 {
     const UIDLandmark uID;
     const CPoint3DWORLD vecPointXYZWORLD;
-    const std::vector< CDescriptor > vecDescriptors;
+    const CDescriptor matDescriptor;
 
     CDescriptorPoint3DWORLD( const UIDLandmark& p_uID,
+                             const CPoint3DWORLD& p_vecPointXYZWORLD,
+                             const CDescriptor& p_matDescriptor ): uID( p_uID ), vecPointXYZWORLD( p_vecPointXYZWORLD ), matDescriptor( p_matDescriptor )
+    {
+        //ds nothing to do
+    }
+};
+
+struct CDescriptorVectorPoint3DWORLD
+{
+    const UIDLandmark uID;
+    const CPoint3DWORLD vecPointXYZWORLD;
+    const std::vector< CDescriptor > vecDescriptors;
+
+    CDescriptorVectorPoint3DWORLD( const UIDLandmark& p_uID,
                              const CPoint3DWORLD& p_vecPointXYZWORLD,
                              const std::vector< CDescriptor >& p_vecDescriptors ): uID( p_uID ), vecPointXYZWORLD( p_vecPointXYZWORLD ), vecDescriptors( p_vecDescriptors )
     {
@@ -21,9 +35,9 @@ struct CDescriptorPointCloud
 {
     const UIDCloud uID;
     const Eigen::Isometry3d matPose;
-    const std::vector< CDescriptorPoint3DWORLD > vecPoints;
+    const std::vector< CDescriptorVectorPoint3DWORLD > vecPoints;
 
-    CDescriptorPointCloud( const UIDCloud& p_uID, const Eigen::Isometry3d& p_matPose, const std::vector< CDescriptorPoint3DWORLD >& p_vecPoints ): uID( p_uID ), matPose( p_matPose ), vecPoints( p_vecPoints )
+    CDescriptorPointCloud( const UIDCloud& p_uID, const Eigen::Isometry3d& p_matPose, const std::vector< CDescriptorVectorPoint3DWORLD >& p_vecPoints ): uID( p_uID ), matPose( p_matPose ), vecPoints( p_vecPoints )
     {
         //ds nothing to do
     }

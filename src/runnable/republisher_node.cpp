@@ -7,22 +7,24 @@
 #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
+#include <sensor_msgs/Imu.h>
 
 //ds custom
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
 #include "txt_io/pose_message.h"
-#include "utility/CStack.h"
 #include "utility/CLogger.h"
 
 //ds fake session counters
 uint64_t g_uFrameIDIMU      = 0;
-uint64_t g_uFrameIDCamera_0 = 0;
-uint64_t g_uFrameIDCamera_1 = 0;
+uint64_t g_uFrameIDCameraRIGHT = 0;
+uint64_t g_uFrameIDCameraLEFT  = 0;
 uint64_t g_uFrameIDPose     = 0;
 
 //ds publishers
 image_transport::Publisher g_cPublisherCameraLEFT;
+image_transport::Publisher g_cPublisherCameraRIGHT;
+ros::Publisher g_cPublisherIMU;
 
 inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::string& p_strImageFolder, const uint32_t& p_uSleepMicroseconds );
 
@@ -34,12 +36,8 @@ int main( int argc, char **argv )
     CLogger::openBox( );
     std::printf( "(main) launched: %s\n", argv[0] );
 
-    //ds image resolution
-    const uint32_t uImageRows = 480;
-    const uint32_t uImageCols = 752;
-
     //ds setup node
-    ros::init( argc, argv, "republisher_alberto" );
+    ros::init( argc, argv, "republisher_node" );
     ros::NodeHandle hNode;
 
     //ds escape here on failure
@@ -52,24 +50,25 @@ int main( int argc, char **argv )
     }
 
     //ds default files
-    std::string strInfileMessageDump = "/home/dominik/ros_bags/datasets4dominik/good_solution/solution.log";
-    std::string strImageFolder       = "/home/dominik/ros_bags/datasets4dominik/good_solution/images/";
+    std::string strInfileMessageDump = "/home/n551jw/ros_dumps_alberto/good_solution/data.log";
+    std::string strImageFolder       = "/home/n551jw/ros_dumps_alberto/good_solution/images/";
 
     //ds open the file
     std::ifstream ifMessages( strInfileMessageDump, std::ifstream::in );
 
     //ds internals
-    uint32_t uFrequencyPlaybackHz( 200 );
+    uint32_t uFrequencyPlaybackHz( 100 );
     uint32_t uSleepMicroseconds( ( 1.0/uFrequencyPlaybackHz )*1e6 );
 
     //ds instantiate publishers
     image_transport::ImageTransport itTransportCameraLEFT( hNode );
-    g_cPublisherCameraLEFT = itTransportCameraLEFT.advertise( "camera/image_raw", 1 );
+    image_transport::ImageTransport itTransportCameraRIGHT( hNode );
+    g_cPublisherCameraLEFT  = itTransportCameraLEFT.advertise( "/thin_visensor_node/camera_left/image_raw", 1 );
+    g_cPublisherCameraRIGHT = itTransportCameraRIGHT.advertise( "/thin_visensor_node/camera_right/image_raw", 1 );
+    g_cPublisherIMU         = hNode.advertise< sensor_msgs::Imu >( "/thin_visensor_node/imu_adis16448", 1 );
 
     //ds log configuration
     std::printf( "(main) ROS Node namespace   := '%s'\n", hNode.getNamespace( ).c_str( ) );
-    std::printf( "(main) uImageRows (height)  := '%u'\n", uImageRows );
-    std::printf( "(main) uImageCols (width)   := '%u'\n", uImageCols );
     std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
     std::printf( "(main) uFrequencyPlaybackHz := '%u'\n", uFrequencyPlaybackHz );
     std::printf( "(main) uSleepMicroseconds   := '%u'\n", uSleepMicroseconds );
@@ -114,11 +113,91 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
     //ds set message information depending on type
     if( "IMU" == strMessageType )
     {
-        //ds IMU message
+        //ds fields
+        Eigen::Vector3d vecAngularVelocity;
+        Eigen::Vector3d vecLinearAcceleration;
+
+        //ds parse the values
+        issLine >> strToken >> vecLinearAcceleration[0] >> vecLinearAcceleration[1] >> vecLinearAcceleration[2] >> vecAngularVelocity[0] >> vecAngularVelocity[1] >> vecAngularVelocity[2];
+
+        //ds build the IMU message
+        sensor_msgs::Imu msgIMU;
+        msgIMU.header.stamp    = ros::Time( dTimeSeconds );
+        msgIMU.header.seq      = g_uFrameIDIMU;
+        msgIMU.header.frame_id = "imu_adis16448";
+
+        //ds COMPASS: orientation
+        msgIMU.orientation.x   = 0.0;
+        msgIMU.orientation.y   = 0.0;
+        msgIMU.orientation.z   = 0.0;
+        msgIMU.orientation.w   = 1.0;
+        msgIMU.orientation_covariance[0] = 99999.9;
+        msgIMU.orientation_covariance[1] = 0.0;
+        msgIMU.orientation_covariance[2] = 0.0;
+        msgIMU.orientation_covariance[3] = 0.0;
+        msgIMU.orientation_covariance[4] = 99999.9;
+        msgIMU.orientation_covariance[5] = 0.0;
+        msgIMU.orientation_covariance[6] = 0.0;
+        msgIMU.orientation_covariance[7] = 0.0;
+        msgIMU.orientation_covariance[8] = 99999.9;
+
+        //ds GYROSCOPE: angular Velocity
+        msgIMU.angular_velocity.x = vecAngularVelocity[0];
+        msgIMU.angular_velocity.y = vecAngularVelocity[1];
+        msgIMU.angular_velocity.z = vecAngularVelocity[2];
+        msgIMU.angular_velocity_covariance[0] = 0.0;
+        msgIMU.angular_velocity_covariance[1] = 0.0;
+        msgIMU.angular_velocity_covariance[2] = 0.0;
+        msgIMU.angular_velocity_covariance[3] = 0.0;
+        msgIMU.angular_velocity_covariance[4] = 0.0;
+        msgIMU.angular_velocity_covariance[5] = 0.0;
+        msgIMU.angular_velocity_covariance[6] = 0.0;
+        msgIMU.angular_velocity_covariance[7] = 0.0;
+        msgIMU.angular_velocity_covariance[8] = 0.0;
+
+        //ds ACCELEROMETER: linear Acceleration
+        msgIMU.linear_acceleration.x = vecLinearAcceleration[0];
+        msgIMU.linear_acceleration.y = vecLinearAcceleration[1];
+        msgIMU.linear_acceleration.z = vecLinearAcceleration[2];
+        msgIMU.linear_acceleration_covariance[0] = 0.0;
+        msgIMU.linear_acceleration_covariance[1] = 0.0;
+        msgIMU.linear_acceleration_covariance[2] = 0.0;
+        msgIMU.linear_acceleration_covariance[3] = 0.0;
+        msgIMU.linear_acceleration_covariance[4] = 0.0;
+        msgIMU.linear_acceleration_covariance[5] = 0.0;
+        msgIMU.linear_acceleration_covariance[6] = 0.0;
+        msgIMU.linear_acceleration_covariance[7] = 0.0;
+        msgIMU.linear_acceleration_covariance[8] = 0.0;
+
+        //ds publish all messages
+        g_cPublisherIMU.publish( msgIMU );
+
+        ++g_uFrameIDIMU;
     }
     else if( "IMAGE0" == strMessageType )
     {
-        //ds camera_0 message
+        //ds set image information
+        std::string strImageFile;
+
+        //ds get parameter
+        issLine >> strToken >> strImageFile;
+
+        //ds fix filepath
+        strImageFile = p_strImageFolder + strImageFile.substr( 7, 18 );
+
+        //ds read the image
+        cv::Mat matImage = cv::imread( strImageFile, cv::IMREAD_GRAYSCALE );
+
+        //ds image header
+        std_msgs::Header msgHeader;
+        msgHeader.stamp    = ros::Time( dTimeSeconds );
+        msgHeader.seq      = g_uFrameIDCameraRIGHT;
+        msgHeader.frame_id = "camera_right";
+
+        //ds publish the image
+        g_cPublisherCameraRIGHT.publish( cv_bridge::CvImage( msgHeader, "mono8", matImage ).toImageMsg( ) );
+
+        ++g_uFrameIDCameraRIGHT;
     }
     else if( "IMAGE1" == strMessageType )
     {
@@ -137,13 +216,13 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
         //ds image header
         std_msgs::Header msgHeader;
         msgHeader.stamp    = ros::Time( dTimeSeconds );
-        msgHeader.seq      = g_uFrameIDCamera_1;
-        msgHeader.frame_id = g_uFrameIDCamera_1;
+        msgHeader.seq      = g_uFrameIDCameraLEFT;
+        msgHeader.frame_id = "camera_left";
 
         //ds publish the image
         g_cPublisherCameraLEFT.publish( cv_bridge::CvImage( msgHeader, "mono8", matImage ).toImageMsg( ) );
 
-        ++g_uFrameIDCamera_1;
+        ++g_uFrameIDCameraLEFT;
     }
     else
     {

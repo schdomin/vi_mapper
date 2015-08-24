@@ -25,6 +25,9 @@ public:
                    const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks,
                    const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames,
                    const Eigen::Isometry3d& p_matTransformationLEFTtoWORLDInitial );
+    Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraSTEREO,
+                   const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks,
+                   const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames );
     ~Cg2oOptimizer( );
 
 private:
@@ -34,11 +37,11 @@ private:
     const std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
 
     g2o::SparseOptimizer m_cOptimizerSparse;
-    const UIDKeyFrame m_uIDShift              = 1e9; //ds required to navigate between landmarks and poses
-    UIDLandmark m_uIDOptimizationLAST         = 0;
+    const UIDKeyFrame m_uIDShift              = 1000000; //ds required to navigate between landmarks and poses
+    UIDLandmark m_uIDLandmarkOptimizationLAST = 0;
     g2o::VertexSE3 *m_pVertexPoseLAST         = 0;
     const uint32_t m_uIterations              = 500;
-    uint32_t m_uOptimizationsSegment          = 0;
+    uint32_t m_uOptimizations          = 0;
 
     const double m_dMaximumReliableDepthForPointXYZ = 2.5;
     const double m_dMaximumReliableDepthForUVDepth  = 7.5;
@@ -52,9 +55,10 @@ private:
 
 public:
 
-    void optimizeSegment( const UIDKeyFrame& p_uIDBegin, const UIDKeyFrame& p_uIDEnd );
+    void optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame );
+    void optimizeContinuous( const UIDKeyFrame& p_uIDBegin, const UIDKeyFrame& p_uIDEnd );
 
-    const uint32_t getNumberOfSegmentOptimizations( ) const { return m_uOptimizationsSegment; }
+    const uint32_t getNumberOfSegmentOptimizations( ) const { return m_uOptimizations; }
     const bool isOptimized( const CLandmark* p_pLandmark ) const;
     const bool isKeyFramed( const CLandmark* p_pLandmark ) const;
 

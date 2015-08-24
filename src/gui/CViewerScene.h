@@ -47,7 +47,7 @@ public:
 
     //void addKeyFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< std::vector< const CMeasurementLandmark* > > p_pLandmarks );
     void addFrame( const std::pair< bool, Eigen::Isometry3d > p_prFrame );
-    void addFrame( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD );
+    void updateFrame( const UIDFrame& p_uID, const bool& p_bIsKeyFrame );
     void manualDraw( );
 
 private:
@@ -58,7 +58,6 @@ private:
 private:
 
     std::vector< std::pair< bool, qglviewer::Frame > > m_vecFrames;
-    std::vector< CPoint3DWORLD > m_vecFramesSlidingWindow;
     //std::map< UIDLandmark, CPoint3DInWorldFrame > m_mapLandmarks;
 
     //std::shared_ptr< std::vector< const CMeasurementLandmark* > > m_pLiveMeasurements;

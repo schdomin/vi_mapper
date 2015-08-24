@@ -123,7 +123,7 @@ int main( int argc, char **argv )
         {
             //ds check for frames to update the viewer
             if( cTracker.isFrameAvailable( ) ){ cViewer.addFrame( cTracker.getFrameLEFTtoWORLD( ) ); }
-            if( cTracker.isFrameAvailableSlidingWindow( ) ){ cViewer.addFrame( cTracker.getFrameLEFTtoWORLDSlidingWindow( ) ); }
+            //if( cTracker.isFrameAvailableSlidingWindow( ) ){ cViewer.updateFrame( cTracker.getFrameLEFTtoWORLDSlidingWindow( ), true ); }
             cViewer.manualDraw( );
         }
 

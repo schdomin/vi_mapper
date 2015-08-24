@@ -244,7 +244,7 @@ public:
         {
             m_pFile = std::fopen( "logs/optimization_odometry.txt", "w" );
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS REPROJECTIONS | ERROR_RSS |      X      Y      Z |  DELTA | MOTION |       RISK" );
+            std::fprintf( m_pFile, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS REPROJECTIONS | ERROR_RSS |      X      Y      Z |  DELTA |       RISK" );
         }
         static void addEntryIteration( const UIDFrame& p_uFrame, const uint8_t& p_uIteration, const UIDLandmark& p_uNumberOfLandmarksInOptimization, const UIDLandmark& p_uNumberOfInliers, const UIDLandmark& p_uNumberOfReprojections, const double& p_dErrorCurrent )
         {
@@ -256,10 +256,10 @@ public:
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "\n    %04lu |    INLIER |          %03lu     %03lu           %03lu | %9.2f |", p_uFrame, p_uNumberOfLandmarksInOptimization, p_uNumberOfInliers, p_uNumberOfReprojections, p_dErrorCurrent );
         }
-        static void addEntryResult( const CPoint3DWORLD& p_vecPosition, const double& p_dOptimizationDelta, const double& p_dMotionScaling, const double& p_dOptimizationRisk )
+        static void addEntryResult( const CPoint3DWORLD& p_vecPosition, const double& p_dOptimizationDelta, const double& p_dOptimizationRisk )
         {
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, " %6.2f %6.2f %6.2f | %6.4f |   %4.2f |     %6.4f", p_vecPosition.x( ), p_vecPosition.y( ), p_vecPosition.z( ), p_dOptimizationDelta, p_dMotionScaling, p_dOptimizationRisk );
+            std::fprintf( m_pFile, " %6.2f %6.2f %6.2f | %6.4f |     %6.4f", p_vecPosition.x( ), p_vecPosition.y( ), p_vecPosition.z( ), p_dOptimizationDelta, p_dOptimizationRisk );
         }
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 

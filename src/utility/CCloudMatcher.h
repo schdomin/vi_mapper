@@ -19,7 +19,7 @@ public:
         std::shared_ptr< std::vector< CMatchCloud > > vecMatches( std::make_shared< std::vector< CMatchCloud > >( ) );
 
         //ds try to match the query into the training
-        for( const CDescriptorPoint3DWORLD& cPointQuery: p_pCloudQuery->vecPoints )
+        for( const CDescriptorVectorPoint3DWORLD& cPointQuery: p_pCloudQuery->vecPoints )
         {
             //ds current matching distance
             double dMatchingDistanceBest = 1e6;
@@ -27,7 +27,7 @@ public:
             //UIDDescriptor uDescriptorMatchingsBest = 0;
 
             //ds match this point against all training points
-            for( const CDescriptorPoint3DWORLD& cPointReference: p_pCloudReference->vecPoints )
+            for( const CDescriptorVectorPoint3DWORLD& cPointReference: p_pCloudReference->vecPoints )
             {
                 //ds compute current matching distance against training point - EUCLIDIAN
                 double dMatchingDistance = CCloudMatcher::m_dWeightEuclidian*( cPointQuery.vecPointXYZWORLD-cPointReference.vecPointXYZWORLD ).squaredNorm( );

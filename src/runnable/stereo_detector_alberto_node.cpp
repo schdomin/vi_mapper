@@ -24,8 +24,8 @@ std::shared_ptr< txt_io::CPoseMessage > g_pActiveMessagesPose           = 0;
 
 //ds fake session counters
 uint64_t g_uFrameIDIMU      = 0;
-uint64_t g_uFrameIDCamera_0 = 0;
-uint64_t g_uFrameIDCamera_1 = 0;
+uint64_t g_uFrameIDCameraRIGHT = 0;
+uint64_t g_uFrameIDCameraLEFT = 0;
 uint64_t g_uFrameIDPose     = 0;
 
 //ds initialize statics
@@ -318,7 +318,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
     else if( "IMAGE0" == strMessageType )
     {
         //ds camera_0 message
-        g_pActiveMessageCameraRIGHT = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_right", "camera_right", g_uFrameIDCamera_0, dTimeSeconds ) );
+        g_pActiveMessageCameraRIGHT = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_right", "camera_right", g_uFrameIDCameraRIGHT, dTimeSeconds ) );
 
         //ds set image information
         std::string strImageFile;
@@ -339,7 +339,7 @@ inline void readNextMessageFromFile( std::ifstream& p_ifMessages, const std::str
     else if( "IMAGE1" == strMessageType )
     {
         //ds camera_1 message
-        g_pActiveMessageCameraLEFT = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_left", "camera_left", g_uFrameIDCamera_1, dTimeSeconds ) );
+        g_pActiveMessageCameraLEFT = std::shared_ptr< txt_io::PinholeImageMessage >( new txt_io::PinholeImageMessage( "/camera_left", "camera_left", g_uFrameIDCameraLEFT, dTimeSeconds ) );
 
         //ds set image information
         std::string strImageFile;

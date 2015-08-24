@@ -55,7 +55,7 @@ int main( int argc, char** argv )
             UIDLandmark uMatches = 0;
 
             //ds try to match the query into the training
-            for( const CDescriptorPoint3DWORLD& cPointQuery: cCloudQuery.vecPoints )
+            for( const CDescriptorVectorPoint3DWORLD& cPointQuery: cCloudQuery.vecPoints )
             {
                 //ds current matching distance
                 double dMatchingDistanceBest           = 1e6;
@@ -63,7 +63,7 @@ int main( int argc, char** argv )
                 //UIDDescriptor uDescriptorMatchingsBest = 0;
 
                 //ds match this point against all training points
-                for( const CDescriptorPoint3DWORLD cPointTrain: cCloudTrain.vecPoints )
+                for( const CDescriptorVectorPoint3DWORLD cPointTrain: cCloudTrain.vecPoints )
                 {
                     //ds compute current matching distance against training point - EUCLIDIAN
                     double dMatchingDistance = dWeightEuclidian*( cPointQuery.vecPointXYZWORLD-cPointTrain.vecPointXYZWORLD ).squaredNorm( );
