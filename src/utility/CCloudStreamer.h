@@ -21,7 +21,7 @@ public:
         //ds for all these points
         for( const CLandmark* pLandmark: *p_vecVisibleLandmarks )
         {
-            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->vecDescriptorsLEFT ) );
+            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->getLastPointXYZLEFT( ), pLandmark->vecDescriptorsLEFT ) );
         }
 
         return new CDescriptorPointCloud( p_uIDKeyFrame, p_matPose, vecPoints );
@@ -187,7 +187,7 @@ public:
             }
 
             //ds set vector
-            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( u, vecPointXYZWORLD, vecDescriptors ) );
+            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( u, vecPointXYZWORLD, CPoint3DCAMERA( 0.0, 0.0, 0.0 ), vecDescriptors ) );
         }
 
         return CDescriptorPointCloud( p_uID, matPose, vecPoints );

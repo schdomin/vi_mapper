@@ -1,3 +1,4 @@
+#if 0
 #include "CNaiveStereoDetector.h"
 
 #include <opencv/highgui.h>

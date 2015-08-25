@@ -9,7 +9,7 @@ class CCloudMatcher
 //ds fields
 private:
 
-    static constexpr double m_dWeightEuclidian        = 100.0;
+    static constexpr double m_dWeightEuclidian        = 50.0;
     static constexpr double m_dMatchingDistanceCutoff = 100.0;
 
 public:
@@ -25,6 +25,7 @@ public:
             double dMatchingDistanceBest = 1e6;
             UIDLandmark uIDMatchBest     = 0;
             //UIDDescriptor uDescriptorMatchingsBest = 0;
+            CPoint3DCAMERA vecPointXYZCAMERAMatch;
 
             //ds match this point against all training points
             for( const CDescriptorVectorPoint3DWORLD& cPointReference: p_pCloudReference->vecPoints )
@@ -82,13 +83,14 @@ public:
                     dMatchingDistanceBest    = dMatchingDistance;
                     uIDMatchBest             = cPointReference.uID;
                     //uDescriptorMatchingsBest = uDescriptorMatchings;
+                    vecPointXYZCAMERAMatch   = cPointReference.vecPointXYZCAMERA;
                 }
             }
 
             //ds check if match
             if( CCloudMatcher::m_dMatchingDistanceCutoff > dMatchingDistanceBest )
             {
-                vecMatches->push_back( CMatchCloud( cPointQuery.uID, uIDMatchBest ) );
+                vecMatches->push_back( CMatchCloud( cPointQuery.uID, uIDMatchBest, cPointQuery.vecPointXYZCAMERA, vecPointXYZCAMERAMatch ) );
             }
 
             //std::printf( "(main) best match for query: %03lu -> train: %03lu (matching distance: %9.4f, descriptor matchings: %03lu)\n", cPointQuery.uID, uIDQueryBest, dMatchingDistanceBest, uDescriptorMatchingsBest );

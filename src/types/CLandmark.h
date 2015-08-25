@@ -103,6 +103,7 @@ public:
     const cv::Point2d getLastDetectionRIGHT( ) const { return m_vecMeasurements.back( )->ptUVRIGHT; }
     const CMeasurementLandmark* getLastMeasurement( ) const { return m_vecMeasurements.back( ); }
     const double getLastDepth( ) const { return m_vecMeasurements.back( )->vecPointXYZLEFT.z( ); }
+    const CPoint3DCAMERA getLastPointXYZLEFT( ) const { return m_vecMeasurements.back( )->vecPointXYZLEFT; }
     const std::vector< CMeasurementLandmark* >::size_type getNumberOfMeasurements( ) const { return m_vecMeasurements.size( ); }
 
 private:

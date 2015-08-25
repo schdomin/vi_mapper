@@ -1,3 +1,4 @@
+#if 0
 #include "CStereoDetector.h"
 
 #include <opencv/highgui.h>

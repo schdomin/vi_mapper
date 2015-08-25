@@ -629,15 +629,21 @@ const CKeyFrame* CTrackerStereoMotionModel::_getLoopClosureKeyFrameFCFS( const U
     const CDescriptorPointCloud* pCloudCurrent( CCloudstreamer::getCloud( p_uID, p_matTransformationLEFTtoWORLD, m_cMatcher.getVisibleOptimizedLandmarks( ) ) );
 
     //ds compare current cloud against previous ones to enable loop closure (skipping the keyframes added just before)
-    for( UIDKeyFrame i = 0; i < p_uID-m_uLoopClosingKeyFrameDistance; ++i )
+    for( const CDescriptorPointCloud* pCloudReference: *m_vecClouds )
     {
+        //ds if we get close to the current keyframe
+        if( 2 > pCloudCurrent->uID-pCloudReference->uID )
+        {
+            break;
+        }
+
         //ds get matches
-        std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( CCloudMatcher::getMatches( pCloudCurrent, m_vecClouds->at( i ) ) );
+        std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( CCloudMatcher::getMatches( pCloudCurrent, pCloudReference ) );
 
         //ds if we have a suffient amount of matches
         if( m_uMinimumNumberOfMatchesLoopClosure < vecMatches->size( ) )
         {
-            std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) found loop closure for keyframes: %06lu -> %06lu (points: %lu)\n", p_uID, m_vecClouds->at( i )->uID, vecMatches->size( ) );
+            std::printf( "<CTrackerStereoMotionModel>(_getLoopClosureKeyFrameFCFS) found loop closure for keyframes: %06lu -> %06lu (points: %lu)\n", p_uID, pCloudReference->uID, vecMatches->size( ) );
 
             //ds draw matches
             for( const CMatchCloud& cMatch: *vecMatches )
@@ -647,9 +653,95 @@ const CKeyFrame* CTrackerStereoMotionModel::_getLoopClosureKeyFrameFCFS( const U
 
             //m_uWaitKeyTimeoutMS = 0;
 
+            //ds transformation between this keyframe and the loop closure one (take current measurement as prior)
+            Eigen::Isometry3d matTransformationToCLOSURE( pCloudReference->matTransformationLEFTtoWORLD.inverse( )*pCloudCurrent->matTransformationLEFTtoWORLD );
+
+            //ds 1mm for convergence
+            const double dErrorDeltaForConvergence = 0.001;
+            double dErrorSquaredPrevious           = 0.0;
+            const double dMaximumErrorForInlier    = 0.1;
+
+            //ds run least-squares maximum 10 times
+            for( uint8_t uLS = 0; uLS < 10; ++uLS )
+            {
+                //ds error
+                double dErrorSquaredTotal = 0.0;
+                uint8_t uOutliers         = 0;
+
+                //ds LS setup
+                Eigen::Matrix< double, 6, 6 > matH;
+                Eigen::Matrix< double, 6, 1 > vecB;
+                matH.setZero( );
+                vecB.setZero( );
+
+                //ds for all the points
+                for( const CMatchCloud& cMatch: *vecMatches )
+                {
+                    //ds compute projection into closure
+                    const CPoint3DCAMERA vecPointXYZCLOSURE( matTransformationToCLOSURE*cMatch.vecPointXYZCAMERAQuery );
+                    assert( 0.0 < vecPointXYZCLOSURE.z( ) );
+
+                    //ds compute error
+                    const Eigen::Vector3d vecError( vecPointXYZCLOSURE-cMatch.vecPointXYZCAMERAMatch );
+
+                    //ds update chi
+                    const double dErrorSquared = vecError.transpose( )*vecError;
+
+                    //ds check if outlier
+                    double dWeight = 1.0;
+                    if( dMaximumErrorForInlier < dErrorSquared )
+                    {
+                        dWeight = dMaximumErrorForInlier/dErrorSquared;
+                        ++uOutliers;
+                    }
+
+                    dErrorSquaredTotal += dErrorSquared;
+
+                    //ds get the jacobian of the transform part = [I 2*skew(T*modelPoint)]
+                    Eigen::Matrix< double, 3, 6 > matJacobianTransform;
+                    matJacobianTransform.setZero( );
+                    matJacobianTransform.block<3,3>(0,0).setIdentity( );
+                    matJacobianTransform.block<3,3>(0,3) = -2*CMiniVisionToolbox::getSkew( vecPointXYZCLOSURE );
+
+                    //ds precompute transposed
+                    const Eigen::Matrix< double, 6, 3 > matJacobianTransformTransposed( matJacobianTransform.transpose( ) );
+
+                    //ds accumulate
+                    matH += dWeight*matJacobianTransformTransposed*matJacobianTransform;
+                    vecB += dWeight*matJacobianTransformTransposed*vecError;
+                }
+
+                //ds solve the system and update the estimate
+                matTransformationToCLOSURE = CMiniVisionToolbox::vector2transform( matH.ldlt( ).solve( -vecB ) )*matTransformationToCLOSURE;
+
+                //ds damp rotation
+                const Eigen::Matrix3d matRotation        = matTransformationToCLOSURE.linear( );
+                Eigen::Matrix3d matRotationSquared       = matRotation.transpose( )*matRotation;
+                matRotationSquared.diagonal( ).array( ) -= 1;
+                matTransformationToCLOSURE.linear( )    -= 0.5*matRotation*matRotationSquared;
+
+                /*ds descent required
+                if( dErrorSquaredPrevious < dErrorSquaredTotal )
+                {
+                    std::printf( "<CTrackerStereoMotionModel>(_getLoopClosureKeyFrameFCFS) unable to optimize - average error: %f (outliers: %u)\n", dErrorSquaredTotal/vecMatches->size( ), uOutliers );
+                    break;
+                }*/
+
+                //ds check if converged
+                if( dErrorDeltaForConvergence > std::fabs( dErrorSquaredPrevious-dErrorSquaredTotal ) )
+                {
+                    std::printf( "<CTrackerStereoMotionModel>(_getLoopClosureKeyFrameFCFS) converged in %u iterations - average error: %f (outliers: %u)\n", uLS, dErrorSquaredTotal/vecMatches->size( ), uOutliers );
+                    break;
+                }
+                else
+                {
+                    dErrorSquaredPrevious = dErrorSquaredTotal;
+                }
+            }
+
             //ds add current cloud and return reference
             m_vecClouds->push_back( pCloudCurrent );
-            return m_vecKeyFrames->at( m_vecClouds->at( i )->uID );
+            return m_vecKeyFrames->at( pCloudReference->uID );
         }
     }
 

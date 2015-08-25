@@ -1,6 +1,6 @@
 CAMERA 0 (right)
 
----
+--- Pose CAMERA 0 TO IMU
 position: 
   x: -0.0434705406089
   y: 0.00417949317011

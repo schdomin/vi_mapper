@@ -299,6 +299,31 @@ const Eigen::Matrix3d CMiniVisionToolbox::getSkew( const Eigen::Vector3d& p_vecV
     return matSkew;
 }
 
+const Eigen::Isometry3d CMiniVisionToolbox::vector2transform( const Eigen::Matrix< double, 6, 1 >& p_vecLinearized )
+{
+    Eigen::Isometry3d matTransformation( Eigen::Matrix4d::Identity( ) );
+
+    //ds translation
+    matTransformation.translation( ) = p_vecLinearized.head<3>( );
+
+    //ds rotation
+    double dW = p_vecLinearized.block<3,1>(3,0).squaredNorm( );
+
+    //ds if not at unity
+    if( 1.0 > dW )
+    {
+        //ds normalize and set
+        dW = sqrt( 1.0 - dW );
+        matTransformation.linear( ) = Eigen::Quaterniond( dW, p_vecLinearized( 3 ), p_vecLinearized( 4 ), p_vecLinearized( 5 ) ).toRotationMatrix( );
+    }
+    else
+    {
+        matTransformation.linear( ).setIdentity( );
+    }
+
+    return matTransformation;
+}
+
 const Eigen::Matrix3d CMiniVisionToolbox::getEssential( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationTo )
 {
     //ds compute essential matrix: http://en.wikipedia.org/wiki/Essential_matrix TODO check math!

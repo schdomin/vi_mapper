@@ -76,12 +76,12 @@ private:
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
     UIDKeyFrame m_uIDProcessedKeyFrameLAST              = 0;
     UIDLandmark m_uIDProcessedLandmarkLAST              = 0;
-    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 9;
+    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 90;
     Cg2oOptimizer m_cOptimizer;
 
     //ds loop closing
     const UIDKeyFrame m_uLoopClosingKeyFrameDistance       = 10;
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure = 25;
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure = 35;
     std::shared_ptr< std::vector< const C67DTree* > > m_vecTrees;
 
     //ds control

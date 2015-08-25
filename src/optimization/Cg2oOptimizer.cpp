@@ -58,7 +58,7 @@ Cg2oOptimizer::Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraST
 
     CLogger::openBox( );
     //std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) configuration: gn_var_cholmod\n" );
-    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) configuration: lm_var_cholmod\n" );
+    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) configuration: lm_var_cholmod COMPLETE\n" );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) iterations: %u\n", m_uIterations );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement PointXYZ: %f\n", m_dMaximumReliableDepthForPointXYZ );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement UVDepth: %f\n", m_dMaximumReliableDepthForUVDepth );
@@ -108,7 +108,7 @@ Cg2oOptimizer::Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraST
 
     CLogger::openBox( );
     //std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) configuration: gn_var_cholmod\n" );
-    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) configuration: lm_var_cholmod\n" );
+    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) configuration: lm_var_cholmod TAILWISE\n" );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) iterations: %u\n", m_uIterations );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement PointXYZ: %f\n", m_dMaximumReliableDepthForPointXYZ );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement UVDepth: %f\n", m_dMaximumReliableDepthForUVDepth );
@@ -173,7 +173,7 @@ void Cg2oOptimizer::optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame )
     m_cOptimizerSparse.addVertex( pVertexPoseFrom );
 
     //ds always save acceleration data
-    //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseInitial, vecChunkKeyFrames.front( )->vecLinearAccelerationNormalized ) );
+    m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseFrom, vecChunkKeyFrames.front( )->vecLinearAccelerationNormalized ) );
 
     //ds info
     UIDLandmark uMeasurementsStoredPointXYZ    = 0;
@@ -250,7 +250,7 @@ void Cg2oOptimizer::optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame )
         }
 
         //ds always save acceleration data
-        //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
+        m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
 
         //ds check visible landmarks and add the edges for the current pose
         for( const CMeasurementLandmark* pMeasurementLandmark: pKeyFrame->vecMeasurements )
@@ -674,7 +674,7 @@ g2o::EdgeSE3LinearAcceleration* Cg2oOptimizer::_getEdgeLinearAcceleration( g2o::
     pEdgeLinearAcceleration->setVertex( 0, p_pVertexPose );
     pEdgeLinearAcceleration->setMeasurement( p_vecLinearAccelerationNormalized );
     pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
-    const double arrInformationMatrixLinearAcceleration[9] = { 100, 0, 0, 0, 100, 0, 0, 0, 100 };
+    const double arrInformationMatrixLinearAcceleration[9] = { 1e-5, 0, 0, 0, 1e-5, 0, 0, 0, 1e-5 };
     pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
 
     return pEdgeLinearAcceleration;

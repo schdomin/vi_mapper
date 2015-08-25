@@ -1,3 +1,4 @@
+#if 0
 #include "CTrackerStereoMotionModel.h"
 
 #include <opencv/highgui.h>

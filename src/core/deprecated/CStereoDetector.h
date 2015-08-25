@@ -1,3 +1,4 @@
+#if 0
 #ifndef CSTEREODETECTOR_H_
 #define CSTEREODETECTOR_H_
 

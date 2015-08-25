@@ -53,6 +53,7 @@ public:
                                                       m_matRotationIMUtoCAMERA( Eigen::Matrix3d( p_matRotationIntrinsicIMUtoCAMERA )*m_vecRotationToIMU.toRotationMatrix( ) ),
                                                       m_matRotationCAMERAtoIMU( m_matRotationIMUtoCAMERA.inverse( ) ),
                                                       m_matTransformationCAMERAtoIMU( Eigen::Matrix4d::Identity( ) ),
+                                                      m_matTransformationIMUtoCAMERA( Eigen::Matrix4d::Identity( ) ),
                                                       m_uWidthPixel( p_uWidthPixel ),
                                                       m_uHeightPixel( p_uHeightPixel ),
                                                       m_iWidthPixel( m_uWidthPixel ),
@@ -252,6 +253,7 @@ private:
                   << "\nRectification matrix (R):\n\n" << m_matRectification << "\n\n"
                   << "\nProjection matrix (P):\n\n" << m_matProjection << "\n\n"
                   << "Principal point: " << m_vecPrincipalPoint.transpose( ) << "\n"
+                  << "Quaternion x y z w (CAMERA to IMU): " << m_vecRotationToIMU.x( ) << " " << m_vecRotationToIMU.y( ) << " " << m_vecRotationToIMU.z( ) << " " << m_vecRotationToIMU.w( ) << "\n"
                   << "\nTransformation matrix (CAMERA to IMU):\n\n" << m_matTransformationCAMERAtoIMU.matrix( ) << "\n\n"
                   << "\nTransformation matrix (IMU to CAMERA):\n\n" << m_matTransformationIMUtoCAMERA.matrix( ) << "\n\n"
                   << "Resolution (w x h): " << m_uWidthPixel << " x " << m_uHeightPixel << "\n"
