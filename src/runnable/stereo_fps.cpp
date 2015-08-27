@@ -4,6 +4,7 @@
 
 //ds custom
 #include "txt_io/message_reader.h"
+#include "exceptions/CExceptionLogfileTree.h"
 #include "core/CTrackerStereoMotionModel.h"
 #include "gui/CViewerScene.h"
 
@@ -77,7 +78,7 @@ int main( int argc, char **argv )
     if( !cMessageReader.good( ) )
     {
         std::printf( "(main) unable to open message file: %s\n", strInfileMessageDump.c_str( ) );
-        std::printf( "(main) terminated: %s\n", argv[0]);
+        std::printf( "(main) terminated: %s\n", argv[0] );
         std::fflush( stdout );
         return 1;
     }
@@ -99,6 +100,19 @@ int main( int argc, char **argv )
 
     //ds allocate the tracker
     CTrackerStereoMotionModel cTracker( eMode, uWaitKeyTimeout );
+
+    try
+    {
+        //ds prepare file structure
+        cTracker.sanitizeFiletree( );
+    }
+    catch( const CExceptionLogfileTree& p_cException )
+    {
+        std::printf( "(main) unable to sanitize filetree - exception: '%s'\n", p_cException.what( ) );
+        std::printf( "(main) terminated: %s\n", argv[0] );
+        std::fflush( stdout );
+        return 1;
+    }
 
     //ds allocate a libqglviewer
     CViewerScene cViewer( cTracker.getLandmarksHandle( ), cTracker.getKeyFramesHandle( ) );
@@ -189,7 +203,7 @@ int main( int argc, char **argv )
 
     //ds get end time
     const double dDuration     = CLogger::getTimeSeconds( )-dTimeStartSeconds;
-    const uint64_t uFrameCount = cTracker.getFrameCount( );
+    const UIDFrame uFrameCount = cTracker.getFrameCount( );
 
     std::printf( "(main) dataset completed\n" );
     std::printf( "(main) duration: %fs\n", dDuration );
@@ -198,17 +212,14 @@ int main( int argc, char **argv )
 
     if( 1 < uFrameCount )
     {
-        //ds generate full file names
-        const std::string strG2ODump( "g2o/graph_" + CLogger::getTimestamp( ) );
+        //ds finalize tracker (e.g. do a last optimization)
+        cTracker.finalize( );
 
-        //ds dump file
-        cTracker.saveUVDepthOrDisparity( strG2ODump );
-        cTracker.saveXYZ( strG2ODump );
-        cTracker.saveUVDepth( strG2ODump );
-        cTracker.saveUVDisparity( strG2ODump );
-        cTracker.saveCOMBO( strG2ODump );
-
-        std::printf( "(main) successfully written g2o dump to: %s_TYPE.g2o\n", strG2ODump.c_str( ) );
+        //ds and update the viewer
+        if( cViewer.isVisible( ) )
+        {
+            cViewer.manualDraw( );
+        }
     }
 
     //ds exit

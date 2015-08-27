@@ -44,9 +44,9 @@ const double CConfigurationCamera::matTransformationIntialWORLDtoLEFT[] = { 0, -
                                                                             1,  0,  0, 0,
                                                                             0,  0,  0, 1 };
 
-const double CConfigurationCamera::matRotationIntrinsicIMUtoCAMERA[] = { -1,  0, 0,
+const double CConfigurationCamera::matRotationIntrinsicCAMERAtoIMU[] = { -1,  0, 0,
                                                                           0, -1, 0,
                                                                           0,  0, 1 };
 
-const CPinholeCamera CConfigurationCamera::LEFT::cPinholeCamera = CPinholeCamera( "LEFT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, matRotationIntrinsicIMUtoCAMERA, uWidth, uHeight, dFocalLengthMeters );
-const CPinholeCamera CConfigurationCamera::RIGHT::cPinholeCamera = CPinholeCamera( "RIGHT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, matRotationIntrinsicIMUtoCAMERA, uWidth, uHeight, dFocalLengthMeters );
+const CPinholeCamera CConfigurationCamera::LEFT::cPinholeCamera = CPinholeCamera( "LEFT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, matRotationIntrinsicCAMERAtoIMU, uWidth, uHeight, dFocalLengthMeters );
+const CPinholeCamera CConfigurationCamera::RIGHT::cPinholeCamera = CPinholeCamera( "RIGHT", matIntrinsic, vecDistortionCoefficients, matRectification, matProjection, matQuaternionToIMU, vecTranslationToIMU, matRotationIntrinsicCAMERAtoIMU, uWidth, uHeight, dFocalLengthMeters );

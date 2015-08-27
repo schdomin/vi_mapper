@@ -84,7 +84,7 @@ void CViewerScene::draw()
         if( 0 != pKeyFrame->pLoopClosure )
         {
             const CPoint3DWORLD vecPositionXYZCurrent( pKeyFrame->matTransformationLEFTtoWORLD.translation( ) );
-            const CPoint3DWORLD vecPositionLoopClosure( pKeyFrame->pLoopClosure->matTransformationLEFTtoWORLD.translation( ) );
+            const CPoint3DWORLD vecPositionLoopClosure( pKeyFrame->pLoopClosure->pKeyFrameReference->matTransformationLEFTtoWORLD.translation( ) );
             glVertex3f( vecPositionXYZCurrent.x( ), vecPositionXYZCurrent.y( ), vecPositionXYZCurrent.z( ) );
             glVertex3f( vecPositionLoopClosure.x( ), vecPositionLoopClosure.y( ), vecPositionLoopClosure.z( ) );
         }
@@ -97,7 +97,7 @@ void CViewerScene::draw()
     //ds if we registered already some keyframes we have to move the head
     if( 0 != pKeyFramePrevious )
     {
-        uStart = pKeyFramePrevious->uFrame;
+        uStart = pKeyFramePrevious->uFrameOfCreation;
     }
 
     //ds dodging if case for drawing the head coordinate frame

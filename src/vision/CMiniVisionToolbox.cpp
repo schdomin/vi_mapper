@@ -28,6 +28,18 @@ const Eigen::Matrix3d CMiniVisionToolbox::fromOrientationRodrigues( const Eigen:
     return CWrapperOpenCV::fromCVMatrix< double, 3, 3 >( matOrientation );
 }
 
+const Eigen::Vector3d CMiniVisionToolbox::toOrientationRodrigues( const Eigen::Matrix3d& p_matRotation )
+{
+    //ds orientation
+    cv::Mat vecOrientation;
+
+    //ds fill the matrix
+    cv::Rodrigues( CWrapperOpenCV::toCVMatrix( p_matRotation ), vecOrientation );
+
+    //ds return in Eigen format
+    return CWrapperOpenCV::fromCVVector< double, 3 >( vecOrientation );
+}
+
 const Eigen::Quaterniond CMiniVisionToolbox::fromEulerAngles( const Eigen::Vector3d& p_vecEulerAngles )
 {
     //ds allocate a quaternion
@@ -299,7 +311,7 @@ const Eigen::Matrix3d CMiniVisionToolbox::getSkew( const Eigen::Vector3d& p_vecV
     return matSkew;
 }
 
-const Eigen::Isometry3d CMiniVisionToolbox::vector2transform( const Eigen::Matrix< double, 6, 1 >& p_vecLinearized )
+const Eigen::Isometry3d CMiniVisionToolbox::getTransformationFromVector( const Eigen::Matrix< double, 6, 1 >& p_vecLinearized )
 {
     Eigen::Isometry3d matTransformation( Eigen::Matrix4d::Identity( ) );
 

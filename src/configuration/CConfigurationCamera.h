@@ -53,7 +53,7 @@ public:
 
     static const double matTransformationIntialAlberto[16];
     static const double matTransformationIntialWORLDtoLEFT[16];
-    static const double matRotationIntrinsicIMUtoCAMERA[9];
+    static const double matRotationIntrinsicCAMERAtoIMU[9];
 
 };
 

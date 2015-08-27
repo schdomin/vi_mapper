@@ -33,6 +33,7 @@ public:
     }
 
     static const Eigen::Matrix3d fromOrientationRodrigues( const Eigen::Vector3d& p_vecOrientation );
+    static const Eigen::Vector3d toOrientationRodrigues( const Eigen::Matrix3d& p_matRotation );
     static const Eigen::Quaterniond fromEulerAngles( const Eigen::Vector3d& p_vecEulerAngles );
 
     static const Eigen::Vector2d getPointUndistorted( const Eigen::Vector2i& p_vecPointDistorted, const Eigen::Vector2d& p_vecPrincipalPoint, const Eigen::Vector4d& p_vecDistortionCoefficients );
@@ -43,7 +44,7 @@ public:
     static const Eigen::Vector2d getPointDistorted( const Eigen::Vector2d& p_vecPointUndistorted, const Eigen::Vector2d& p_vecPrincipalPoint, const Eigen::Vector4d& p_vecDistortionCoefficients );
 
     static const Eigen::Matrix3d getSkew( const Eigen::Vector3d& p_vecVector );
-    static const Eigen::Isometry3d vector2transform(const Eigen::Matrix< double, 6, 1 >& t);
+    static const Eigen::Isometry3d getTransformationFromVector(const Eigen::Matrix< double, 6, 1 >& t);
     static const Eigen::Matrix3d getEssential( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationTo );
     static const Eigen::Matrix3d getEssentialPrecomputed( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationToInverse );
     static const Eigen::Matrix3d getFundamental( const Eigen::Isometry3d& p_matTransformationFrom, const Eigen::Isometry3d& p_matTransformationTo, const Eigen::Matrix3d& p_matIntrinsic );

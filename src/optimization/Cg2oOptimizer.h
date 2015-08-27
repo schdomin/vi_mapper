@@ -37,11 +37,10 @@ private:
     const std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
 
     g2o::SparseOptimizer m_cOptimizerSparse;
-    const UIDKeyFrame m_uIDShift              = 1000000; //ds required to navigate between landmarks and poses
-    UIDLandmark m_uIDLandmarkOptimizationLAST = 0;
-    g2o::VertexSE3 *m_pVertexPoseLAST         = 0;
-    const uint32_t m_uIterations              = 500;
-    uint32_t m_uOptimizations          = 0;
+    const UIDKeyFrame m_uIDShift      = 1000000; //ds required to navigate between landmarks and poses
+    g2o::VertexSE3 *m_pVertexPoseLAST = 0;
+    const uint32_t m_uIterations      = 500;
+    uint32_t m_uOptimizations         = 0;
 
     const double m_dMaximumReliableDepthForPointXYZ = 2.5;
     const double m_dMaximumReliableDepthForUVDepth  = 7.5;
@@ -55,12 +54,16 @@ private:
 
 public:
 
+    void optimizeTailLoopClosuresOnly( const UIDKeyFrame& p_uIDBeginKeyFrame );
     void optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame );
-    void optimizeContinuous( const UIDKeyFrame& p_uIDBegin, const UIDKeyFrame& p_uIDEnd );
+    void optimizeContinuous( const UIDKeyFrame& p_uIDBeginKeyFrame );
 
     const uint32_t getNumberOfSegmentOptimizations( ) const { return m_uOptimizations; }
     const bool isOptimized( const CLandmark* p_pLandmark ) const;
     const bool isKeyFramed( const CLandmark* p_pLandmark ) const;
+
+    //ds clears g2o files in logging directory
+    void clearFiles( ) const;
 
 private:
 
@@ -78,6 +81,18 @@ private:
                                                               const CMeasurementLandmark* p_pMeasurement,
                                                               const double& p_dFxPixels,
                                                               const double& p_dBaselineMeters ) const;
+
+    void _loadLandmarksToGraph( const std::vector< CLandmark* >& p_vecChunkLandmarks );
+    g2o::VertexSE3* _setAndgetPose( g2o::VertexSE3* p_pVertexPoseFrom, const CKeyFrame* pKeyFrameCurrent );
+    void _setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const CKeyFrame* pKeyFrameCurrent );
+    void _setLandmarkMeasurements( g2o::VertexSE3* p_pVertexPoseCurrent,
+                           const CKeyFrame* pKeyFrameCurrent,
+                           UIDLandmark& p_uMeasurementsStoredPointXYZ,
+                           UIDLandmark& p_uMeasurementsStoredUVDepth,
+                           UIDLandmark& p_uMeasurementsStoredUVDisparity );
+
+    void _applyOptimization( const std::vector< CLandmark* >& p_vecChunkLandmarks );
+    void _applyOptimization( const std::vector< CKeyFrame* >& p_vecChunkKeyFrames );
 
 
 };

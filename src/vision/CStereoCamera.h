@@ -65,7 +65,6 @@ public:
         m_matTransformLEFTtoIMU   = p_cCameraLEFT.m_matTransformationCAMERAtoIMU;
         m_matTransformRIGHTtoIMU  = p_cCameraRIGHT.m_matTransformationCAMERAtoIMU;
         m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
-        m_matTransformLEFTtoRIGHT = m_matTransformRIGHTtoIMU.inverse( )*m_matTransformLEFTtoIMU;
 
         m_dBaselineMeters = m_matTransformLEFTtoRIGHT.translation( ).norm( );
 

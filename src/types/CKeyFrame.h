@@ -2,42 +2,65 @@
 #define CKEYFRAME_H
 
 #include "CLandmark.h"
+#include "TypesCloud.h"
 
-struct CKeyFrame
+class CKeyFrame
 {
-    const UIDKeyFrame uID;
-    Eigen::Isometry3d matTransformationLEFTtoWORLD;
-    const CLinearAccelerationIMU vecLinearAccelerationNormalized;
-    const std::vector< const CMeasurementLandmark* > vecMeasurements;
-    bool bIsOptimized = false;
-    const UIDFrame uFrame;
-    const CKeyFrame* pLoopClosure;
+
+public:
+
+    //ds keyframe loop closing
+    struct CMatchICP
+    {
+        const CKeyFrame* pKeyFrameReference;
+        const Eigen::Isometry3d matTransformationToClosure;
+
+        CMatchICP( const CKeyFrame* p_pKeyFrameReference,
+                   const Eigen::Isometry3d& p_matTransformationToReference ): pKeyFrameReference( p_pKeyFrameReference ),
+                                                                              matTransformationToClosure( p_matTransformationToReference )
+        {
+            //ds nothing to do
+        }
+    };
+
+public:
 
     CKeyFrame( const UIDKeyFrame& p_uID,
+               const UIDFrame& p_uFrame,
                const Eigen::Isometry3d p_matTransformationLEFTtoWORLD,
                const CLinearAccelerationIMU& p_vecLinearAcceleration,
                const std::vector< const CMeasurementLandmark* >& p_vecMeasurements,
-               const UIDFrame& p_uFrame,
-               const CKeyFrame* p_pLoopClosure ): uID( p_uID ),
+               const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloud,
+               const CMatchICP* p_pLoopClosure ): uID( p_uID ),
+                                                  uFrameOfCreation( p_uFrame ),
                                                   matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
                                                   vecLinearAccelerationNormalized( p_vecLinearAcceleration ),
                                                   vecMeasurements( p_vecMeasurements ),
-                                                  uFrame( p_uFrame ),
+                                                  vecCloud( p_vecCloud ),
                                                   pLoopClosure( p_pLoopClosure )
     {
         //ds nothing to do
     }
-
-    //ds copy constructor (however with unique id)
-    CKeyFrame( const UIDKeyFrame& p_uID, const CKeyFrame* p_pKeyFrame, const CKeyFrame* p_pLoopClosure ): uID( p_uID ),
-                                                                                                          matTransformationLEFTtoWORLD( p_pKeyFrame->matTransformationLEFTtoWORLD ),
-                                                                                                          vecLinearAccelerationNormalized( p_pKeyFrame->vecLinearAccelerationNormalized ),
-                                                                                                          vecMeasurements( p_pKeyFrame->vecMeasurements ),
-                                                                                                          uFrame( p_pKeyFrame->uFrame ),
-                                                                                                          pLoopClosure( p_pLoopClosure )
+    ~CKeyFrame( )
     {
-        //ds nothing to do
+        //ds free loop closure if set
+        if( 0 != pLoopClosure )
+        {
+            delete pLoopClosure;
+        }
     }
+
+public:
+
+    const UIDKeyFrame uID;
+    const UIDFrame uFrameOfCreation;
+    Eigen::Isometry3d matTransformationLEFTtoWORLD;
+    const CLinearAccelerationIMU vecLinearAccelerationNormalized;
+    const std::vector< const CMeasurementLandmark* > vecMeasurements;
+    bool bIsOptimized = false;
+    const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > vecCloud;
+    const CMatchICP* pLoopClosure;
+
 };
 
 #endif //CKEYFRAME_H

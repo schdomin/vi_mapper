@@ -70,19 +70,18 @@ private:
     UIDLandmark m_uAvailableLandmarkID          = 0;
     UIDLandmark m_uNumberofVisibleLandmarksLAST = 0;
     std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
-    std::shared_ptr< std::vector< const CDescriptorPointCloud* > > m_vecClouds;
 
     //ds g2o data
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
-    UIDKeyFrame m_uIDProcessedKeyFrameLAST              = 0;
-    UIDLandmark m_uIDProcessedLandmarkLAST              = 0;
-    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 90;
+    UIDKeyFrame m_uIDProcessedKeyFrameLAST = 0;
+    UIDKeyFrame m_uIDLoopClosureLAST       = 0;
+    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization;
+    const UIDKeyFrame m_uIDDeltaLoopClosureForOptimization;
     Cg2oOptimizer m_cOptimizer;
 
     //ds loop closing
-    const UIDKeyFrame m_uLoopClosingKeyFrameDistance       = 10;
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure = 35;
-    std::shared_ptr< std::vector< const C67DTree* > > m_vecTrees;
+    const UIDKeyFrame m_uLoopClosingKeyFrameDistance;
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -102,34 +101,14 @@ public:
                          const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
                          const std::shared_ptr< txt_io::CIMUMessage > p_pIMU );
 
-    const uint64_t getFrameCount( ) const { return m_uFrameCount; }
+    const UIDFrame getFrameCount( ) const { return m_uFrameCount; }
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
     const std::shared_ptr< std::vector< CLandmark* > > getLandmarksHandle( ) const { return m_vecLandmarks; }
     const std::shared_ptr< std::vector< CKeyFrame* > > getKeyFramesHandle( ) const { return m_vecKeyFrames; }
     const bool isFrameAvailable( ) const { return m_bIsFrameAvailable; }
     const std::pair< bool, Eigen::Isometry3d > getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_prFrameLEFTtoWORLD; }
-
-    //ds postprocessing
-    void saveUVDepthOrDisparity( const std::string& p_strOutfile ) const
-    {
-        //CBridgeG2O::saveUVDepthOrDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
-    }
-    void saveXYZ( const std::string& p_strOutfile ) const
-    {
-        //CBridgeG2O::saveXYZ( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
-    }
-    void saveUVDepth( const std::string& p_strOutfile ) const
-    {
-        //CBridgeG2O::saveUVDepth( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
-    }
-    void saveUVDisparity( const std::string& p_strOutfile ) const
-    {
-        //CBridgeG2O::saveUVDisparity( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
-    }
-    void saveCOMBO( const std::string& p_strOutfile ) const
-    {
-        //CBridgeG2O::saveCOMBO( p_strOutfile, *m_pCameraSTEREO, *m_vecLandmarks, m_vecKeyFrames );
-    }
+    void finalize( );
+    void sanitizeFiletree( ){ m_cOptimizer.clearFiles( ); }
 
 //ds helpers
 private:
@@ -140,7 +119,8 @@ private:
                           const Eigen::Isometry3d& p_matTransformationEstimateParallelWORLDtoLEFT,
                           const CLinearAccelerationIMU& p_vecLinearAcceleration,
                           const Eigen::Vector3d& p_vecRotationTotal,
-                          const Eigen::Vector3d& p_vecTranslationTotal );
+                          const Eigen::Vector3d& p_vecTranslationTotal,
+                          const double& p_dDeltaTimeSeconds );
 
     const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const UIDFrame& p_uFrame,
                                                       cv::Mat& p_matDisplay,
@@ -151,8 +131,7 @@ private:
                                                       const Eigen::Vector3d& p_vecRotation );
 
     //ds loop closing
-    const CKeyFrame* _getLoopClosureKeyFrame( const int64_t& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, cv::Mat& p_matDisplayLEFT );
-    const CKeyFrame* _getLoopClosureKeyFrameFCFS( const int64_t& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, cv::Mat& p_matDisplayLEFT );
+    const CKeyFrame::CMatchICP* _getLoopClosureKeyFrameFCFS( const UIDKeyFrame& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
 
     //ds sliding window keyframe detection
     const bool _containsSlidingWindowKeyFrame( ) const;

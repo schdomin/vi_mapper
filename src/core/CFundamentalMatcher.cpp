@@ -97,6 +97,22 @@ const std::shared_ptr< const std::vector< CLandmark* > > CFundamentalMatcher::ge
     return vecVisibleLandmarks;
 }
 
+const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > CFundamentalMatcher::getCloudForVisibleOptimizedLandmarks( ) const
+{
+    //ds return vector
+    std::shared_ptr< std::vector< CDescriptorVectorPoint3DWORLD > > vecCloud( std::make_shared< std::vector< CDescriptorVectorPoint3DWORLD > >( ) );
+
+    for( CLandmark* pLandmark: m_vecVisibleLandmarks )
+    {
+        if( CBridgeG2O::isOptimized( pLandmark ) )
+        {
+            vecCloud->push_back( CDescriptorVectorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->getLastPointXYZLEFT( ), pLandmark->vecDescriptorsLEFT ) );
+        }
+    }
+
+    return vecCloud;
+}
+
 const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFrame p_uFrame,
                                                                   cv::Mat& p_matDisplayLEFT,
                                                                   cv::Mat& p_matDisplayRIGHT,
@@ -121,9 +137,9 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
     const CPoint3DWORLD vecTranslationEstimate( p_matTransformationEstimateWORLDtoLEFT.inverse( ).translation( ) );
 
     //ds active measurements
-    for( const CDetectionPoint cDetectionPoint: m_vecDetectionPointsActive )
+    for( const CDetectionPoint& cDetectionPoint: m_vecDetectionPointsActive )
     {
-        //ds loop over the points for the current scan
+        //ds loop over the points for the current scan (use all points not only optimized and visible ones)
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
         {
             //ds project into camera
@@ -382,7 +398,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                 }
                 else
                 {
-                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) unable to run loop on inliers only (%u not sufficient)\n", uInliersCurrent );
+                    std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) unable to run loop on inliers only (%u not sufficient)\n", uInliersCurrent );
                 }
                 break;
             }

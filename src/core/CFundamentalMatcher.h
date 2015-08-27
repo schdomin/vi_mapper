@@ -3,6 +3,7 @@
 
 #include "CTriangulator.h"
 #include "types/CLandmark.h"
+#include "types/TypesCloud.h"
 #include "optimization/CPositSolver.h"
 #include "optimization/CPositSolverProjection.h"
 #include "optimization/CPositSolverStereo.h"
@@ -115,8 +116,8 @@ private:
     UIDLandmark m_uNumberOfDetectionsEpipolar         = 0;
 
     //ds posit solving
-    const uint8_t m_uSearchBlockSizePoseOptimization   = 15;
-    const uint8_t m_uMinimumPointsForPoseOptimization  = 30;
+    const uint8_t m_uSearchBlockSizePoseOptimization   = 10; //15
+    const uint8_t m_uMinimumPointsForPoseOptimization  = 25; //30
     const uint8_t m_uMinimumInliersForPoseOptimization = 10;
     const uint8_t m_uCapIterationsPoseOptimization     = 10;
     const double m_dConvergenceDeltaPoseOptimization   = 1e-5;
@@ -139,6 +140,9 @@ public:
 
     //ds returns a handle to all currently visible landmarks
     const std::shared_ptr< const std::vector< CLandmark* > > getVisibleOptimizedLandmarks( ) const;
+
+    //ds returns cloud version of currently visible landmarks
+    const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > getCloudForVisibleOptimizedLandmarks( ) const;
 
     const Eigen::Isometry3d getPoseOptimizedSTEREO( const UIDFrame p_uFrame,
                                                     cv::Mat& p_matDisplayLEFT,

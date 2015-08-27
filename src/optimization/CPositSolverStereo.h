@@ -169,7 +169,7 @@ struct CPositSolverStereo
 	  scale  = dMaximumError/en;
         }
         chi2 += e.transpose()*e;
-        H+=J.transpose()*J;
+        H+=J.transpose()*J*scale;
         b+=J.transpose()*e*scale;
         uNumberOfReprojections++;
       }
@@ -212,13 +212,9 @@ struct CPositSolverStereo
       } else
         inliers[i]=false;
 
-          double scale = 1;
-          if (en>dMaximumError) {
-        scale  = dMaximumError/en;
-          }
           chi2 += e.transpose()*e;
           H+=J.transpose()*J;
-          b+=J.transpose()*e*scale;
+          b+=J.transpose()*e;
           uNumberOfReprojections++;
         }
 
