@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdio>
 #include <fstream>
+#include "vision/CStereoCamera.h"
 
 namespace gtools
 {

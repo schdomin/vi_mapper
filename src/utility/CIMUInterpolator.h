@@ -9,74 +9,197 @@
 class CIMUInterpolator
 {
 
-/*ds ctor/dtor
+//ds ctor/dtor
 public:
 
-    CIMUInterpolator( const double& p_dMaximumDeltaTimeSeconds = 0.1 ): m_vecLastVelocityLinear( 0.0, 0.0, 0.0 ),
-                                                                        m_vecLastVelocityAngular( 0.0, 0.0, 0.0 ),
-                                                                        m_vecOffsetAccelerationLinear( 0.2, 9.80665, 0.5 ),
-                                                                        m_vecOffsetVelocityAngular( 0.0, 0.0, 0.0 ),
-                                                                        m_dLastTimestamp( 0.0 ),
-                                                                        m_dMaximumDeltaTimeSeconds( p_dMaximumDeltaTimeSeconds )
+    CIMUInterpolator( ): m_dLastTimestamp( 0.0 ), m_vecOffsetAccelerationLinear( 0.0, 0.0, 0.0 ), m_vecOffsetVelocityAngular( 0.0, 0.0, 0.0 )
     {
-        m_mapTransformationsIMU.clear( );
         m_vecCalibration.clear( );
     }
 
     ~CIMUInterpolator( )
     {
-        m_mapTransformationsIMU.clear( );
-        m_vecCalibration.clear( );
-    }*/
+        //ds nothing to do
+    }
 
 //ds fields
 private:
 
-    /*std::map< double, Eigen::Isometry3d > m_mapTransformationsIMU;
+    std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > > m_vecCalibration;
+    double m_dLastTimestamp;
+    std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type uMeasurementsForOptimization = 100;
+    const double m_dCalibrationConvergenceDeltaRotation = 1e-3;
+    const double m_dCalibrationConvergenceDeltaFinal    = 1e-3;
+    bool m_bIsCalibrated = false;
+    bool m_bIsRotationComputed = false;
 
-    Eigen::Vector3d m_vecLastVelocityLinear;
-    Eigen::Vector3d m_vecLastVelocityAngular;
+    Eigen::Vector3d m_vecOffsetAccelerationLinear;
+    Eigen::Vector3d m_vecOffsetVelocityAngular;
+    Eigen::Matrix3d m_matRotationIMUtoWORLD;
+    Eigen::Matrix3d m_matRotationWORLDtoIMU;
 
-    std::vector< std::pair< Eigen::Vector3d, Eigen::Vector3d > > m_vecCalibration;
-    Eigen::Vector3d m_vecOffsetAccelerationLinear; //ds TODO calibration
-    Eigen::Vector3d m_vecOffsetVelocityAngular; //ds TODO calibration
-
-    double m_dLastTimestamp;*/
+public:
 
     //ds IMU filtering (calibrated 2015-07-25)
-    static constexpr double m_dImprecisionAngularVelocity     = 0.001;
-    static constexpr double m_dImprecisionLinearAcceleration  = 0.1;
+    static constexpr double m_dImprecisionAngularVelocity     = 0.01;
+    static constexpr double m_dImprecisionLinearAcceleration  = 0.1; //0.1
     static constexpr double m_vecBiasLinearAccelerationXYZ[3] = { 0.0, 0.0, -9.80665 }; //ds compensate gravitational component (http://en.wikipedia.org/wiki/ISO_80000-3)
+    static constexpr double dMaximumDeltaTimeSeconds          = 0.11;
 
+//ds accessors
 public:
 
-    static constexpr double dMaximumDeltaTimeSeconds = 0.11;
-
-/*ds accessors
-public:
-
-    void addMeasurementCalibration( const Eigen::Vector3d& p_vecAccelerationLinear, const Eigen::Vector3d& p_vecVelocityAngular )
+    void addMeasurementCalibration( const CLinearAccelerationIMU& p_vecAccelerationLinear, const CAngularVelocityIMU& p_vecVelocityAngular )
     {
-        m_vecCalibration.push_back( std::pair< Eigen::Vector3d, Eigen::Vector3d >( p_vecAccelerationLinear, p_vecVelocityAngular ) );
+        m_vecCalibration.push_back( std::make_pair( p_vecAccelerationLinear, p_vecVelocityAngular ) );
+
+        //ds check if we can optimize
+        if( 0 == m_vecCalibration.size( )%uMeasurementsForOptimization )
+        {
+            if( m_bIsRotationComputed )
+            {
+                calibrateOffsets( );
+            }
+            else
+            {
+                calibrateRotation( );
+            }
+        }
     }
 
     void calibrateOffsets( )
     {
-        std::for_each( m_vecCalibration.begin( ),m_vecCalibration.end( ),[&]( std::pair< Eigen::Vector3d, Eigen::Vector3d > prMeasurement )
+        //ds should not be called when calibrated
+        assert( !m_bIsCalibrated );
+
+        Eigen::Vector3d vecOffsetAccelerationLinearWORLD( 0.0, 0.0, 0.0 );
+        Eigen::Vector3d vecOffsetVelocityAngular( 0.0, 0.0, 0.0 );
+
+        std::for_each( m_vecCalibration.begin( ),m_vecCalibration.end( ),[&]( std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > prMeasurement )
         {
-            m_vecOffsetAccelerationLinear += prMeasurement.first;
-            m_vecOffsetVelocityAngular    += prMeasurement.second;
+            vecOffsetAccelerationLinearWORLD += m_matRotationIMUtoWORLD*prMeasurement.first;
+            vecOffsetVelocityAngular         += prMeasurement.second;
         });
 
         //ds compute means
-        m_vecOffsetAccelerationLinear /= m_vecCalibration.size( );
-        m_vecOffsetVelocityAngular    /= m_vecCalibration.size( );
+        vecOffsetAccelerationLinearWORLD /= m_vecCalibration.size( );
+        vecOffsetVelocityAngular         /= m_vecCalibration.size( );
 
-        std::printf( "<CIMUInterpolator>(calibrateOffsets) calibrated offsets for linear acceleration: %5.2f %5.2f %5.2f\n", m_vecOffsetAccelerationLinear.x( ), m_vecOffsetAccelerationLinear.y( ), m_vecOffsetAccelerationLinear.z( ) );
-        std::printf( "<CIMUInterpolator>(calibrateOffsets) calibrated offsets for angular velocity: %5.2f %5.2f %5.2f\n", m_vecOffsetVelocityAngular.x( ), m_vecOffsetVelocityAngular.y( ), m_vecOffsetVelocityAngular.z( ) );
+        //ds compute variances
+        Eigen::Vector3d vecVarianceAccelerationLinearWORLD( 0.0, 0.0, 0.0 );
+        Eigen::Vector3d vecVarianceVelocityAngular( 0.0, 0.0, 0.0 );
+        std::for_each( m_vecCalibration.begin( ),m_vecCalibration.end( ),[&]( std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > prMeasurement )
+        {
+            const Eigen::Vector3d vecLinearAccelerationWORLD( m_matRotationIMUtoWORLD*prMeasurement.first );
+            vecVarianceAccelerationLinearWORLD.x( ) += ( vecLinearAccelerationWORLD.x( )-vecOffsetAccelerationLinearWORLD.x( ) )*( vecLinearAccelerationWORLD.x( )-vecOffsetAccelerationLinearWORLD.x( ) );
+            vecVarianceAccelerationLinearWORLD.y( ) += ( vecLinearAccelerationWORLD.y( )-vecOffsetAccelerationLinearWORLD.y( ) )*( vecLinearAccelerationWORLD.y( )-vecOffsetAccelerationLinearWORLD.y( ) );
+            vecVarianceAccelerationLinearWORLD.z( ) += ( vecLinearAccelerationWORLD.z( )-vecOffsetAccelerationLinearWORLD.z( ) )*( vecLinearAccelerationWORLD.z( )-vecOffsetAccelerationLinearWORLD.z( ) );
+            vecVarianceVelocityAngular.x( )    += ( prMeasurement.second.x( )-vecOffsetVelocityAngular.x( ) )*( prMeasurement.second.x( )-vecOffsetVelocityAngular.x( ) );
+            vecVarianceVelocityAngular.y( )    += ( prMeasurement.second.y( )-vecOffsetVelocityAngular.y( ) )*( prMeasurement.second.y( )-vecOffsetVelocityAngular.y( ) );
+            vecVarianceVelocityAngular.z( )    += ( prMeasurement.second.z( )-vecOffsetVelocityAngular.z( ) )*( prMeasurement.second.z( )-vecOffsetVelocityAngular.z( ) );
+        });
+        vecVarianceAccelerationLinearWORLD /= m_vecCalibration.size( );
+        vecVarianceVelocityAngular         /= m_vecCalibration.size( );
+
+        //ds update measurements if useful
+        if( m_dCalibrationConvergenceDeltaFinal < std::fabs( vecOffsetAccelerationLinearWORLD.x( )-m_vecOffsetAccelerationLinear.x( ) ) ||
+            m_dCalibrationConvergenceDeltaFinal < std::fabs( vecOffsetAccelerationLinearWORLD.y( )-m_vecOffsetAccelerationLinear.y( ) ) ||
+            m_dCalibrationConvergenceDeltaFinal < std::fabs( vecOffsetAccelerationLinearWORLD.z( )-m_vecOffsetAccelerationLinear.z( ) ) ||
+            m_dCalibrationConvergenceDeltaFinal < std::fabs( vecOffsetVelocityAngular.x( )-m_vecOffsetVelocityAngular.x( ) ) ||
+            m_dCalibrationConvergenceDeltaFinal < std::fabs( vecOffsetVelocityAngular.y( )-m_vecOffsetVelocityAngular.y( ) ) ||
+            m_dCalibrationConvergenceDeltaFinal < std::fabs( vecOffsetVelocityAngular.z( )-m_vecOffsetVelocityAngular.z( ) ) )
+        {
+            m_vecOffsetAccelerationLinear = vecOffsetAccelerationLinearWORLD;
+            m_vecOffsetVelocityAngular    = vecOffsetVelocityAngular;
+
+            std::printf( "<CIMUInterpolator>(calibrateOffsets) calibrated linear acceleration | BIAS: %6.3f %6.3f %6.3f | VARIANCE: %7.5f %7.5f %7.5f\n",
+                         m_vecOffsetAccelerationLinear.x( ), m_vecOffsetAccelerationLinear.y( ), m_vecOffsetAccelerationLinear.z( ), vecVarianceAccelerationLinearWORLD.x( ), vecVarianceAccelerationLinearWORLD.y( ), vecVarianceAccelerationLinearWORLD.z( ) );
+            std::printf( "<CIMUInterpolator>(calibrateOffsets) calibrated angular velocity    | BIAS: %6.3f %6.3f %6.3f | VARIANCE: %7.5f %7.5f %7.5f\n",
+                         m_vecOffsetVelocityAngular.x( ), m_vecOffsetVelocityAngular.y( ), m_vecOffsetVelocityAngular.z( ), vecVarianceVelocityAngular.x( ), vecVarianceVelocityAngular.y( ), vecVarianceVelocityAngular.z( ) );
+        }
+        else
+        {
+            std::printf( "<CIMUInterpolator>(calibrateOffsets) converged - IMU calibration complete\n" );
+            m_bIsCalibrated = true;
+        }
     }
 
-    void addMeasurement( Eigen::Vector3d& p_vecAccelerationLinear, const Eigen::Vector3d& p_vecVelocityAngular, const double& p_dTimestampSeconds )
+    void calibrateRotation( )
+    {
+        //ds should not be called when calibrated
+        assert( !m_bIsRotationComputed );
+
+        Eigen::Vector3d vecOffsetAccelerationLinear( 0.0, 0.0, 0.0 );
+
+        std::for_each( m_vecCalibration.begin( ),m_vecCalibration.end( ),[&]( std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > prMeasurement )
+        {
+            vecOffsetAccelerationLinear += prMeasurement.first;
+        });
+
+        //ds compute means
+        vecOffsetAccelerationLinear /= m_vecCalibration.size( );
+
+        //ds compute variances
+        Eigen::Vector3d vecVarianceAccelerationLinear( 0.0, 0.0, 0.0 );
+        std::for_each( m_vecCalibration.begin( ),m_vecCalibration.end( ),[&]( std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > prMeasurement )
+        {
+            vecVarianceAccelerationLinear.x( ) += ( prMeasurement.first.x( )-vecOffsetAccelerationLinear.x( ) )*( prMeasurement.first.x( )-vecOffsetAccelerationLinear.x( ) );
+            vecVarianceAccelerationLinear.y( ) += ( prMeasurement.first.y( )-vecOffsetAccelerationLinear.y( ) )*( prMeasurement.first.y( )-vecOffsetAccelerationLinear.y( ) );
+            vecVarianceAccelerationLinear.z( ) += ( prMeasurement.first.z( )-vecOffsetAccelerationLinear.z( ) )*( prMeasurement.first.z( )-vecOffsetAccelerationLinear.z( ) );
+        });
+        vecVarianceAccelerationLinear /= m_vecCalibration.size( );
+
+        //ds update measurements if useful
+        if( m_dCalibrationConvergenceDeltaRotation < std::fabs( vecOffsetAccelerationLinear.x( )-m_vecOffsetAccelerationLinear.x( ) ) ||
+            m_dCalibrationConvergenceDeltaRotation < std::fabs( vecOffsetAccelerationLinear.y( )-m_vecOffsetAccelerationLinear.y( ) ) ||
+            m_dCalibrationConvergenceDeltaRotation < std::fabs( vecOffsetAccelerationLinear.z( )-m_vecOffsetAccelerationLinear.z( ) ) )
+        {
+            m_vecOffsetAccelerationLinear = vecOffsetAccelerationLinear;
+
+            std::printf( "<CIMUInterpolator>(calibrateRotation) calibrated linear acceleration | BIAS: %6.3f %6.3f %6.3f | VARIANCE: %7.5f %7.5f %7.5f\n",
+                         m_vecOffsetAccelerationLinear.x( ), m_vecOffsetAccelerationLinear.y( ), m_vecOffsetAccelerationLinear.z( ), vecVarianceAccelerationLinear.x( ), vecVarianceAccelerationLinear.y( ), vecVarianceAccelerationLinear.z( ) );
+        }
+        else
+        {
+            //ds converged - we can compute the rotation
+            const Eigen::Vector3d vecIMU( m_vecOffsetAccelerationLinear.normalized( ) );
+            const Eigen::Vector3d vecGraviation( 0.0, 0.0, -1.0 );
+
+            //ds compute rotation matrix
+            const Eigen::Vector3d vecCross( vecIMU.cross( vecGraviation ) );
+            const double dSine   = vecCross.norm( );
+            const double dCosine = vecIMU.transpose( )*vecGraviation;
+            const Eigen::Matrix3d matSkew( CMiniVisionToolbox::getSkew( vecCross ) );
+
+            //ds set member
+            m_matRotationIMUtoWORLD = Eigen::Matrix3d::Identity( ) + matSkew + ( 1-dCosine )/( dSine*dSine )*matSkew*matSkew;
+            m_matRotationWORLDtoIMU = m_matRotationIMUtoWORLD.transpose( );
+            m_bIsRotationComputed   = true;
+
+            //ds reset offsets for linear acceleration
+            m_vecOffsetAccelerationLinear = Eigen::Vector3d::Zero( );
+
+            std::printf( "<CIMUInterpolator>(calibrateRotation) converged - starting BIAS and VARIANCE calibration\n" );
+        }
+    }
+
+    const bool isCalibrated( ) const
+    {
+        return m_bIsCalibrated;
+    }
+
+    const Eigen::Isometry3d getTransformationWORLDtoCAMERA( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA ) const
+    {
+        //ds allocate isometry
+        Eigen::Isometry3d matTransformationWORLDtoCAMERA( Eigen::Matrix4d::Identity( ) );
+
+        //ds set rotational part
+        matTransformationWORLDtoCAMERA.linear( ) = p_matRotationIMUtoCAMERA*m_matRotationWORLDtoIMU;
+
+        return matTransformationWORLDtoCAMERA;
+    }
+
+    /*void addMeasurement( Eigen::Vector3d& p_vecAccelerationLinear, const Eigen::Vector3d& p_vecVelocityAngular, const double& p_dTimestampSeconds )
     {
         //std::cout << p_vecAccelerationLinear.transpose( ) << std::endl;
 
@@ -141,9 +264,9 @@ public:
 
         CLinearAccelerationWORLD vecLinearAccelerationFiltered( 0.0, 0.0, 0.0 );
 
-        if( 0 < dAbsoluteAccelerationX ){ vecLinearAccelerationFiltered.x( ) = CIMUInterpolator::sign( dAccelerationX )*dAbsoluteAccelerationX; }
-        if( 0 < dAbsoluteAccelerationY ){ vecLinearAccelerationFiltered.y( ) = CIMUInterpolator::sign( dAccelerationY )*dAbsoluteAccelerationY; }
-        if( 0 < dAbsoluteAccelerationZ ){ vecLinearAccelerationFiltered.z( ) = CIMUInterpolator::sign( dAccelerationZ )*dAbsoluteAccelerationZ; }
+        if( 0.0 < dAbsoluteAccelerationX ){ vecLinearAccelerationFiltered.x( ) = CIMUInterpolator::sign( dAccelerationX )*dAbsoluteAccelerationX; }
+        if( 0.0 < dAbsoluteAccelerationY ){ vecLinearAccelerationFiltered.y( ) = CIMUInterpolator::sign( dAccelerationY )*dAbsoluteAccelerationY; }
+        if( 0.0 < dAbsoluteAccelerationZ ){ vecLinearAccelerationFiltered.z( ) = CIMUInterpolator::sign( dAccelerationZ )*dAbsoluteAccelerationZ; }
 
         return vecLinearAccelerationFiltered;
     }

@@ -3,10 +3,11 @@
 #include <QKeyEvent>
 #include <QGLViewer/manipulatedFrame.h>
 
-#include "optimization/CBridgeG2O.h"
+#include "optimization/Cg2oOptimizer.h"
 
 CViewerScene::CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks,
-                            const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames ): m_vecLandmarks( p_vecLandmarks ), m_vecKeyFrames( p_vecKeyFrames )
+                            const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames,
+                            const double& p_dLoopClosingRadius ): m_vecLandmarks( p_vecLandmarks ), m_vecKeyFrames( p_vecKeyFrames ), m_dLoopClosingRadius( p_dLoopClosingRadius ), m_pQuadratic( gluNewQuadric( ) )
 {
     //ds nothing to do
 }
@@ -43,7 +44,7 @@ void CViewerScene::draw()
     glPopMatrix( );
 
     //ds current ID
-    UIDKeyFrame uCurrent = 0;
+    std::vector< CKeyFrame* >::size_type uCurrent = 0;
 
     //ds while the key frames are optimized
     while( m_vecKeyFrames->size( ) > uCurrent && m_vecKeyFrames->at( uCurrent )->bIsOptimized )
@@ -140,6 +141,14 @@ void CViewerScene::draw()
     glPushMatrix( );
     glMultMatrixd( cFrameCurrent.matrix( ) );
     drawAxis( 0.25 );
+
+    //ds draw loop closing sphere around head
+    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
+    glEnable( GL_BLEND );
+    glColor4f( 0.5, 0.5, 1.0, 0.05 );
+    //glTranslatef( cFrameCurrent.translation( ).x, cFrameCurrent.translation( ).y, cFrameCurrent.translation( ).z );
+    gluSphere( m_pQuadratic, m_dLoopClosingRadius, 16, 16 );
+    glDisable( GL_BLEND );
     glPopMatrix( );
 
     //ds set line width and point size for landmarks
@@ -188,7 +197,7 @@ void CViewerScene::draw()
         else
         {
             //ds draw landmark if valid
-            if( CBridgeG2O::isOptimized( pLandmarkInScene ) )
+            if( Cg2oOptimizer::isOptimized( pLandmarkInScene ) )
             {
                 //ds enable transparency
                 glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -210,72 +219,6 @@ void CViewerScene::draw()
     }
 
     glPopAttrib( );
-
-    /*ds enable transparency
-    glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
-    glEnable( GL_BLEND );
-
-    //ds draw all existing landmarks
-    for( const std::pair< UIDLandmark, CPoint3DInWorldFrame >& cLandmarkInScene: m_mapLandmarks )
-    {
-        //ds draw optimized position
-        glColor3f( 0.5, 0.5, 0.5 );
-        glPushMatrix( );
-        glTranslatef( cLandmarkInScene.second.x( ), cLandmarkInScene.second.y( ), cLandmarkInScene.second.z( ) );
-        _drawBox( 0.02, 0.02, 0.02 );
-        glPopMatrix( );
-    }
-
-    //ds disable transparency
-    glDisable( GL_BLEND );
-
-    //ds check if we have measurements
-    if( 0 != m_pLiveMeasurements )
-    {
-        //ds loop over currently live measurements
-        for( const CMeasurementLandmark* pLandmark: *m_pLiveMeasurements )
-        {
-            //ds buffer positions
-            const qglviewer::Vec vecPositionOriginal( pLandmark->vecPointXYZWORLD );
-            const qglviewer::Vec vecPositionOptimized( pLandmark->vecPointXYZWORLDOptimized );
-
-            //ds draw the line between original and optimized
-            glColor3f( 1.0, 0.1, 0.1 );
-            glLineWidth( 1.0 );
-            glPushAttrib( GL_ENABLE_BIT );
-            glDisable( GL_LIGHTING );
-            glBegin( GL_LINES );
-            glVertex3f( vecPositionOriginal.x, vecPositionOriginal.y, vecPositionOriginal.z );
-            glVertex3f( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
-            glEnd( );
-            glPopAttrib( );
-
-            //ds draw original position
-            glColor3f( 0.75, 0.75, 0.75 );
-            glPushMatrix( );
-            glTranslatef( vecPositionOriginal.x, vecPositionOriginal.y, vecPositionOriginal.z );
-            _drawBox( 0.025, 0.025, 0.025 );
-            glPopMatrix( );
-
-            //ds draw optimized position
-            glColor3f( 0.25, 1.0, 0.25 );
-            glPushMatrix( );
-            glTranslatef( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
-            _drawBox( 0.025, 0.025, 0.025 );
-            glPopMatrix( );
-
-            try
-            {
-                //ds check if the live measurement updates a existing landmark
-                m_mapLandmarks.at( pLandmark->uID ) = pLandmark->vecPointXYZWORLDOptimized;
-            }
-            catch( const std::out_of_range& p_cException )
-            {
-                //ds landmark not found, we can add it
-                m_mapLandmarks.insert( std::pair< UIDLandmark, CPoint3DInWorldFrame >( pLandmark->uID, pLandmark->vecPointXYZWORLDOptimized ) );
-            }
-        }
-    }*/
 }
 
 void CViewerScene::init( )

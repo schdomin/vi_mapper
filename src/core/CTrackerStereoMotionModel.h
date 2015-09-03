@@ -12,6 +12,7 @@
 #include "utility/CCloudStreamer.h"
 #include "types/CKeyFrame.h"
 #include "optimization/Cg2oOptimizer.h"
+#include "utility/CIMUInterpolator.h"
 
 class CTrackerStereoMotionModel
 {
@@ -21,6 +22,7 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
+                               const CIMUInterpolator& p_cIMUInterpolator,
                                const uint32_t& p_uWaitKeyTimeoutMS = 1 );
     ~CTrackerStereoMotionModel( );
 
@@ -72,6 +74,7 @@ private:
     std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
 
     //ds g2o data
+    const UIDLandmark m_uMinimumLandmarksForKeyFrame;
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
     UIDKeyFrame m_uIDProcessedKeyFrameLAST = 0;
     UIDKeyFrame m_uIDLoopClosureLAST       = 0;
@@ -80,8 +83,9 @@ private:
     Cg2oOptimizer m_cOptimizer;
 
     //ds loop closing
-    const UIDKeyFrame m_uLoopClosingKeyFrameDistance;
+    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance;
     const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure;
+    const double m_dLoopClosingRadiusSquaredNN = 25.0;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -105,6 +109,7 @@ public:
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
     const std::shared_ptr< std::vector< CLandmark* > > getLandmarksHandle( ) const { return m_vecLandmarks; }
     const std::shared_ptr< std::vector< CKeyFrame* > > getKeyFramesHandle( ) const { return m_vecKeyFrames; }
+    const double getLoopClosingRadius( ) const { return std::sqrt( m_dLoopClosingRadiusSquaredNN ); }
     const bool isFrameAvailable( ) const { return m_bIsFrameAvailable; }
     const std::pair< bool, Eigen::Isometry3d > getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_prFrameLEFTtoWORLD; }
     void finalize( );
@@ -118,6 +123,7 @@ private:
                           const Eigen::Isometry3d& p_matTransformationEstimateWORLDtoLEFT,
                           const Eigen::Isometry3d& p_matTransformationEstimateParallelWORLDtoLEFT,
                           const CLinearAccelerationIMU& p_vecLinearAcceleration,
+                          const CAngularVelocityIMU& p_vecAngularVelocity,
                           const Eigen::Vector3d& p_vecRotationTotal,
                           const Eigen::Vector3d& p_vecTranslationTotal,
                           const double& p_dDeltaTimeSeconds );

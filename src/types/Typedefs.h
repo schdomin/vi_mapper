@@ -41,4 +41,8 @@ typedef Eigen::Vector3d CAngularVelocityLEFT;
 typedef Eigen::Vector3d CAngularVelocityWORLD;
 typedef Eigen::Vector3d CLinearAccelerationWORLD;
 
+typedef Eigen::Matrix< double, 4, 4 > EigenMatrix4d;
+typedef Eigen::Matrix< double, 6, 1 > EigenVector6d;
+typedef Eigen::Matrix< double, 6, 6 > EigenMatrix6d;
+
 #endif //TYPEDEFS_H

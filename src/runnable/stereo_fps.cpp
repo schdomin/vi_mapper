@@ -7,6 +7,7 @@
 #include "exceptions/CExceptionLogfileTree.h"
 #include "core/CTrackerStereoMotionModel.h"
 #include "gui/CViewerScene.h"
+#include "utility/CIMUInterpolator.h"
 
 //ds command line parsing (setting params IN/OUT)
 void setParametersNaive( const int& p_iArgc,
@@ -90,7 +91,7 @@ int main( int argc, char **argv )
     CLogger::CLogLandmarkFinalOptimized::open( );
     CLogger::CLogOptimizationOdometry::open( );
     CLogger::CLogTrajectory::open( );
-    CLogger::CLogLinearAcceleration::open( );
+    CLogger::CLogIMUInput::open( );
 
     //ds log configuration
     std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
@@ -98,9 +99,43 @@ int main( int argc, char **argv )
     std::fflush( stdout );
     CLogger::closeBox( );
 
-    //ds allocate the tracker
-    CTrackerStereoMotionModel cTracker( eMode, uWaitKeyTimeout );
+    //ds evaluate IMU situation first
+    CIMUInterpolator cIMUInterpolator;
 
+    //ds stop time
+    const double dTimeStartSeconds = CLogger::getTimeSeconds( );
+
+    //ds message holders
+    std::shared_ptr< txt_io::CIMUMessage > pMessageIMU( 0 );
+    std::shared_ptr< txt_io::PinholeImageMessage > pMessageCameraLEFT( 0 );
+    std::shared_ptr< txt_io::PinholeImageMessage > pMessageCameraRIGHT( 0 );
+
+    //ds playback the dump - IMU calibration
+    while( cMessageReader.good( ) && !cIMUInterpolator.isCalibrated( ) )
+    {
+        //ds retrieve a message
+        txt_io::BaseMessage* msgBase = cMessageReader.readMessage( );
+
+        //ds if set
+        if( 0 != msgBase )
+        {
+            //ds trigger callbacks artificially - check for imu input first
+            if( "IMU_MESSAGE" == msgBase->tag( ) )
+            {
+                //ds IMU message
+                pMessageIMU = std::shared_ptr< txt_io::CIMUMessage >( dynamic_cast< txt_io::CIMUMessage* >( msgBase ) );
+
+                //ds add to interpolator
+                cIMUInterpolator.addMeasurementCalibration( pMessageIMU->getLinearAcceleration( ), pMessageIMU->getAngularVelocity( ) );
+            }
+        }
+    }
+
+    //ds must be calibrated
+    assert( cIMUInterpolator.isCalibrated( ) );
+
+    //ds allocate the tracker
+    CTrackerStereoMotionModel cTracker( eMode, cIMUInterpolator, uWaitKeyTimeout );
     try
     {
         //ds prepare file structure
@@ -115,23 +150,13 @@ int main( int argc, char **argv )
     }
 
     //ds allocate a libqglviewer
-    CViewerScene cViewer( cTracker.getLandmarksHandle( ), cTracker.getKeyFramesHandle( ) );
+    CViewerScene cViewer( cTracker.getLandmarksHandle( ), cTracker.getKeyFramesHandle( ), cTracker.getLoopClosingRadius( ) );
     cViewer.setWindowTitle( "CViewerScene: WORLD" );
     cViewer.showMaximized( );
-
-    //ds stop time
-    const double dTimeStartSeconds = CLogger::getTimeSeconds( );
-
-    //ds message holders
-    std::shared_ptr< txt_io::CIMUMessage > pMessageIMU( 0 );
-    std::shared_ptr< txt_io::PinholeImageMessage > pMessageCameraLEFT( 0 );
-    std::shared_ptr< txt_io::PinholeImageMessage > pMessageCameraRIGHT( 0 );
 
     //ds playback the dump
     while( cMessageReader.good( ) && !cTracker.isShutdownRequested( ) )
     {
-        std::fflush( stdout );
-
         //ds check if viewer is still active
         if( cViewer.isVisible( ) )
         {
@@ -152,6 +177,12 @@ int main( int argc, char **argv )
             {
                 //ds IMU message
                 pMessageIMU = std::shared_ptr< txt_io::CIMUMessage >( dynamic_cast< txt_io::CIMUMessage* >( msgBase ) );
+
+                //ds add to interpolator if not converged yet
+                if( !cIMUInterpolator.isCalibrated( ) )
+                {
+                    cIMUInterpolator.addMeasurementCalibration( pMessageIMU->getLinearAcceleration( ), pMessageIMU->getAngularVelocity( ) );
+                }
             }
             else
             {

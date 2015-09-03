@@ -34,7 +34,7 @@ const double CConfigurationCamera::RIGHT::vecTranslationToIMU[]       = {-0.0434
 const double CConfigurationCamera::RIGHT::matRectification[]          = {0.999990753148139, 0.0005481502260720453, -0.004265342840574327, -0.0005419629065900193, 0.9999987995316526, 0.001451623732757562, 0.004266133428042508, -0.0014492986522044342, 0.9999898497679818};
 const double CConfigurationCamera::RIGHT::matProjection[]             = {450.5097158071153, 0.0, 375.9431800842285, -49.63250853439215, 0.0, 450.5097158071153, 222.3379611968994, 0.0, 0.0, 0.0, 1.0, 0.0};
 
-const double CConfigurationCamera::matTransformationIntialAlberto[] = { 0.994504,  0.0803288, 0.0671501, -3.14989,
+/*const double CConfigurationCamera::matTransformationIntialAlberto[] = { 0.994504,  0.0803288, 0.0671501, -3.14989,
                                                                         0.052872,  0.168259, -0.984324,   0.0468936,
                                                                        -0.0903682, 0.982464,  0.163087,  -1.38018,
                                                                                0,  0,         0,          1};
@@ -42,7 +42,7 @@ const double CConfigurationCamera::matTransformationIntialAlberto[] = { 0.994504
 const double CConfigurationCamera::matTransformationIntialWORLDtoLEFT[] = { 0, -1,  0, 0,
                                                                             0,  0, -1, 0,
                                                                             1,  0,  0, 0,
-                                                                            0,  0,  0, 1 };
+                                                                            0,  0,  0, 1 };*/
 
 const double CConfigurationCamera::matRotationIntrinsicCAMERAtoIMU[] = { -1,  0, 0,
                                                                           0, -1, 0,

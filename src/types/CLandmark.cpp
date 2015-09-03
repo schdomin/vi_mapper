@@ -90,9 +90,9 @@ void CLandmark::addMeasurement( const UIDFrame& p_uFrame,
         m_vecCameraOrientationAccumulated = Eigen::Vector3d::Zero( );
 
         //ds get calibrated point
-        //vecPointXYZCalibrated = _getOptimizedLandmarkKLMA( p_uFrame, vecPointXYZCalibrated );
+        vecPointXYZOptimized = _getOptimizedLandmarkKLMA( p_uFrame, vecPointXYZOptimized );
         //vecPointXYZCalibrated = _getOptimizedLandmarkIDLMA( p_uFrame, vecMeanMeasurement );
-        vecPointXYZOptimized = _getOptimizedLandmarkKRDLMA( p_uFrame, vecPointXYZOptimized );
+        //vecPointXYZOptimized = _getOptimizedLandmarkKRDLMA( p_uFrame, vecPointXYZOptimized );
         //vecPointXYZCalibrated = _getOptimizedLandmarkIDWA( );
     }
 
@@ -110,14 +110,12 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFra
     Eigen::Vector4d vecB( 0.0, 0.0, 0.0, 0.0 );
     CPoint3DInWorldFrameHomogenized vecX( p_vecInitialGuess.x( ), p_vecInitialGuess.y( ), p_vecInitialGuess.z( ), 1.0 );
 
-    //std::printf( "[%06lu] vecX: %6.2f %6.2f %6.2f\n", uID, vecX.x( ), vecX.y( ), vecX.z( ) );
-
     //ds iterations (break-out if convergence reached early)
     for( uint32_t uIteration = 0; uIteration < CLandmark::m_uCapIterations; ++uIteration )
     {
         //ds reset rss
         double dRSSCurrent = 0.0;
-        uint32_t uInliers( 0 );
+        uint32_t uInliers  = 0;
 
         //ds do calibration over all recorded values
         for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
@@ -166,7 +164,7 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFra
             vecB += dContribution*matJacobianTransposed*vecError;
         }
 
-        //ds solve constrained system (since x(3) = 0.0)
+        //ds solve constrained system (since dx(3) = 0.0)
         const CPoint3DWORLD vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
 
         //ds update x solution
@@ -211,101 +209,14 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFra
             //ds average the measurement
             dCurrentAverageSquaredError = dSumSquaredErrors/m_vecMeasurements.size( );
 
-            //std::printf( "[%04lu] converged (%2u) in %3u iterations to (%6.2f %6.2f %6.2f) from (%6.2f %6.2f %6.2f) ARSS: %6.2f\n", uID, uCalibrations, uIteration, vecX(0), vecX(1), vecX(2), p_vecInitialGuess(0), p_vecInitialGuess(1), p_vecInitialGuess(2), dCurrentAverageSquaredError );
+            //std::printf( "[%04lu] converged (%2u) in %3u iterations to (%6.2f %6.2f %6.2f) from (%6.2f %6.2f %6.2f) ARSS: %6.2f (inliers: %u/%lu)\n",
+            //             uID, uOptimizationsSuccessful, uIteration, vecX(0), vecX(1), vecX(2), p_vecInitialGuess(0), p_vecInitialGuess(1), p_vecInitialGuess(2), dCurrentAverageSquaredError, uInliers, m_vecMeasurements.size( ) );
             return vecX.head< 3 >( );
         }
     }
 
     ++uOptimizationsFailed;
-    std::printf( "<CLandmark>(_getOptimizedLandmarkLMA) landmark [%06lu] optimization failed\n", uID );
-
-    //ds if still here the calibration did not converge - keep the initial estimate
-    return p_vecInitialGuess;
-}
-
-const CPoint3DWORLD CLandmark::_getOptimizedLandmarkIDLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
-{
-    //ds initial values
-    Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
-    Eigen::Vector4d vecB( Eigen::Vector4d::Zero( ) );
-    CPoint3DInWorldFrameHomogenized vecX( p_vecInitialGuess.x( ), p_vecInitialGuess.y( ), p_vecInitialGuess.z( ), 1.0 );
-
-    //std::printf( "[%06lu] vecX: %6.2f %6.2f %6.2f\n", uID, vecX.x( ), vecX.y( ), vecX.z( ) );
-
-    //ds iterations (break-out if convergence reached early)
-    for( uint32_t uIteration = 0; uIteration < CLandmark::m_uCapIterations; ++uIteration )
-    {
-        //ds do calibration over all recorded values
-        for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
-        {
-            //ds current element
-            const double dUReference( pMeasurement->ptUVLEFT.x );
-            const double dVReference( pMeasurement->ptUVLEFT.y );
-            const double dInverseDepthMeters( 1.0/pMeasurement->vecPointXYZLEFT.z( ) );
-
-            //ds compute projection
-            const CPoint2DHomogenized vecProjectionHomogeneous( pMeasurement->matProjectionWORLDtoLEFT*vecX );
-            const double dA( vecProjectionHomogeneous(0) );
-            const double dB( vecProjectionHomogeneous(1) );
-            const double dC( vecProjectionHomogeneous(2) );
-            const double dCSquared( dC*dC );
-
-            //ds compute current error
-            const Eigen::Vector2d vecError( static_cast< double >( dA/dC )-dUReference, static_cast< double >( dB/dC )-dVReference );
-
-            //std::printf( "[%06lu][%04u] error: %4.2f %4.2f\n", uID, uIteration, vecError.x( ), vecError.y( ) );
-
-            //ds compute jacobian
-            Eigen::Matrix< double, 2, 4 > matJacobian;
-            matJacobian.row(0) = Vector3dT( 1/dC, 0, -dA/dCSquared )*pMeasurement->matProjectionWORLDtoLEFT;
-            matJacobian.row(1) = Vector3dT( 0, 1/dC, -dB/dCSquared )*pMeasurement->matProjectionWORLDtoLEFT;
-            const Eigen::Matrix< double, 4, 2 > matJacobianTransposed( matJacobian.transpose( ) );
-
-            //ds compute H and B
-            matH += dInverseDepthMeters*matJacobianTransposed*matJacobian + CLandmark::m_dLevenbergDamping*Eigen::Matrix4d::Identity( );
-            vecB += dInverseDepthMeters*matJacobianTransposed*vecError;
-        }
-
-        //ds solve constrained system H*dx=-b (since dx(3) = 0.0)
-        const CPoint3DWORLD vecDeltaX( matH.block< 4, 3 >(0,0).householderQr( ).solve( -vecB ) );
-
-        //ds update x solution
-        vecX.block< 3, 1 >(0,0) += vecDeltaX;
-
-        //std::printf( "[%06lu][%04u]: %6.2f %6.2f %6.2f %6.2f (delta 2norm: %f)\n", uID, uIteration, vecX.x( ), vecX.y( ), vecX.z( ), vecX(3), vecDeltaX.squaredNorm( ) );
-
-        //std::fprintf( m_pFilePosition, "%04lu %06lu %03u %03lu %03u %6.2f\n", p_uFrame, uID, uIteration, m_vecMeasurements.size( ), uInliers, dRSSCurrent );
-
-        //ds check if we have converged
-        if( CLandmark::m_dConvergenceDelta > vecDeltaX.squaredNorm( ) )
-        {
-            ++uOptimizationsSuccessful;
-
-            double dSumSquaredErrors = 0.0;
-
-            //ds loop over all previous measurements again
-            for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
-            {
-                //ds get projected point
-                const CPoint2DHomogenized vecProjectionHomogeneous( pMeasurement->matProjectionWORLDtoLEFT*vecX );
-
-                //ds compute pixel coordinates TODO remove cast
-                const Eigen::Vector2d vecUV = CWrapperOpenCV::getInterDistance( static_cast< Eigen::Vector2d >( vecProjectionHomogeneous.head< 2 >( )/vecProjectionHomogeneous(2) ), pMeasurement->ptUVLEFT );
-
-                //ds add up the squared error
-                dSumSquaredErrors += vecUV.squaredNorm( );
-            }
-
-            //ds average the measurement
-            dCurrentAverageSquaredError = dSumSquaredErrors/m_vecMeasurements.size( );
-
-            //std::printf( "[%04lu] converged (%2u) in %3u iterations to (%6.2f %6.2f %6.2f) from (%6.2f %6.2f %6.2f) ARSS: %6.2f\n", uID, uCalibrations, uIteration, vecX(0), vecX(1), vecX(2), p_vecInitialGuess(0), p_vecInitialGuess(1), p_vecInitialGuess(2), dCurrentAverageSquaredError );
-            return vecX.head< 3 >( );
-        }
-    }
-
-    ++uOptimizationsFailed;
-    std::printf( "<CLandmark>(_getOptimizedLandmarkIDLMA) landmark [%06lu] optimization failed\n", uID );
+    //std::printf( "<CLandmark>(_getOptimizedLandmarkLMA) landmark [%06lu] optimization failed\n", uID );
 
     //ds if still here the calibration did not converge - keep the initial estimate
     return p_vecInitialGuess;

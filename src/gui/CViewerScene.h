@@ -33,7 +33,8 @@ class CViewerScene: public QGLViewer
 public:
 
     CViewerScene( const std::shared_ptr< std::vector< CLandmark* > > p_vecLandmarks,
-                  const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames );
+                  const std::shared_ptr< std::vector< CKeyFrame* > > p_vecKeyFrames,
+                  const double& p_dLoopClosingRadius );
     ~CViewerScene( );
 
 protected:
@@ -65,6 +66,8 @@ private:
     //ds references
     const std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
     const std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
+    const double m_dLoopClosingRadius;
+    GLUquadricObj* m_pQuadratic;
 
 };
 

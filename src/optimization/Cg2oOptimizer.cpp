@@ -214,7 +214,7 @@ void Cg2oOptimizer::optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame )
     m_cOptimizerSparse.addVertex( pVertexPoseFrom );
 
     //ds always save acceleration data
-    m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseFrom, vecChunkKeyFrames.front( )->vecLinearAccelerationNormalized ) );
+    //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseFrom, vecChunkKeyFrames.front( )->vecLinearAccelerationNormalized ) );
 
     //ds info
     UIDLandmark uMeasurementsStoredPointXYZ    = 0;
@@ -239,7 +239,7 @@ void Cg2oOptimizer::optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame )
         }
 
         //ds always save acceleration data
-        m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
+        //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
 
         //ds set landmark measurements
         _setLandmarkMeasurements( pVertexPoseCurrent, pKeyFrame, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity );
@@ -351,16 +351,16 @@ void Cg2oOptimizer::optimizeContinuous( const UIDKeyFrame& p_uIDBeginKeyFrame )
     ++m_uOptimizations;
 }
 
-const bool Cg2oOptimizer::isOptimized( const CLandmark* p_pLandmark ) const
+bool Cg2oOptimizer::isOptimized( const CLandmark* p_pLandmark )
 {
     //ds criteria
-    return ( m_uMinimumOptimizations < p_pLandmark->uOptimizationsSuccessful ) && ( p_pLandmark->uOptimizationsSuccessful*m_dMaximumErrorPerOptimization > p_pLandmark->dCurrentAverageSquaredError );
+    return ( Cg2oOptimizer::m_uMinimumOptimizations < p_pLandmark->uOptimizationsSuccessful ) && ( p_pLandmark->uOptimizationsSuccessful*Cg2oOptimizer::m_dMaximumErrorPerOptimization > p_pLandmark->dCurrentAverageSquaredError );
 }
 
-const bool Cg2oOptimizer::isKeyFramed( const CLandmark* p_pLandmark ) const
+bool Cg2oOptimizer::isKeyFramed( const CLandmark* p_pLandmark )
 {
     //ds criteria
-    return ( m_uMinimumKeyFramePresences < p_pLandmark->uNumberOfKeyFramePresences );
+    return ( Cg2oOptimizer::m_uMinimumKeyFramePresences < p_pLandmark->uNumberOfKeyFramePresences );
 }
 
 void Cg2oOptimizer::clearFiles( ) const
@@ -406,7 +406,7 @@ g2o::EdgeSE3LinearAcceleration* Cg2oOptimizer::_getEdgeLinearAcceleration( g2o::
     pEdgeLinearAcceleration->setVertex( 0, p_pVertexPose );
     pEdgeLinearAcceleration->setMeasurement( p_vecLinearAccelerationNormalized );
     pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
-    const double arrInformationMatrixLinearAcceleration[9] = { 1e-5, 0, 0, 0, 1e-5, 0, 0, 0, 1e-5 };
+    const double arrInformationMatrixLinearAcceleration[9] = { 100, 0, 0, 0, 100, 0, 0, 0, 100 };
     pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
 
     return pEdgeLinearAcceleration;
@@ -677,12 +677,14 @@ void Cg2oOptimizer::_applyOptimization( const std::vector< CLandmark* >& p_vecCh
         const g2o::HyperGraph::VertexIDMap::iterator itLandmark( m_cOptimizerSparse.vertices( ).find( pLandmark->uID ) );
 
         //ds must be present
-        assert( itLandmark != m_cOptimizerSparse.vertices( ).end( ) );
+        //assert( itLandmark != m_cOptimizerSparse.vertices( ).end( ) );
+        if( itLandmark != m_cOptimizerSparse.vertices( ).end( ) )
+        {
+            const g2o::VertexPointXYZ* pVertexLandmark( dynamic_cast< g2o::VertexPointXYZ* >( itLandmark->second ) );
 
-        const g2o::VertexPointXYZ* pVertexLandmark( dynamic_cast< g2o::VertexPointXYZ* >( itLandmark->second ) );
-
-        //ds update position
-        pLandmark->vecPointXYZOptimized = pVertexLandmark->estimate( );
+            //ds update position
+            pLandmark->vecPointXYZOptimized = pVertexLandmark->estimate( );
+        }
     }
 }
 

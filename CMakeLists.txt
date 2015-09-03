@@ -18,6 +18,8 @@ find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED )
 find_package(G2O REQUIRED)
 find_package(Qt4 REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(GLUT REQUIRED)
 find_package(QGLViewer REQUIRED)
 find_package(Cholmod REQUIRED)
 
@@ -49,6 +51,8 @@ include_directories(${G2O_INCLUDE_DIR})
 #include_directories(${CSPARSE_INCLUDE_DIR})
 include_directories(${CHOLMOD_INCLUDE_DIR})
 include_directories(${QT_INCLUDES})
+include_directories(${OPENGL_INCLUDE_DIRS})
+include_directories(${GLUT_INCLUDE_DIRS})
 include_directories(${QGLVIEWER_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -69,9 +73,7 @@ src/types/CLandmark.cpp
 src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
-src/core/CMatcherEpipolar.cpp
 src/core/CFundamentalMatcher.cpp
-src/optimization/CBridgeG2O.cpp
 src/optimization/Cg2oOptimizer.cpp
 src/gui/CViewerScene.cpp
 src/types/C67DTree.cpp)
@@ -92,12 +94,17 @@ ${G2O_TYPES_SLAM3D}
 ${G2O_SOLVER_CHOLMOD}
 ${CHOLMOD_LIBRARY}
 ${G2O_STUFF_LIBRARY}
+${FLANN_LIBRARIES})
+
+set(LIBRARIES_VISUALIZATION
+${OPENGL_LIBRARIES}
+${GLUT_LIBRARY}
 ${QGLVIEWER_LIBRARY}
 ${QT_QTXML_LIBRARY}
 ${QT_QTOPENGL_LIBRARY}
 ${QT_QTGUI_LIBRARY}
 ${QT_QTCORE_LIBRARY}
-${FLANN_LIBRARIES})
+GLU)
 
 set(LIBRARIES_MOCKED
 ${catkin_LIBRARIES} 
@@ -110,7 +117,7 @@ ${G2O_STUFF_LIBRARY}
 ${G2O_TYPES_SBA})
 
 add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
-add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp)
+add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp src/vision/CMiniVisionToolbox.cpp src/configuration/CConfigurationCamera.cpp src/gui/CViewerCloud.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
 #add_executable(stereo_detector_alberto_node src/main/stereo_detector_alberto_node.cpp src/core/CEpipolarDetectorBRIEF.cpp src/utility/CMiniVisionToolbox.cpp)
@@ -126,7 +133,7 @@ add_executable(republisher_node src/runnable/republisher_node.cpp)
 
 #ds link the binaries against catkin
 target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
-target_link_libraries(test_cloud_matching ${catkin_LIBRARIES})
+target_link_libraries(test_cloud_matching ${OpenCV_LIBRARIES} ${LIBRARIES_VISUALIZATION})
 #target_link_libraries(stereo_detector_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_blocking_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_alberto_node ${LIBRARIES_GENERAL})
@@ -134,7 +141,7 @@ target_link_libraries(test_cloud_matching ${catkin_LIBRARIES})
 #target_link_libraries(test_depth ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} -fopenmp)
 #target_link_libraries(stereo_single ${LIBRARIES_GENERAL})
 #target_link_libraries(stereo_parallel ${LIBRARIES_GENERAL})
-target_link_libraries(stereo_fps ${LIBRARIES_GENERAL})
+target_link_libraries(stereo_fps ${LIBRARIES_GENERAL} ${LIBRARIES_VISUALIZATION})
 target_link_libraries(republisher_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 
 message("--------------------------------------------------------------------")

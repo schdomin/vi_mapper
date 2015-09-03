@@ -2,6 +2,8 @@
 #define CLOGGER_H
 
 #include <chrono>
+#include <fstream>
+
 #include "types/CLandmark.h"
 #include "types/TypesMocked.h"
 
@@ -34,6 +36,18 @@ public:
     static const double getTimeSeconds( )
     {
         return std::chrono::system_clock::now( ).time_since_epoch( ).count( )/1e9;
+    }
+
+    template < class T > static void writeDatum( std::ostream& p_osStream, const T& p_tValue )
+    {
+        const char * pValue = reinterpret_cast< const char* >( &p_tValue );
+        p_osStream.write( pValue, sizeof(T) );
+    }
+
+    template < class T > static void readDatum( std::istream& p_isStream, T& p_tValue )
+    {
+        char * pValue = reinterpret_cast< char* >( &p_tValue );
+        p_isStream.read( pValue, sizeof(T) );
     }
 
 //ds logging
@@ -244,12 +258,12 @@ public:
         {
             m_pFile = std::fopen( "logs/optimization_odometry.txt", "w" );
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS REPROJECTIONS | ERROR_RSS |      X      Y      Z |  DELTA |       RISK" );
+            std::fprintf( m_pFile, "ID_FRAME | ITERATION | TOTAL_POINTS INLIERS | ERROR_AVERAGE | ERROR_RSS |      X      Y      Z |  DELTA |       RISK" );
         }
-        static void addEntryIteration( const UIDFrame& p_uFrame, const uint8_t& p_uIteration, const UIDLandmark& p_uNumberOfLandmarksInOptimization, const UIDLandmark& p_uNumberOfInliers, const UIDLandmark& p_uNumberOfReprojections, const double& p_dErrorCurrent )
+        static void addEntryIteration( const UIDFrame& p_uFrame, const uint8_t& p_uIteration, const UIDLandmark& p_uNumberOfLandmarksInOptimization, const UIDLandmark& p_uNumberOfInliers, const double& p_dErrorAverage, const double& p_dErrorCurrent )
         {
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, "\n    %04lu |         %01u |          %03lu     %03lu           %03lu | %9.2f |", p_uFrame, p_uIteration, p_uNumberOfLandmarksInOptimization, p_uNumberOfInliers, p_uNumberOfReprojections, p_dErrorCurrent );
+            std::fprintf( m_pFile, "\n    %04lu |         %01u |          %03lu     %03lu |        %6.2f | %9.2f |", p_uFrame, p_uIteration, p_uNumberOfLandmarksInOptimization, p_uNumberOfInliers, p_dErrorAverage, p_dErrorCurrent );
         }
         static void addEntryInliers( const UIDFrame& p_uFrame, const UIDLandmark& p_uNumberOfLandmarksInOptimization, const UIDLandmark& p_uNumberOfInliers, const UIDLandmark& p_uNumberOfReprojections, const double& p_dErrorCurrent )
         {
@@ -265,24 +279,26 @@ public:
 
     } CLogOptimizationOdometry;
 
-    static struct CLogLinearAcceleration
+    static struct CLogIMUInput
     {
         static std::FILE* m_pFile;
 
         static void open( )
         {
-            m_pFile = std::fopen( "logs/linear_acceleration.txt", "w" );
+            m_pFile = std::fopen( "logs/imu_input.txt", "w" );
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, "ID_FRAME | ACCELERATION:     X      Y      Z | FILTERED:     X      Y      Z\n" );
+            std::fprintf( m_pFile, "ID_FRAME | LINEAR ACCELERATION:     X      Y      Z | FILTERED:     X      Y      Z | ANGULAR VELOCITY:     X      Y      Z | FILTERED:     X      Y      Z\n" );
         }
-        static void addEntry( const UIDFrame& p_uFrame, const CLinearAccelerationWORLD& p_vecLinearAcceleration, const CLinearAccelerationWORLD& p_vecLinearAccelerationFiltered )
+        static void addEntry( const UIDFrame& p_uFrame, const CLinearAccelerationWORLD& p_vecLinearAcceleration, const CLinearAccelerationWORLD& p_vecLinearAccelerationFiltered, const CAngularVelocityLEFT& p_vecAngularVelocity, const CAngularVelocityLEFT& p_vecAngularVelocityFiltered  )
         {
             assert( 0 != m_pFile );
-            std::fprintf( m_pFile, "    %04lu |              %6.2f %6.2f %6.2f |          %6.2f %6.2f %6.2f\n", p_uFrame, p_vecLinearAcceleration.x( ), p_vecLinearAcceleration.y( ), p_vecLinearAcceleration.z( ), p_vecLinearAccelerationFiltered.x( ), p_vecLinearAccelerationFiltered.y( ), p_vecLinearAccelerationFiltered.z( ) );
+            std::fprintf( m_pFile, "    %04lu |                     %6.2f %6.2f %6.2f |          %6.2f %6.2f %6.2f |                  %6.2f %6.2f %6.2f |          %6.2f %6.2f %6.2f\n", p_uFrame,
+                          p_vecLinearAcceleration.x( ), p_vecLinearAcceleration.y( ), p_vecLinearAcceleration.z( ), p_vecLinearAccelerationFiltered.x( ), p_vecLinearAccelerationFiltered.y( ), p_vecLinearAccelerationFiltered.z( ),
+                          p_vecAngularVelocity.x( ), p_vecAngularVelocity.y( ), p_vecAngularVelocity.z( ), p_vecAngularVelocityFiltered.x( ), p_vecAngularVelocityFiltered.y( ), p_vecAngularVelocityFiltered.z( ) );
         }
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 
-    } CLogLinearAcceleration;
+    } CLogIMUInput;
 
 };
 

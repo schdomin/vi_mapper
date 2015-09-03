@@ -44,9 +44,9 @@ private:
 
     const double m_dMaximumReliableDepthForPointXYZ = 2.5;
     const double m_dMaximumReliableDepthForUVDepth  = 7.5;
-    const uint8_t m_uMinimumOptimizations           = 0;
-    const double m_dMaximumErrorPerOptimization     = 10.0; //ds e.g after 3 optimizations an error of 30.0 is allowed
-    const uint8_t m_uMinimumKeyFramePresences       = 1;
+    static constexpr uint8_t m_uMinimumOptimizations           = 0;
+    static constexpr double m_dMaximumErrorPerOptimization     = 10.0; //ds e.g after 3 optimizations an error of 30.0 is allowed
+    static constexpr uint8_t m_uMinimumKeyFramePresences       = 1;
 
     //ds optimized structures
     std::vector< CLandmark* > m_vecLandmarksInGraph;
@@ -59,8 +59,8 @@ public:
     void optimizeContinuous( const UIDKeyFrame& p_uIDBeginKeyFrame );
 
     const uint32_t getNumberOfSegmentOptimizations( ) const { return m_uOptimizations; }
-    const bool isOptimized( const CLandmark* p_pLandmark ) const;
-    const bool isKeyFramed( const CLandmark* p_pLandmark ) const;
+    static bool isOptimized( const CLandmark* p_pLandmark );
+    static bool isKeyFramed( const CLandmark* p_pLandmark );
 
     //ds clears g2o files in logging directory
     void clearFiles( ) const;

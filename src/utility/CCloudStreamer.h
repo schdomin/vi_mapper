@@ -6,6 +6,7 @@
 #include "types/CLandmark.h"
 #include "types/TypesCloud.h"
 #include "types/C67DTree.h"
+#include "types/CKeyFrame.h"
 #include "exceptions/CExceptionInvalidFile.h"
 
 class CCloudstreamer
@@ -13,18 +14,18 @@ class CCloudstreamer
 
 public:
 
-    static CDescriptorPointCloud* getCloud( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
+    static CDescriptorVectorPointCloud* getCloud( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
     {
         //ds points in the cloud
         std::vector< CDescriptorVectorPoint3DWORLD > vecPoints;
 
-        //ds for all these points
+        /*ds for all these points
         for( const CLandmark* pLandmark: *p_vecVisibleLandmarks )
         {
-            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->getLastPointXYZLEFT( ), pLandmark->vecDescriptorsLEFT ) );
-        }
+            //vecPoints.push_back( CDescriptorVectorPoint3DWORLD( pLandmark->uID, pLandmark->vecPointXYZOptimized, pLandmark->getLastPointXYZLEFT( ), pLandmark->vecDescriptorsLEFT ) );
+        }*/
 
-        return new CDescriptorPointCloud( p_uIDKeyFrame, p_matPose, vecPoints );
+        return new CDescriptorVectorPointCloud( p_uIDKeyFrame, p_matPose, vecPoints );
     }
 
     static C67DTree* getTree( const UIDKeyFrame& p_uIDKeyFrame, const Eigen::Isometry3d& p_matPose, const std::shared_ptr< const std::vector< CLandmark* > > p_vecVisibleLandmarks )
@@ -124,8 +125,11 @@ public:
         ofCloudFPS.close( );
     }
 
-    static CDescriptorPointCloud loadCloud( const std::string& p_strFile, const UIDCloud& p_uID )
+    static CDescriptorVectorPointCloud loadCloud( const std::string& p_strFile )
     {
+        //ds get cloud id (last 6 digits previous to .txt)
+        const UIDKeyFrame uID = std::stoi( p_strFile.substr( p_strFile.length( )-12, 6 ) );
+
         //ds open the file
         std::ifstream ifMessages( p_strFile, std::ifstream::in );
 
@@ -157,9 +161,24 @@ public:
         {
             //ds point field
             CPoint3DWORLD vecPointXYZWORLD;
+            CPoint3DCAMERA vecPointXYZCAMERA;
             CCloudstreamer::readDatum( ifMessages, vecPointXYZWORLD.x( ) );
             CCloudstreamer::readDatum( ifMessages, vecPointXYZWORLD.y( ) );
             CCloudstreamer::readDatum( ifMessages, vecPointXYZWORLD.z( ) );
+            CCloudstreamer::readDatum( ifMessages, vecPointXYZCAMERA.x( ) );
+            CCloudstreamer::readDatum( ifMessages, vecPointXYZCAMERA.y( ) );
+            CCloudstreamer::readDatum( ifMessages, vecPointXYZCAMERA.z( ) );
+
+            assert( 0.0 < vecPointXYZCAMERA.z( ) );
+
+            cv::Point2d ptUVLEFT;
+            cv::Point2d ptUVRIGHT;
+            CCloudstreamer::readDatum( ifMessages, ptUVLEFT.x );
+            CCloudstreamer::readDatum( ifMessages, ptUVLEFT.y );
+            CCloudstreamer::readDatum( ifMessages, ptUVRIGHT.x );
+            CCloudstreamer::readDatum( ifMessages, ptUVRIGHT.y );
+
+            assert( ptUVLEFT.y == ptUVRIGHT.y );
 
             //ds number of descriptors
             std::vector< CMeasurementLandmark* >::size_type uNumberOfDescriptors;
@@ -187,10 +206,10 @@ public:
             }
 
             //ds set vector
-            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( u, vecPointXYZWORLD, CPoint3DCAMERA( 0.0, 0.0, 0.0 ), vecDescriptors ) );
+            vecPoints.push_back( CDescriptorVectorPoint3DWORLD( u, vecPointXYZWORLD, vecPointXYZCAMERA, ptUVLEFT, ptUVRIGHT, vecDescriptors ) );
         }
 
-        return CDescriptorPointCloud( p_uID, matPose, vecPoints );
+        return CDescriptorVectorPointCloud( uID, matPose, vecPoints );
     }
 
 private:
