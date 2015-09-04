@@ -142,13 +142,13 @@ void CViewerScene::draw()
     glMultMatrixd( cFrameCurrent.matrix( ) );
     drawAxis( 0.25 );
 
-    //ds draw loop closing sphere around head
+    /*ds draw loop closing sphere around head
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
     glEnable( GL_BLEND );
     glColor4f( 0.5, 0.5, 1.0, 0.05 );
     //glTranslatef( cFrameCurrent.translation( ).x, cFrameCurrent.translation( ).y, cFrameCurrent.translation( ).z );
     gluSphere( m_pQuadratic, m_dLoopClosingRadius, 16, 16 );
-    glDisable( GL_BLEND );
+    glDisable( GL_BLEND );*/
     glPopMatrix( );
 
     //ds set line width and point size for landmarks

@@ -45,7 +45,9 @@ private:
     CPoint3DWORLD m_vecPositionKeyFrameLAST;
     Eigen::Vector3d m_vecCameraOrientationAccumulated;
     const double m_dTranslationDeltaForKeyFrameMetersL2;
-    const double m_dAngleDeltaForOptimizationRadiansL2;
+    const double m_dAngleDeltaForKeyFrameRadiansL2;
+    const UIDFrame m_uFrameDifferenceForKeyFrame;
+    UIDFrame m_uFrameKeyFrameLAST = 0;
     CPoint3DWORLD m_vecPositionCurrent;
     CPoint3DWORLD m_vecPositionLAST;
     double m_dTranslationDeltaSquaredNormCurrent = 0.0;

@@ -73,11 +73,13 @@ public:
     //ds optimization configuration (shared among all landmarks)
     static constexpr double m_dDistanceDeltaForOptimizationMeters = 0.1; //ds squared measurement
     static constexpr double m_dAngleDeltaForOptimizationRadians   = 0.5; //ds squared measurement
-    static constexpr uint32_t m_uCapIterations                    = 500;
+    static constexpr uint32_t m_uCapIterations                    = 100;
     static constexpr double m_dLevenbergDamping                   = 5.0;
     //const double m_dFactorDynamicDamping        = 1.05;
     static constexpr double m_dConvergenceDelta                   = 1e-5;
     static constexpr double m_dKernelMaximumError                 = 25.0;
+    static constexpr double m_dMaximumErrorSquaredAveragePixels   = 15.0;
+    static constexpr uint8_t m_uMinimumInliers                    = 10;
 
 private:
 
@@ -105,6 +107,7 @@ public:
     const double getLastDepth( ) const { return m_vecMeasurements.back( )->vecPointXYZLEFT.z( ); }
     const CPoint3DCAMERA getLastPointXYZLEFT( ) const { return m_vecMeasurements.back( )->vecPointXYZLEFT; }
     const std::vector< CMeasurementLandmark* >::size_type getNumberOfMeasurements( ) const { return m_vecMeasurements.size( ); }
+    void optimize( const UIDFrame& p_uFrame );
 
 private:
 

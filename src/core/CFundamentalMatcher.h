@@ -111,8 +111,9 @@ private:
 
     //ds internal
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
-    const uint8_t m_uRecursionLimitEpipolarLines      = 0; //3
+    const uint8_t m_uRecursionLimitEpipolarLines      = 2; //3
     const uint8_t m_uRecursionStepSize                = 2;
+    UIDLandmark m_uNumberOfFailedLandmarkOptimizationsTotal = 0;
     UIDLandmark m_uNumberOfInvalidLandmarksTotal      = 0;
     UIDLandmark m_uNumberOfDetectionsPoseOptimizationDirect    = 0;
     UIDLandmark m_uNumberOfDetectionsPoseOptimizationDetection = 0;
@@ -120,7 +121,7 @@ private:
 
     //ds posit solving
     const uint8_t m_uSearchBlockSizePoseOptimization   = 10; //15
-    const uint8_t m_uMinimumPointsForPoseOptimization  = 30; //30
+    const uint8_t m_uMinimumPointsForPoseOptimization  = 25; //30
     const uint8_t m_uMinimumInliersForPoseOptimization = 10; //10
     const uint8_t m_uCapIterationsPoseOptimization     = 100;
     const double m_dConvergenceDeltaPoseOptimization   = 1e-5;
@@ -130,7 +131,7 @@ private:
 
     //ds if the optimized pose has an combined squared translational change less than this value it gets ignored
     const double m_dTranslationResolutionOptimization = 0.001;
-    const double m_dRotationResolutionOptimization    = 0.00001;
+    const double m_dRotationResolutionOptimization    = 0.0001;
 
     //ds posit solving
     gtools::CPositSolverStereo m_cSolverPoseSTEREO;
@@ -151,7 +152,7 @@ public:
     const std::shared_ptr< const std::vector< CLandmark* > > getVisibleOptimizedLandmarks( ) const;
 
     //ds returns cloud version of currently visible landmarks
-    const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > getCloudForVisibleOptimizedLandmarks( ) const;
+    const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > getCloudForVisibleOptimizedLandmarks( const UIDFrame& p_uFrame ) const;
 
     const Eigen::Isometry3d getPoseOptimizedSTEREO( const UIDFrame p_uFrame,
                                                     cv::Mat& p_matDisplayLEFT,
@@ -199,6 +200,7 @@ public:
     const std::vector< CDetectionPoint >::size_type getNumberOfDetectionPointsActive( ) const { return m_vecDetectionPointsActive.size( ); }
     const UIDDetectionPoint getNumberOfDetectionPointsTotal( ) const { return m_uAvailableDetectionPointID; }
     const UIDLandmark getNumberOfInvalidLandmarksTotal( ) const { return m_uNumberOfInvalidLandmarksTotal; }
+    const UIDLandmark getNumberOfFailedLandmarkOptimizations( ) const { return m_uNumberOfFailedLandmarkOptimizationsTotal; }
     const UIDLandmark getNumberOfDetectionsPoseOptimizationDirect( ) const { return m_uNumberOfDetectionsPoseOptimizationDirect; }
     const UIDLandmark getNumberOfDetectionsPoseOptimizationDetection( ) const { return m_uNumberOfDetectionsPoseOptimizationDetection; }
     const UIDLandmark getNumberOfDetectionsEpipolar( ) const { return m_uNumberOfDetectionsEpipolar; }
@@ -245,6 +247,17 @@ private:
                                     const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                                     const Eigen::Vector3d& p_vecCameraOrientation,
                                     const MatrixProjection& p_matProjectionWORLDtoLEFT );
+
+    void _addMeasurementToLandmarkSTEREO( const UIDFrame p_uFrame,
+                                                               CLandmark* p_pLandmark,
+                                                               const cv::Point2d& p_ptUVLEFT,
+                                                               const cv::Point2d& p_ptUVRIGHT,
+                                                               const CPoint3DCAMERA& p_vecPointXYZLEFT,
+                                                               const CDescriptor& p_matDescriptorLEFT,
+                                                               const CDescriptor& p_matDescriptorRIGHT,
+                                                               const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                                               const Eigen::Vector3d& p_vecCameraOrientation,
+                                                               const MatrixProjection& p_matProjectionWORLDtoLEFT );
 
     inline const double _getCurveU( const Eigen::Vector3d& p_vecCoefficients, const double& p_dV ) const;
     inline const double _getCurveV( const Eigen::Vector3d& p_vecCoefficients, const double& p_dU ) const;

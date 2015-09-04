@@ -76,7 +76,9 @@ src/core/CTriangulator.cpp
 src/core/CFundamentalMatcher.cpp
 src/optimization/Cg2oOptimizer.cpp
 src/gui/CViewerScene.cpp
-src/types/C67DTree.cpp)
+src/types/C67DTree.cpp
+src/optimization/closure_buffer.cpp
+src/optimization/closure_checker.cpp)
 
 set(SOURCEFILES_MOCKED
 src/configuration/CConfigurationCamera.cpp

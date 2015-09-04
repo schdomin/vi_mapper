@@ -161,6 +161,9 @@ void Cg2oOptimizer::optimizeTailLoopClosuresOnly( const UIDKeyFrame& p_uIDBeginK
             ++uLoopClosures;
         }
 
+        //ds update checker window
+        m_cClosureBuffer.updateList( 3 );
+
         //ds update from
         pVertexPoseFrom = pVertexPoseCurrent;
     }
@@ -354,7 +357,7 @@ void Cg2oOptimizer::optimizeContinuous( const UIDKeyFrame& p_uIDBeginKeyFrame )
 bool Cg2oOptimizer::isOptimized( const CLandmark* p_pLandmark )
 {
     //ds criteria
-    return ( Cg2oOptimizer::m_uMinimumOptimizations < p_pLandmark->uOptimizationsSuccessful ) && ( p_pLandmark->uOptimizationsSuccessful*Cg2oOptimizer::m_dMaximumErrorPerOptimization > p_pLandmark->dCurrentAverageSquaredError );
+    return ( Cg2oOptimizer::m_uMinimumOptimizations < p_pLandmark->uOptimizationsSuccessful ) && ( Cg2oOptimizer::m_dMaximumErrorPerOptimization > p_pLandmark->dCurrentAverageSquaredError );
 }
 
 bool Cg2oOptimizer::isKeyFramed( const CLandmark* p_pLandmark )
@@ -592,8 +595,34 @@ void Cg2oOptimizer::_setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const
     //ds information quality (10x more relevant than regular pose measurement)
     pEdgeLoopClosure->setInformation( Eigen::Matrix< double, 6, 6 >( arrInformationMatrixLoopClosure ) );
 
-    //ds add to optimizer
-    m_cOptimizerSparse.addEdge( pEdgeLoopClosure );
+    //ds add closure to buffer
+    m_cClosureBuffer.addEdge( pEdgeLoopClosure );
+    m_cClosureBuffer.addVertex( p_pVertexPoseCurrent );
+
+    //ds check if we have good closures and add them on success
+    if( m_cClosureBuffer.checkList( Cg2oOptimizer::m_uClosureBufferWindowSize ) )
+    {
+        m_cClosureChecker.init( m_cClosureBuffer.vertices( ), m_cClosureBuffer.edgeSet( ), Cg2oOptimizer::m_dClosureCheckerInlierThreshold );
+        m_cClosureChecker.check( );
+
+        std::printf( "<Cg2oOptimizer>(_setLoopClosure) chi2: %f inliers: %u\n", m_cClosureChecker.chi2( ), m_cClosureChecker.inliers( ) );
+
+        if (m_cClosureChecker.inliers( ) > Cg2oOptimizer::m_uMinimumNumberOfInliers){
+          LoopClosureChecker::EdgeDoubleMap results = m_cClosureChecker.closures();
+          cout << "Results:" << endl;
+          for (LoopClosureChecker::EdgeDoubleMap::iterator it= results.begin(); it!= results.end(); it++){
+        EdgeSE3* e = (EdgeSE3*) (it->first);
+        assert( 0 != e );
+        cout << "Edge from: " << e->vertices()[0]->id() << " to: " << e->vertices()[1]->id() << ". Chi2 = " << it->second <<  endl;
+
+        if (it->second < Cg2oOptimizer::m_dClosureCheckerInlierThreshold){
+          cout << "Is an inlier. Adding to Graph" << endl;
+          //ds add to optimizer
+          m_cOptimizerSparse.addEdge( e );
+        }
+          }
+        }
+    }
 }
 
 void Cg2oOptimizer::_setLandmarkMeasurements( g2o::VertexSE3* p_pVertexPoseCurrent,

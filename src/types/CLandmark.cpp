@@ -90,9 +90,9 @@ void CLandmark::addMeasurement( const UIDFrame& p_uFrame,
         m_vecCameraOrientationAccumulated = Eigen::Vector3d::Zero( );
 
         //ds get calibrated point
-        vecPointXYZOptimized = _getOptimizedLandmarkKLMA( p_uFrame, vecPointXYZOptimized );
+        //vecPointXYZOptimized = _getOptimizedLandmarkKLMA( p_uFrame, vecPointXYZOptimized );
         //vecPointXYZCalibrated = _getOptimizedLandmarkIDLMA( p_uFrame, vecMeanMeasurement );
-        //vecPointXYZOptimized = _getOptimizedLandmarkKRDLMA( p_uFrame, vecPointXYZOptimized );
+        vecPointXYZOptimized = _getOptimizedLandmarkKRDLMA( p_uFrame, vecPointXYZOptimized );
         //vecPointXYZCalibrated = _getOptimizedLandmarkIDWA( );
     }
 
@@ -103,19 +103,27 @@ void CLandmark::addMeasurement( const UIDFrame& p_uFrame,
     m_vecMeasurements.push_back( new CMeasurementLandmark( uID, p_ptUVLEFT, p_ptUVRIGHT, p_vecXYZLEFT, p_vecXYZWORLD, vecPointXYZOptimized, p_vecCameraPosition, p_matProjectionWORLDtoLEFT ) );
 }
 
+void CLandmark::optimize( const UIDFrame& p_uFrame )
+{
+    //ds update position
+    //vecPointXYZOptimized = _getOptimizedLandmarkKLMA( p_uFrame, vecPointXYZOptimized );
+    vecPointXYZOptimized = _getOptimizedLandmarkKRDLMA( p_uFrame, vecPointXYZOptimized );
+}
+
 const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )
 {
     //ds initial values
     Eigen::Matrix4d matH( Eigen::Matrix4d::Zero( ) );
     Eigen::Vector4d vecB( 0.0, 0.0, 0.0, 0.0 );
     CPoint3DInWorldFrameHomogenized vecX( p_vecInitialGuess.x( ), p_vecInitialGuess.y( ), p_vecInitialGuess.z( ), 1.0 );
+    Eigen::Matrix2d matOmega( Eigen::Matrix2d::Identity( ) );
 
     //ds iterations (break-out if convergence reached early)
     for( uint32_t uIteration = 0; uIteration < CLandmark::m_uCapIterations; ++uIteration )
     {
-        //ds reset rss
-        double dRSSCurrent = 0.0;
-        uint32_t uInliers  = 0;
+        //ds counts
+        double dErrorSquaredTotalPixels = 0.0;
+        uint32_t uInliers               = 0;
 
         //ds do calibration over all recorded values
         for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
@@ -134,24 +142,26 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFra
             //ds compute current error
             const Eigen::Vector2d vecError( static_cast< double >( dA/dC )-dUReference, static_cast< double >( dB/dC )-dVReference );
 
+            //ds depth affects disparity (e.g x distance)
+            assert( 0.0 < pMeasurement->vecPointXYZLEFT.z( ) );
+            matOmega(0,0) = 1.0/pMeasurement->vecPointXYZLEFT.z( );
+
             //ds kernelized LS TODO: adjust graveness for distant points
-            const double dSquaredError( vecError.squaredNorm( ) );
+            const double dErrorSquaredPixels = vecError.transpose( )*matOmega*vecError;
             double dContribution( 1.0 );
-            if( CLandmark::m_dKernelMaximumError < dSquaredError )
+            if( CLandmark::m_dKernelMaximumError < dErrorSquaredPixels )
             {
                 //ds safe since if squared error would was zero it would not enter the loop (assuming maximum error is bigger than zero)
-                dContribution = std::sqrt( CLandmark::m_dKernelMaximumError/dSquaredError );
+                dContribution = CLandmark::m_dKernelMaximumError/dErrorSquaredPixels;
             }
             else
             {
                 //ds inlier
                 ++uInliers;
             }
+            dErrorSquaredTotalPixels += dContribution*dErrorSquaredPixels;
 
             //std::printf( "[%06lu][%04u] error: %4.2f %4.2f (squared: %4.2f)\n", uID, uIteration, vecError.x( ), vecError.y( ), dSquaredError );
-
-            //ds accumulate rss
-            dRSSCurrent += dContribution*dSquaredError;
 
             //ds compute jacobian
             Eigen::Matrix< double, 2, 4 > matJacobian;
@@ -160,8 +170,8 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFra
             const Eigen::Matrix< double, 4, 2 > matJacobianTransposed( matJacobian.transpose( ) );
 
             //ds compute H and B
-            matH += dContribution*matJacobianTransposed*matJacobian + CLandmark::m_dLevenbergDamping*Eigen::Matrix4d::Identity( );
-            vecB += dContribution*matJacobianTransposed*vecError;
+            matH += dContribution*matJacobianTransposed*matOmega*matJacobian + CLandmark::m_dLevenbergDamping*Eigen::Matrix4d::Identity( );
+            vecB += dContribution*matJacobianTransposed*matOmega*vecError;
         }
 
         //ds solve constrained system (since dx(3) = 0.0)
@@ -186,37 +196,35 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkKLMA( const UIDFrame& p_uFra
         //ds check if we have converged
         if( CLandmark::m_dConvergenceDelta > vecDeltaX.squaredNorm( ) )
         {
-            ++uOptimizationsSuccessful;
+            //ds compute average error
+            const double dErrorSquaredAveragePixels = dErrorSquaredTotalPixels/m_vecMeasurements.size( );
 
-            double dSumSquaredErrors( 0.0 );
-
-            //ds loop over all previous measurements again
-            for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
+            //ds if acceptable
+            if( CLandmark::m_dMaximumErrorSquaredAveragePixels > dErrorSquaredAveragePixels && m_uMinimumInliers < uInliers )
             {
-                //ds get projected point
-                const CPoint2DHomogenized vecProjectionHomogeneous( pMeasurement->matProjectionWORLDtoLEFT*vecX );
+                //ds success
+                ++uOptimizationsSuccessful;
 
-                //ds compute pixel coordinates TODO remove cast
-                const Eigen::Vector2d vecUV = CWrapperOpenCV::getInterDistance( static_cast< Eigen::Vector2d >( vecProjectionHomogeneous.head< 2 >( )/vecProjectionHomogeneous(2) ), pMeasurement->ptUVLEFT );
+                //ds update average
+                dCurrentAverageSquaredError = dErrorSquaredAveragePixels;
 
-                //ds compute squared error
-                const double dSquaredError( vecUV.squaredNorm( ) );
-
-                //ds add up
-                dSumSquaredErrors += dSquaredError;
+                //std::printf( "[%04lu] converged (%2u) in %3u iterations to (%6.2f %6.2f %6.2f) from (%6.2f %6.2f %6.2f) ARSS: %6.2f (inliers: %u/%lu)\n",
+                //             uID, uOptimizationsSuccessful, uIteration, vecX(0), vecX(1), vecX(2), p_vecInitialGuess(0), p_vecInitialGuess(1), p_vecInitialGuess(2), dCurrentAverageSquaredError, uInliers, m_vecMeasurements.size( ) );
+                return vecX.head< 3 >( );
             }
+            else
+            {
+                ++uOptimizationsFailed;
+                std::printf( "<CLandmark>(_getOptimizedLandmarkLMA) landmark [%06lu] optimization failed - solution unacceptable (average error: %f, inliers: %u)\n", uID, dErrorSquaredAveragePixels, uInliers );
 
-            //ds average the measurement
-            dCurrentAverageSquaredError = dSumSquaredErrors/m_vecMeasurements.size( );
-
-            //std::printf( "[%04lu] converged (%2u) in %3u iterations to (%6.2f %6.2f %6.2f) from (%6.2f %6.2f %6.2f) ARSS: %6.2f (inliers: %u/%lu)\n",
-            //             uID, uOptimizationsSuccessful, uIteration, vecX(0), vecX(1), vecX(2), p_vecInitialGuess(0), p_vecInitialGuess(1), p_vecInitialGuess(2), dCurrentAverageSquaredError, uInliers, m_vecMeasurements.size( ) );
-            return vecX.head< 3 >( );
+                //ds if still here the calibration did not converge - keep the initial estimate
+                return p_vecInitialGuess;
+            }
         }
     }
 
     ++uOptimizationsFailed;
-    //std::printf( "<CLandmark>(_getOptimizedLandmarkLMA) landmark [%06lu] optimization failed\n", uID );
+    std::printf( "<CLandmark>(_getOptimizedLandmarkLMA) landmark [%06lu] optimization failed - system did not converge\n", uID );
 
     //ds if still here the calibration did not converge - keep the initial estimate
     return p_vecInitialGuess;

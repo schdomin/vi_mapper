@@ -8,6 +8,9 @@
 #include "types/CLandmark.h"
 #include "types/CKeyFrame.h"
 
+#include "closure_buffer.h"
+#include "closure_checker.h"
+
 class Cg2oOptimizer
 {
 
@@ -45,12 +48,19 @@ private:
     const double m_dMaximumReliableDepthForPointXYZ = 2.5;
     const double m_dMaximumReliableDepthForUVDepth  = 7.5;
     static constexpr uint8_t m_uMinimumOptimizations           = 0;
-    static constexpr double m_dMaximumErrorPerOptimization     = 10.0; //ds e.g after 3 optimizations an error of 30.0 is allowed
+    static constexpr double m_dMaximumErrorPerOptimization     = 20.0; //ds e.g after 3 optimizations an error of 30.0 is allowed
     static constexpr uint8_t m_uMinimumKeyFramePresences       = 1;
 
     //ds optimized structures
     std::vector< CLandmark* > m_vecLandmarksInGraph;
     std::vector< CKeyFrame* > m_vecKeyFramesInGraph;
+
+    //ds loop closure selection
+    ClosureBuffer m_cClosureBuffer;
+    LoopClosureChecker m_cClosureChecker;
+    static constexpr uint8_t m_uClosureBufferWindowSize      = 3;
+    static constexpr double m_dClosureCheckerInlierThreshold = 3.0;
+    static constexpr uint8_t m_uMinimumNumberOfInliers       = 1;
 
 public:
 
