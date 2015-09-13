@@ -3,13 +3,14 @@
 
 #include "g2o/core/sparse_optimizer.h"
 #include "g2o/types/slam3d/types_slam3d.h"
+#include "g2o/core/robust_kernel_impl.h"
 
 #include "vision/CStereoCamera.h"
 #include "types/CLandmark.h"
 #include "types/CKeyFrame.h"
 
-#include "closure_buffer.h"
-#include "closure_checker.h"
+//#include "closure_buffer.h"
+//#include "closure_checker.h"
 
 class Cg2oOptimizer
 {
@@ -45,22 +46,22 @@ private:
     const uint32_t m_uIterations      = 500;
     uint32_t m_uOptimizations         = 0;
 
-    const double m_dMaximumReliableDepthForPointXYZ = 2.5;
-    const double m_dMaximumReliableDepthForUVDepth  = 7.5;
-    static constexpr uint8_t m_uMinimumOptimizations           = 0;
-    static constexpr double m_dMaximumErrorPerOptimization     = 20.0; //ds e.g after 3 optimizations an error of 30.0 is allowed
-    static constexpr uint8_t m_uMinimumKeyFramePresences       = 1;
+    const double m_dMaximumReliableDepthForPointXYZ  = 2.5;
+    const double m_dMaximumReliableDepthForUVDepth   = 7.5;
+    static constexpr uint8_t m_uMinimumOptimizations = 0;
+    static constexpr double m_dMaximumErrorSquared   = 9.0; //0.09;
+    static constexpr uint8_t m_uMinimumKeyFramePresences = 0;
 
     //ds optimized structures
     std::vector< CLandmark* > m_vecLandmarksInGraph;
     std::vector< CKeyFrame* > m_vecKeyFramesInGraph;
 
-    //ds loop closure selection
+    /*ds loop closure selection
     ClosureBuffer m_cClosureBuffer;
     LoopClosureChecker m_cClosureChecker;
     static constexpr uint8_t m_uClosureBufferWindowSize      = 3;
-    static constexpr double m_dClosureCheckerInlierThreshold = 3.0;
-    static constexpr uint8_t m_uMinimumNumberOfInliers       = 1;
+    static constexpr double m_dClosureCheckerInlierThreshold = 25.0;
+    static constexpr uint8_t m_uMinimumNumberOfInliers       = 1;*/
 
 public:
 

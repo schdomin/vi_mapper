@@ -13,6 +13,7 @@ public:
 
     static const Eigen::Vector3d toHomo( const Eigen::Vector2d& p_vecVector ){ return Eigen::Vector3d( p_vecVector(0), p_vecVector(1), 1.0 ); }
     static const Eigen::Vector4d toHomo( const Eigen::Vector3d& p_vecVector ){ return Eigen::Vector4d( p_vecVector(0), p_vecVector(1), p_vecVector(2), 1.0 ); }
+    static const Eigen::Vector4d getHomogeneous( const CPoint3DCAMERA& p_vecPointXYZ ){ return CPoint3DHomogenized( p_vecPointXYZ.x( ), p_vecPointXYZ.y( ), p_vecPointXYZ.z( ), 1.0 ); }
     static const Eigen::Vector2d fromHomo( const Eigen::Vector3d& p_vecVector ){ return Eigen::Vector2d( p_vecVector(0), p_vecVector(1) ); }
     static const Eigen::Vector3d fromHomo( const Eigen::Vector4d& p_vecVector ){ return Eigen::Vector3d( p_vecVector(0), p_vecVector(1), p_vecVector(2) ); }
     static const Eigen::Vector3d getNormalized( const Eigen::Vector2d& p_vecPoint, const double& dFx, const double& dFy, const double& dCx, const double& dCy )

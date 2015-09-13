@@ -55,6 +55,7 @@ private:
     //ds feature related
     //const uint32_t m_uKeyPointSize;
     const std::shared_ptr< cv::FeatureDetector > m_pDetector;
+    const std::shared_ptr< cv::FeatureDetector > m_pDetectorLowQuality;
     const std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
     const std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
     const double m_dMatchingDistanceCutoffTriangulation;
@@ -63,12 +64,14 @@ private:
 
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
     const uint8_t m_uVisibleLandmarksMinimum;
-    cv::Mat m_matDisplayLowerReference;
-    const double m_dMinimumDepthMeters;
-    const double m_dMaximumDepthMeters;
+    const double m_dMinimumDepthMeters = 0.05;
+    const double m_dMaximumDepthMeters = 100.0;
 
     std::shared_ptr< CTriangulator > m_pTriangulator;
     CFundamentalMatcher m_cMatcher;
+
+    //ds detection
+    UIDFrame m_uIDFrameDetectionLAST = 0;
 
     //ds tracking (we use the ID counter instead of accessing the vector size every time for speed)
     UIDLandmark m_uAvailableLandmarkID          = 0;
@@ -79,22 +82,23 @@ private:
     const UIDLandmark m_uMinimumLandmarksForKeyFrame;
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
     UIDKeyFrame m_uIDProcessedKeyFrameLAST = 0;
-    UIDKeyFrame m_uIDLoopClosureLAST       = 0;
+    UIDKeyFrame m_uIDLoopClosureOptimizationLAST       = 0;
     const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization;
     const UIDKeyFrame m_uIDDeltaLoopClosureForOptimization;
     Cg2oOptimizer m_cOptimizer;
 
     //ds loop closing
-    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance;
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure;
-    const double m_dLoopClosingRadiusSquaredNN = 25.0;
+    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 10;
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 10;
+    const double m_dLoopClosingRadiusSquaredMeters          = 25.0;
 
     //ds control
     const EPlaybackMode m_eMode;
     bool m_bIsShutdownRequested = false;
 
     //ds info display
-    bool m_bIsFrameAvailable       = false;
+    cv::Mat m_matDisplayLowerReference;
+    bool m_bIsFrameAvailable = false;
     std::pair< bool, Eigen::Isometry3d > m_prFrameLEFTtoWORLD;
     uint32_t m_uFramesCurrentCycle        = 0;
     double m_dPreviousFrameRate           = 0.0;
@@ -111,7 +115,7 @@ public:
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
     const std::shared_ptr< std::vector< CLandmark* > > getLandmarksHandle( ) const { return m_vecLandmarks; }
     const std::shared_ptr< std::vector< CKeyFrame* > > getKeyFramesHandle( ) const { return m_vecKeyFrames; }
-    const double getLoopClosingRadius( ) const { return std::sqrt( m_dLoopClosingRadiusSquaredNN ); }
+    const double getLoopClosingRadius( ) const { return std::sqrt( m_dLoopClosingRadiusSquaredMeters ); }
     const bool isFrameAvailable( ) const { return m_bIsFrameAvailable; }
     const std::pair< bool, Eigen::Isometry3d > getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_prFrameLEFTtoWORLD; }
     void finalize( );
@@ -130,13 +134,11 @@ private:
                           const Eigen::Vector3d& p_vecTranslationTotal,
                           const double& p_dDeltaTimeSeconds );
 
-    const std::shared_ptr< std::vector< CLandmark* > > _getNewLandmarks( const UIDFrame& p_uFrame,
-                                                      cv::Mat& p_matDisplay,
-                                                      const cv::Mat& p_matImageLEFT,
-                                                      const cv::Mat& p_matImageRIGHT,
-                                                      const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
-                                                      const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                      const Eigen::Vector3d& p_vecRotation );
+    void _addNewLandmarks( const cv::Mat& p_matImageLEFT,
+                           const cv::Mat& p_matImageRIGHT,
+                           const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                           const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                           cv::Mat& p_matDisplaySTEREO );
 
     //ds loop closing
     const CKeyFrame::CMatchICP* _getLoopClosureKeyFrameFCFS( const UIDKeyFrame& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );

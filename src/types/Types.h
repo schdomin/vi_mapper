@@ -11,10 +11,9 @@ struct CMeasurementLandmark
     const CPoint3DCAMERA vecPointXYZLEFT;
     const CPoint3DWORLD  vecPointXYZWORLD;
     const CPoint3DWORLD  vecPointXYZWORLDOptimized;
-    const Eigen::Vector3d vecCameraPosition;
-    //const Eigen::Matrix3d matPRotationWORLDtoLEFT;
-    //const Eigen::Vector3d vecPTranslationWORLDtoLEFT;
+    const Eigen::Isometry3d matTransformationWORLDtoLEFT;
     const MatrixProjection matProjectionWORLDtoLEFT;
+    const MatrixProjection matProjectionWORLDtoRIGHT;
 
     CMeasurementLandmark( const UIDLandmark& p_uID,
                           const cv::Point2d& p_ptUVLEFT,
@@ -22,21 +21,21 @@ struct CMeasurementLandmark
                           const CPoint3DCAMERA& p_vecPointXYZ,
                           const CPoint3DWORLD& p_vecPointXYZWORLD,
                           const CPoint3DWORLD& p_vecPointXYZWORLDOptimized,
-                          const Eigen::Vector3d& p_vecCameraPosition,
-                          //const Eigen::Matrix3d& p_matKRotation,
-                          //const Eigen::Vector3d& p_vecKTranslation,
-                          const MatrixProjection& p_matProjectionWORLDtoLEFT ): uID( p_uID ),
-                                                                      ptUVLEFT( p_ptUVLEFT ),
-                                                                      ptUVRIGHT( p_ptUVRIGHT ),
-                                                                      vecPointXYZLEFT( p_vecPointXYZ ),
-                                                                      vecPointXYZWORLD( p_vecPointXYZWORLD ),
-                                                                      vecPointXYZWORLDOptimized( p_vecPointXYZWORLDOptimized ),
-                                                                      vecCameraPosition( p_vecCameraPosition ),
-                                                                      //matPRotationWORLDtoLEFT( p_matKRotation ),
-                                                                      //vecPTranslationWORLDtoLEFT( p_vecKTranslation ),
-                                                                      matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT )
+                          const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                          const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                          const MatrixProjection& p_matProjectionWORLDtoRIGHT ): uID( p_uID ),
+                                                                                 ptUVLEFT( p_ptUVLEFT ),
+                                                                                 ptUVRIGHT( p_ptUVRIGHT ),
+                                                                                 vecPointXYZLEFT( p_vecPointXYZ ),
+                                                                                 vecPointXYZWORLD( p_vecPointXYZWORLD ),
+                                                                                 vecPointXYZWORLDOptimized( p_vecPointXYZWORLDOptimized ),
+                                                                                 matTransformationWORLDtoLEFT( p_matTransformationWORLDtoLEFT ),
+                                                                                 matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT ),
+                                                                                 matProjectionWORLDtoRIGHT( p_matProjectionWORLDtoRIGHT )
     {
-        //ds nothing to do
+        //ds input validation
+        assert( ptUVLEFT.y == ptUVRIGHT.y );
+        assert( 0.0 < vecPointXYZLEFT.z( ) );
     }
 
 };
@@ -64,7 +63,7 @@ struct CMatchTriangulation
                                                                      ptUVCAMERA( p_ptUVCAMERA ),
                                                                      matDescriptorCAMERA( p_matDescriptorCAMERA )
     {
-        //ds nothing to do
+        //ds no input validation here (negative z allowed)
     }
 };
 

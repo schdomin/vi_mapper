@@ -147,8 +147,8 @@ const Eigen::Vector2d CMiniVisionToolbox::getPointUndistortedPlumbBob( const Eig
 
 const Eigen::Vector2d CMiniVisionToolbox::getPointDistortedPlumbBob( const Eigen::Vector2d& p_vecPointUndistorted, const Eigen::Vector2d& p_vecPointPrincipal, const Eigen::Vector4d& p_vecDistortionCoefficients )
 {
-    const int32_t iUndistortedX( std::abs( p_vecPointUndistorted(0) ) );
-    const int32_t iUndistortedY( std::abs( p_vecPointUndistorted(1) ) );
+    const int32_t iUndistortedX( std::abs( p_vecPointUndistorted.x( ) ) );
+    const int32_t iUndistortedY( std::abs( p_vecPointUndistorted.y( ) ) );
 
     //ds current ranges
     const int32_t iXStart( iUndistortedX-40 );
@@ -186,8 +186,8 @@ const Eigen::Vector2d CMiniVisionToolbox::getPointDistortedPlumbBob( const Eigen
 const Eigen::Vector2d CMiniVisionToolbox::getPointDistorted( const Eigen::Vector2d& p_vecPointUndistorted, const Eigen::Vector2d& p_vecPrincipalPoint, const Eigen::Vector4d& p_vecDistortionCoefficients )
 {
     //ds transform to 1:1 aspect ratio
-    const Eigen::Vector2d vecPointUndistorted( p_vecPointUndistorted(0)/752, p_vecPointUndistorted(1)/480 );
-    const Eigen::Vector2d vecPrincipalPoint( p_vecPrincipalPoint(0)/752, p_vecPrincipalPoint(1)/480 );
+    const Eigen::Vector2d vecPointUndistorted( p_vecPointUndistorted.x( )/752, p_vecPointUndistorted.y( )/480 );
+    const Eigen::Vector2d vecPrincipalPoint( p_vecPrincipalPoint.x( )/752, p_vecPrincipalPoint.y( )/480 );
 
     //ds get distances
     const double dDeltaX( vecPointUndistorted(0)-vecPrincipalPoint(0) );

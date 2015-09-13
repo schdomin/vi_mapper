@@ -28,8 +28,7 @@ CFundamentalMatcher::CFundamentalMatcher( const std::shared_ptr< CTriangulator >
                                                                               m_dMatchingDistanceCutoffTrackingEpipolar( p_dMatchingDistanceCutoffEpipolar ),
                                                                               m_dMatchingDistanceCutoffOriginal( 2*m_dMatchingDistanceCutoffTrackingEpipolar ),
                                                                               m_uAvailableDetectionPointID( 0 ),
-                                                                              m_uMaximumFailedSubsequentTrackingsPerLandmark( p_uMaximumFailedSubsequentTrackingsPerLandmark ),
-                                                                              m_cSolverPoseSTEREO( m_pCameraSTEREO )
+                                                                              m_uMaximumFailedSubsequentTrackingsPerLandmark( p_uMaximumFailedSubsequentTrackingsPerLandmark )
 {
     m_vecDetectionPointsActive.clear( );
     m_vecVisibleLandmarks.clear( );
@@ -121,7 +120,7 @@ const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > CFun
     return vecCloud;
 }
 
-const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFrame p_uFrame,
+const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UIDFrame p_uFrame,
                                                                   cv::Mat& p_matDisplayLEFT,
                                                                   cv::Mat& p_matDisplayRIGHT,
                                                                   const cv::Mat& p_matImageLEFT,
@@ -155,9 +154,9 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
         {
             //ds compute current reprojection point
-            const CPoint3DCAMERA vecPointXYZCAMERA( p_matTransformationEstimateWORLDtoLEFT*pLandmark->vecPointXYZOptimized );
-            const cv::Point2d ptUVEstimateLEFT( m_pCameraLEFT->getProjection( vecPointXYZCAMERA ) );
-            const cv::Point2d ptUVEstimateRIGHT( m_pCameraRIGHT->getProjection( vecPointXYZCAMERA ) );
+            const CPoint3DCAMERA vecPointXYZLEFT( p_matTransformationEstimateWORLDtoLEFT*pLandmark->vecPointXYZOptimized );
+            const cv::Point2d ptUVEstimateLEFT( m_pCameraLEFT->getProjection( vecPointXYZLEFT ) );
+            const cv::Point2d ptUVEstimateRIGHT( m_pCameraRIGHT->getProjection( vecPointXYZLEFT ) );
             assert( ptUVEstimateLEFT.y == ptUVEstimateRIGHT.y );
 
             //ds check if we are in visible range
@@ -172,7 +171,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                     m_pExtractor->compute( p_matImageLEFT, vecKeyPointBufferSingle, matDescriptorLEFT );
 
                     //ds if acceptable
-                    if( 1 == matDescriptorLEFT.rows && m_dMatchingDistanceCutoffPoseOptimizationDirect > cv::norm( pLandmark->matDescriptorLASTLEFT, matDescriptorLEFT, cv::NORM_HAMMING ) )
+                    if( 1 == matDescriptorLEFT.rows && m_dMatchingDistanceCutoffPoseOptimizationDirect > cv::norm( pLandmark->getLastDescriptorLEFT( ), matDescriptorLEFT, cv::NORM_HAMMING ) )
                     {
                         //ds triangulate the point directly
                         const CMatchTriangulation cMatch( m_pTriangulator->getPointTriangulatedCompactInRIGHT( p_matImageRIGHT, vecKeyPointBufferSingle[0], matDescriptorLEFT ) );
@@ -186,7 +185,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                         }
 
                         //ds check if the descriptor match on the right side is out of range
-                        if( m_dMatchingDistanceCutoffPoseOptimizationDirect < cv::norm( pLandmark->matDescriptorLASTRIGHT, matDescriptorRIGHT, cv::NORM_HAMMING ) )
+                        if( m_dMatchingDistanceCutoffPoseOptimizationDirect < cv::norm( pLandmark->getLastDescriptorRIGHT( ), matDescriptorRIGHT, cv::NORM_HAMMING ) )
                         {
                             throw CExceptionNoMatchFound( "triangulation descriptor mismatch" );
                         }
@@ -215,7 +214,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                         m_pExtractor->compute( p_matImageRIGHT, vecKeyPointBufferSingle, matDescriptorRIGHT );
 
                         //ds if acceptable
-                        if( 1 == matDescriptorRIGHT.rows && m_dMatchingDistanceCutoffPoseOptimizationDirect > cv::norm( pLandmark->matDescriptorLASTRIGHT, matDescriptorRIGHT, cv::NORM_HAMMING ) )
+                        if( 1 == matDescriptorRIGHT.rows && m_dMatchingDistanceCutoffPoseOptimizationDirect > cv::norm( pLandmark->getLastDescriptorRIGHT( ), matDescriptorRIGHT, cv::NORM_HAMMING ) )
                         {
                             //ds triangulate the point directly
                             const CMatchTriangulation cMatch( m_pTriangulator->getPointTriangulatedCompactInLEFT( p_matImageLEFT, vecKeyPointBufferSingle[0], matDescriptorRIGHT ) );
@@ -229,7 +228,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                             }
 
                             //ds check if the descriptor match on the right side is out of range
-                            if( m_dMatchingDistanceCutoffPoseOptimizationDirect < cv::norm( pLandmark->matDescriptorLASTLEFT, matDescriptorLEFT, cv::NORM_HAMMING ) )
+                            if( m_dMatchingDistanceCutoffPoseOptimizationDirect < cv::norm( pLandmark->getLastDescriptorLEFT( ), matDescriptorLEFT, cv::NORM_HAMMING ) )
                             {
                                 throw CExceptionNoMatchFound( "triangulation descriptor mismatch" );
                             }
@@ -303,7 +302,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
 
                     //ds check descriptor matches for this landmark
                     std::vector< cv::DMatch > vecMatchesLEFT;
-                    m_pMatcher->match( pLandmark->matDescriptorLASTLEFT, matDescriptorsLEFT, vecMatchesLEFT );
+                    m_pMatcher->match( pLandmark->getLastDescriptorLEFT( ), matDescriptorsLEFT, vecMatchesLEFT );
 
                     //ds if we got a match and the matching distance is within the range
                     if( 0 < vecMatchesLEFT.size( ) )
@@ -326,7 +325,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                             }
 
                             //ds check if the descriptor match is acceptable
-                            if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->matDescriptorLASTRIGHT, matDescriptorRIGHT, cv::NORM_HAMMING ) )
+                            if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->getLastDescriptorRIGHT( ), matDescriptorRIGHT, cv::NORM_HAMMING ) )
                             {
                                 //ds latter landmark update (cannot be done before pose is optimized)
                                 vecMatchesForPoseOptimization.push_back( CMatchPoseOptimizationSTEREO( pLandmark, vecPointXYZ, cMatchRIGHT.vecPointXYZCAMERA, ptBestMatchLEFT, cMatchRIGHT.ptUVCAMERA, matDescriptorLEFT, matDescriptorRIGHT ) );
@@ -394,7 +393,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
 
                         //ds check descriptor matches for this landmark
                         std::vector< cv::DMatch > vecMatchesRIGHT;
-                        m_pMatcher->match( pLandmark->matDescriptorLASTRIGHT, matDescriptorsRIGHT, vecMatchesRIGHT );
+                        m_pMatcher->match( pLandmark->getLastDescriptorRIGHT( ), matDescriptorsRIGHT, vecMatchesRIGHT );
 
                         //ds if we got a match and the matching distance is within the range
                         if( 0 < vecMatchesRIGHT.size( ) )
@@ -417,7 +416,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                                 }
 
                                 //ds check if the descriptor match is acceptable
-                                if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->matDescriptorLASTLEFT, matDescriptorLEFT, cv::NORM_HAMMING ) )
+                                if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->getLastDescriptorLEFT( ), matDescriptorLEFT, cv::NORM_HAMMING ) )
                                 {
                                     //ds latter landmark update (cannot be done before pose is optimized)
                                     vecMatchesForPoseOptimization.push_back( CMatchPoseOptimizationSTEREO( pLandmark, vecPointXYZ, cMatchLEFT.vecPointXYZCAMERA, cMatchLEFT.ptUVCAMERA, ptBestMatchRIGHT, matDescriptorLEFT, matDescriptorRIGHT ) );
@@ -451,7 +450,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
         }
     }
 
-    //ds detected points
+    //ds detected points (INFO)
     const std::vector< CMatchPoseOptimizationSTEREO >::size_type uPoints = vecMatchesForPoseOptimization.size( );
     m_uNumberOfDetectionsPoseOptimizationDetection                       = uPoints-m_uNumberOfDetectionsPoseOptimizationDirect;
 
@@ -480,68 +479,68 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
             {
                 //ds compute projection into current frame
                 const CPoint3DCAMERA vecPointXYZLEFT( matTransformationWORLDtoLEFT*cMatch.vecPointXYZWORLD );
-                const double dDepth = vecPointXYZLEFT.z( );
-                assert( 0.0 < dDepth );
-
-                //ds apply the projection to the transformed point
-                const Eigen::Vector4d vecPointHomogeneous( vecPointXYZLEFT.x( ), vecPointXYZLEFT.y( ), dDepth, 1.0 );
-                const Eigen::Vector3d vecABCLEFT = m_pCameraLEFT->m_matProjection*vecPointHomogeneous;
-                const Eigen::Vector3d vecABCRIGHT = m_pCameraRIGHT->m_matProjection*vecPointHomogeneous;
-
-                //ds buffer c value
-                const double dCLEFT  = vecABCLEFT.z( );
-                const double dCRIGHT = vecABCRIGHT.z( );
-
-                //ds compute error
-                const Eigen::Vector2d vecUVLEFT( vecABCLEFT.x( )/dCLEFT, vecABCLEFT.y( )/dCLEFT );
-                const Eigen::Vector2d vecUVRIGHT( vecABCRIGHT.x( )/dCRIGHT, vecABCRIGHT.y( )/dCRIGHT );
-                const Eigen::Vector4d vecError( vecUVLEFT.x( )-cMatch.ptUVLEFT.x,
-                                                vecUVLEFT.y( )-cMatch.ptUVLEFT.y,
-                                                vecUVRIGHT.x( )-cMatch.ptUVRIGHT.x,
-                                                vecUVRIGHT.y( )-cMatch.ptUVRIGHT.y );
-
-                //ds current error
-                const double dErrorSquaredPixels = vecError.transpose( )*vecError;
-
-                //ds check if outlier
-                double dWeight = 1.0;
-                if( m_dMaximumErrorInlierSquaredPixelsPO < dErrorSquaredPixels )
+                if( 0.0 < vecPointXYZLEFT.z( ) )
                 {
-                    dWeight = m_dMaximumErrorInlierSquaredPixelsPO/dErrorSquaredPixels;
+                    //ds apply the projection to the transformed point
+                    const Eigen::Vector4d vecPointHomogeneous( vecPointXYZLEFT.x( ), vecPointXYZLEFT.y( ), vecPointXYZLEFT.z( ), 1.0 );
+                    const Eigen::Vector3d vecABCLEFT = m_pCameraLEFT->m_matProjection*vecPointHomogeneous;
+                    const Eigen::Vector3d vecABCRIGHT = m_pCameraRIGHT->m_matProjection*vecPointHomogeneous;
+
+                    //ds buffer c value
+                    const double dCLEFT  = vecABCLEFT.z( );
+                    const double dCRIGHT = vecABCRIGHT.z( );
+
+                    //ds compute error
+                    const Eigen::Vector2d vecUVLEFT( vecABCLEFT.x( )/dCLEFT, vecABCLEFT.y( )/dCLEFT );
+                    const Eigen::Vector2d vecUVRIGHT( vecABCRIGHT.x( )/dCRIGHT, vecABCRIGHT.y( )/dCRIGHT );
+                    const Eigen::Vector4d vecError( vecUVLEFT.x( )-cMatch.ptUVLEFT.x,
+                                                    vecUVLEFT.y( )-cMatch.ptUVLEFT.y,
+                                                    vecUVRIGHT.x( )-cMatch.ptUVRIGHT.x,
+                                                    vecUVRIGHT.y( )-cMatch.ptUVRIGHT.y );
+
+                    //ds current error
+                    const double dErrorSquaredPixels = vecError.transpose( )*vecError;
+
+                    //ds check if outlier
+                    double dWeight = 1.0;
+                    if( m_dMaximumErrorInlierSquaredPixelsPoseOptimization < dErrorSquaredPixels )
+                    {
+                        dWeight = m_dMaximumErrorInlierSquaredPixelsPoseOptimization/dErrorSquaredPixels;
+                    }
+                    else
+                    {
+                        ++uInliersCurrent;
+                    }
+                    dErrorSquaredTotalCurrent += dWeight*dErrorSquaredPixels;
+
+                    //ds get the jacobian of the transform part = [I 2*skew(T*modelPoint)]
+                    Eigen::Matrix< double, 4, 6 > matJacobianTransform;
+                    matJacobianTransform.setZero( );
+                    matJacobianTransform.block<3,3>(0,0).setIdentity( );
+                    matJacobianTransform.block<3,3>(0,3) = -2*CMiniVisionToolbox::getSkew( vecPointXYZLEFT );
+
+                    //ds jacobian of the homogeneous division
+                    Eigen::Matrix< double, 2, 3 > matJacobianLEFT;
+                    matJacobianLEFT << 1/dCLEFT,          0, -vecABCLEFT.x( )/( dCLEFT*dCLEFT ),
+                                              0,   1/dCLEFT, -vecABCLEFT.y( )/( dCLEFT*dCLEFT );
+
+                    Eigen::Matrix< double, 2, 3 > matJacobianRIGHT;
+                    matJacobianRIGHT << 1/dCRIGHT,           0, -vecABCRIGHT.x( )/( dCRIGHT*dCRIGHT ),
+                                                0,   1/dCRIGHT, -vecABCRIGHT.y( )/( dCRIGHT*dCRIGHT );
+
+                    //ds final jacobian
+                    Eigen::Matrix< double, 4, 6 > matJacobian;
+                    matJacobian.setZero( );
+                    matJacobian.block< 2,6 >(0,0) = matJacobianLEFT*m_pCameraLEFT->m_matProjection*matJacobianTransform;
+                    matJacobian.block< 2,6 >(2,0) = matJacobianRIGHT*m_pCameraRIGHT->m_matProjection*matJacobianTransform;
+
+                    //ds precompute transposed
+                    const Eigen::Matrix< double, 6, 4 > matJacobianTransposed( matJacobian.transpose( ) );
+
+                    //ds accumulate
+                    matH += dWeight*matJacobianTransposed*matJacobian;
+                    vecB += dWeight*matJacobianTransposed*vecError;
                 }
-                else
-                {
-                    ++uInliersCurrent;
-                }
-                dErrorSquaredTotalCurrent += dWeight*dErrorSquaredPixels;
-
-                //ds get the jacobian of the transform part = [I 2*skew(T*modelPoint)]
-                Eigen::Matrix< double, 4, 6 > matJacobianTransform;
-                matJacobianTransform.setZero( );
-                matJacobianTransform.block<3,3>(0,0).setIdentity( );
-                matJacobianTransform.block<3,3>(0,3) = -2*CMiniVisionToolbox::getSkew( vecPointXYZLEFT );
-
-                //ds jacobian of the homogeneous division
-                Eigen::Matrix< double, 2, 3 > matJacobianLEFT;
-                matJacobianLEFT << 1/dCLEFT,          0, -vecABCLEFT.x( )/( dCLEFT*dCLEFT ),
-                                          0,   1/dCLEFT, -vecABCLEFT.y( )/( dCLEFT*dCLEFT );
-
-                Eigen::Matrix< double, 2, 3 > matJacobianRIGHT;
-                matJacobianRIGHT << 1/dCRIGHT,           0, -vecABCRIGHT.x( )/( dCRIGHT*dCRIGHT ),
-                                            0,   1/dCRIGHT, -vecABCRIGHT.y( )/( dCRIGHT*dCRIGHT );
-
-                //ds final jacobian
-                Eigen::Matrix< double, 4, 6 > matJacobian;
-                matJacobian.setZero( );
-                matJacobian.block< 2,6 >(0,0) = matJacobianLEFT*m_pCameraLEFT->m_matProjection*matJacobianTransform;
-                matJacobian.block< 2,6 >(2,0) = matJacobianRIGHT*m_pCameraRIGHT->m_matProjection*matJacobianTransform;
-
-                //ds precompute transposed
-                const Eigen::Matrix< double, 6, 4 > matJacobianTransposed( matJacobian.transpose( ) );
-
-                //ds accumulate
-                matH += dWeight*matJacobianTransposed*matJacobian;
-                vecB += dWeight*matJacobianTransposed*vecError;
             }
 
             //ds solve the system and update the estimate
@@ -588,13 +587,16 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                 CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dNormOptimizationTranslation, dNormRotationMatrix, dOptimizationRISK );
 
                 //ds if solution is acceptable
-                if( m_dMaximumErrorSquaredAveragePO > dErrorSquaredAverage && m_uMinimumInliersForPoseOptimization < uInliersCurrent && m_dMaximumRISK > dOptimizationRISK )
+                if( m_dMaximumErrorSquaredAveragePoseOptimization > dErrorSquaredAverage && m_uMinimumInliersPoseOptimization < uInliersCurrent && m_dMaximumRISK > dOptimizationRISK )
                 {
-                    //ds update all visible landmarks
+                    //ds precompute intrinsics
                     const MatrixProjection matProjectionWORLDtoLEFT( m_pCameraLEFT->m_matProjection*matTransformationWORLDtoLEFT.matrix( ) );
+                    const MatrixProjection matProjectionWORLDtoRIGHT( m_pCameraRIGHT->m_matProjection*matTransformationWORLDtoLEFT.matrix( ) );
+
+                    //ds update all visible landmarks
                     for( CMatchPoseOptimizationSTEREO cMatchSTEREO: vecMatchesForPoseOptimization )
                     {
-                        _addMeasurementToLandmarkSTEREO( p_uFrame, cMatchSTEREO, matTransformationLEFTtoWORLD, p_vecRotationIMU, matProjectionWORLDtoLEFT );
+                        _addMeasurementToLandmarkSTEREO( p_uFrame, cMatchSTEREO, matTransformationLEFTtoWORLD, matTransformationWORLDtoLEFT, matProjectionWORLDtoLEFT, matProjectionWORLDtoRIGHT );
                     }
 
                     //ds return with pose
@@ -602,7 +604,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
                 }
                 else
                 {
-                    throw CExceptionPoseOptimization( "unable to optimize pose - insufficient accuracy (error average: "+std::to_string( dErrorSquaredAverage )+" risk: "+std::to_string( dOptimizationRISK )+")" );
+                    throw CExceptionPoseOptimization( "unable to optimize pose - insufficient accuracy (error average: "+std::to_string( dErrorSquaredAverage )+" inliers: " +std::to_string( uInliersCurrent )+" risk: "+std::to_string( dOptimizationRISK )+")" );
                 }
             }
             else
@@ -625,7 +627,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREO( const UIDFr
 const Eigen::Isometry3d CFundamentalMatcher::getPoseRefinedOnVisibleLandmarks( const Eigen::Isometry3d& p_matTransformationWORLDtoLEFTEstimate )
 {
     //ds check if we have a sufficient number of points to optimize
-    if( m_uMinimumInliersForPoseOptimization < m_vecVisibleLandmarks.size( ) )
+    if( m_uMinimumInliersPoseOptimization < m_vecVisibleLandmarks.size( ) )
     {
         //ds LS setup
         Eigen::Isometry3d matTransformationWORLDtoLEFT( p_matTransformationWORLDtoLEFTEstimate );
@@ -676,9 +678,9 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseRefinedOnVisibleLandmarks( c
 
                     //ds check if outlier
                     double dWeight = 1.0;
-                    if( m_dMaximumErrorInlierSquaredPixelsPO < dErrorSquaredPixels )
+                    if( m_dMaximumErrorInlierSquaredPixelsPoseOptimization < dErrorSquaredPixels )
                     {
-                        dWeight = m_dMaximumErrorInlierSquaredPixelsPO/dErrorSquaredPixels;
+                        dWeight = m_dMaximumErrorInlierSquaredPixelsPoseOptimization/dErrorSquaredPixels;
                     }
                     else
                     {
@@ -752,7 +754,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseRefinedOnVisibleLandmarks( c
                 const double dErrorSquaredAverage = dErrorSquaredTotalCurrent/m_vecVisibleLandmarks.size( );
 
                 //ds if solution is acceptable
-                if( m_dMaximumErrorSquaredAveragePO > dErrorSquaredAverage && m_uMinimumInliersForPoseOptimization < uInliersCurrent )
+                if( m_dMaximumErrorSquaredAveragePoseOptimization > dErrorSquaredAverage && m_uMinimumInliersPoseOptimization < uInliersCurrent )
                 {
                     //std::printf( "<CFundamentalMatcher>(getPoseRefinedOnVisibleLandmarks) system converged in iterations: %u with error: %f\n", uLS, dErrorSquaredAverage );
 
@@ -797,7 +799,6 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CFundamental
 
     //ds precompute inverse once
     const Eigen::Isometry3d matTransformationWORLDtoLEFT( p_matTransformationLEFTtoWORLD.inverse( ) );
-    const MatrixProjection matProjectionWORLDtoLEFT( m_pCameraLEFT->m_matProjection*matTransformationWORLDtoLEFT.matrix( ) );
 
     //ds new active measurement points
     std::vector< CDetectionPoint > vecKeyFramesActive;
@@ -846,23 +847,23 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CFundamental
     return vecVisibleLandmarks;
 }
 
-const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFundamentalMatcher::getMeasurementsEpipolar( cv::Mat& p_matDisplayLEFT,
-                                                                                                                      cv::Mat& p_matDisplayRIGHT,
-                                                                                                                      const UIDFrame p_uFrame,
-                                                                                                                      const cv::Mat& p_matImageLEFT,
-                                                                                                                      const cv::Mat& p_matImageRIGHT,
-                                                                                                                      const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
-                                                                                                                      const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                                                                                      const Eigen::Vector3d& p_vecCameraOrientation,
-                                                                                                                      const double& p_dMotionScaling )
+const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFundamentalMatcher::getMeasurementsEpipolar( const UIDFrame p_uFrame,
+                                                                                                                        const cv::Mat& p_matImageLEFT,
+                                                                                                                        const cv::Mat& p_matImageRIGHT,
+                                                                                                                        const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                                                                                                                        const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
+                                                                                                                        const double& p_dMotionScaling,
+                                                                                                                        cv::Mat& p_matDisplayLEFT,
+                                                                                                                        cv::Mat& p_matDisplayRIGHT )
 {
     assert( 1.0 <= p_dMotionScaling );
 
+    //ds precompute intrinsics
+    const MatrixProjection matProjectionWORLDtoLEFT( m_pCameraLEFT->m_matProjection*p_matTransformationWORLDtoLEFT.matrix( ) );
+    const MatrixProjection matProjectionWORLDtoRIGHT( m_pCameraRIGHT->m_matProjection*p_matTransformationWORLDtoLEFT.matrix( ) );
+
     //ds measurements to return
     std::shared_ptr< std::vector< const CMeasurementLandmark* > > vecMeasurements( std::make_shared< std::vector< const CMeasurementLandmark* > >( ) );
-
-    //ds precompute inverse once
-    const MatrixProjection matProjectionWORLDtoLEFT( m_pCameraLEFT->m_matProjection*p_matTransformationWORLDtoLEFT.matrix( ) );
 
     //ds new active measurement points
     std::vector< CDetectionPoint > vecDetectionPointsActive;
@@ -872,6 +873,8 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
 
     //ds total detections counter
     m_uNumberOfDetectionsEpipolar = 0;
+    UIDLandmark uNumberOfFailedLandmarkOptimizations = 0;
+    UIDLandmark uNumberOfInvalidLandmarks = 0;
 
     //ds active measurements
     for( const CDetectionPoint& cDetectionPoint: m_vecDetectionPointsActive )
@@ -889,7 +892,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
         const Eigen::Matrix3d matEssential( matRotation*CMiniVisionToolbox::getSkew( vecTranslation ) );
         const Eigen::Matrix3d matFundamental( m_pCameraLEFT->m_matIntrinsicPInverseTransposed*matEssential*m_pCameraLEFT->m_matIntrinsicPInverse );
 
-        //ds loop over the points for the current scan
+        //ds loop over all points for the current scan
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
         {
             //ds check if we can skip this landmark due to failed optimization
@@ -898,16 +901,16 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 pLandmark->bIsCurrentlyVisible = false;
-                ++m_uNumberOfFailedLandmarkOptimizationsTotal;
+                ++uNumberOfFailedLandmarkOptimizations;
             }
 
-            //ds check if we can skip this landmark due to invalid optimization
+            //ds check if we can skip this landmark due to invalid optimization (at least one time optimized but currently failed)
             else if( 0 < pLandmark->uOptimizationsSuccessful && !Cg2oOptimizer::isOptimized( pLandmark ) )
             {
                 cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
                 pLandmark->bIsCurrentlyVisible = false;
-                ++m_uNumberOfInvalidLandmarksTotal;
+                ++uNumberOfInvalidLandmarks;
             }
 
             //ds process the landmark
@@ -1064,16 +1067,24 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
                             if( uDeltaV < uDeltaU )
                             {
                                 //ds get the match over U
-                                pMatchLEFT = _getMatchSampleRecursiveU( p_matDisplayLEFT, p_matImageLEFT, dUMinimum, uDeltaU, vecCoefficients, pLandmark->matDescriptorLASTLEFT, pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
+                                pMatchLEFT = _getMatchSampleRecursiveU( p_matDisplayLEFT, p_matImageLEFT, dUMinimum, uDeltaU, vecCoefficients, pLandmark->getLastDescriptorLEFT( ), pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
                             }
                             else
                             {
                                 //ds get the match over V
-                                pMatchLEFT = _getMatchSampleRecursiveV( p_matDisplayLEFT, p_matImageLEFT, dVForUMinimum, uDeltaV, vecCoefficients, pLandmark->matDescriptorLASTLEFT, pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
+                                pMatchLEFT = _getMatchSampleRecursiveV( p_matDisplayLEFT, p_matImageLEFT, dVForUMinimum, uDeltaV, vecCoefficients, pLandmark->getLastDescriptorLEFT( ), pLandmark->matDescriptorReferenceLEFT, pLandmark->dKeyPointSize, 0 );
                             }
 
                             //ds add this measurement to the landmark
-                            _addMeasurementToLandmarkLEFT( p_uFrame, pLandmark, p_matImageRIGHT, pMatchLEFT->cKeyPoint, pMatchLEFT->matDescriptor, p_matTransformationLEFTtoWORLD, p_vecCameraOrientation, matProjectionWORLDtoLEFT );
+                            _addMeasurementToLandmarkLEFT( p_uFrame,
+                                                           pLandmark,
+                                                           p_matImageRIGHT,
+                                                           pMatchLEFT->cKeyPoint,
+                                                           pMatchLEFT->matDescriptor,
+                                                           p_matTransformationLEFTtoWORLD,
+                                                           p_matTransformationWORLDtoLEFT,
+                                                           matProjectionWORLDtoLEFT,
+                                                           matProjectionWORLDtoRIGHT );
                             vecMeasurementsPerDetectionPoint.push_back( pLandmark->getLastMeasurement( ) );
 
                             //ds update info
@@ -1138,7 +1149,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
 
                                     //ds check descriptor matches for this landmark
                                     std::vector< cv::DMatch > vecMatchesLEFT;
-                                    m_pMatcher->match( pLandmark->matDescriptorLASTLEFT, matDescriptorsLEFT, vecMatchesLEFT );
+                                    m_pMatcher->match( pLandmark->getLastDescriptorLEFT( ), matDescriptorsLEFT, vecMatchesLEFT );
 
                                     //ds if we got a match and the matching distance is within the range
                                     if( 0 < vecMatchesLEFT.size( ) )
@@ -1161,7 +1172,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
                                             }
 
                                             //ds check if the descriptor match is acceptable
-                                            if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->matDescriptorLASTRIGHT, matDescriptorRIGHT, cv::NORM_HAMMING ) )
+                                            if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->getLastDescriptorRIGHT( ), matDescriptorRIGHT, cv::NORM_HAMMING ) )
                                             {
                                                 //ds add this measurement to the landmark
                                                 _addMeasurementToLandmarkSTEREO( p_uFrame,
@@ -1172,8 +1183,9 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
                                                                                  matDescriptorLEFT,
                                                                                  matDescriptorRIGHT,
                                                                                  p_matTransformationLEFTtoWORLD,
-                                                                                 p_vecCameraOrientation,
-                                                                                 matProjectionWORLDtoLEFT );
+                                                                                 p_matTransformationWORLDtoLEFT,
+                                                                                 matProjectionWORLDtoLEFT,
+                                                                                 matProjectionWORLDtoRIGHT );
                                                 vecMeasurementsPerDetectionPoint.push_back( pLandmark->getLastMeasurement( ) );
                                             }
                                             else
@@ -1238,7 +1250,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
 
                                         //ds check descriptor matches for this landmark
                                         std::vector< cv::DMatch > vecMatchesRIGHT;
-                                        m_pMatcher->match( pLandmark->matDescriptorLASTRIGHT, matDescriptorsRIGHT, vecMatchesRIGHT );
+                                        m_pMatcher->match( pLandmark->getLastDescriptorRIGHT( ), matDescriptorsRIGHT, vecMatchesRIGHT );
 
                                         //ds if we got a match and the matching distance is within the range
                                         if( 0 < vecMatchesRIGHT.size( ) )
@@ -1261,7 +1273,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
                                                 }
 
                                                 //ds check if the descriptor match is acceptable
-                                                if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->matDescriptorLASTLEFT, matDescriptorLEFT, cv::NORM_HAMMING ) )
+                                                if( m_dMatchingDistanceCutoffPoseOptimization > cv::norm( pLandmark->getLastDescriptorLEFT( ), matDescriptorLEFT, cv::NORM_HAMMING ) )
                                                 {
                                                     //ds add this measurement to the landmark
                                                     _addMeasurementToLandmarkSTEREO( p_uFrame,
@@ -1272,8 +1284,9 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
                                                                                      matDescriptorLEFT,
                                                                                      matDescriptorRIGHT,
                                                                                      p_matTransformationLEFTtoWORLD,
-                                                                                     p_vecCameraOrientation,
-                                                                                     matProjectionWORLDtoLEFT );
+                                                                                     p_matTransformationWORLDtoLEFT,
+                                                                                     matProjectionWORLDtoLEFT,
+                                                                                     matProjectionWORLDtoRIGHT );
                                                     vecMeasurementsPerDetectionPoint.push_back( pLandmark->getLastMeasurement( ) );
                                                 }
                                                 else
@@ -1333,6 +1346,15 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
         }
     }
 
+    //ds info counters
+    m_uNumberOfFailedLandmarkOptimizationsTotal += uNumberOfFailedLandmarkOptimizations;
+    m_uNumberOfInvalidLandmarksTotal            += uNumberOfInvalidLandmarks;
+
+    if( 25 < uNumberOfFailedLandmarkOptimizations+uNumberOfInvalidLandmarks )
+    {
+        std::printf( "<CFundamentalMatcher>(getMeasurementsEpipolar) erased landmarks - failed optimization: %2lu, invalid optimization: %2lu\n", uNumberOfFailedLandmarkOptimizations, uNumberOfInvalidLandmarks );
+    }
+
     //ds update active measurement points
     m_vecDetectionPointsActive.swap( vecDetectionPointsActive );
 
@@ -1365,7 +1387,7 @@ const cv::Mat CFundamentalMatcher::getMaskActiveLandmarks( const Eigen::Isometry
         //ds loop over the points for the current scan
         for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
         {
-            //ds if the landmark is visible we dont have to compute the reprojection
+            //ds if the landmark is visible we don't have to compute the reprojection
             if( pLandmark->bIsCurrentlyVisible )
             {
                 cv::circle( matMaskDetection, pLandmark->getLastDetectionLEFT( ), m_uFeatureRadiusForMask, cv::Scalar ( 0 ), -1 );
@@ -1600,10 +1622,11 @@ void CFundamentalMatcher::_addMeasurementToLandmarkLEFT( const UIDFrame p_uFrame
                                                   CLandmark* p_pLandmark,
                                                   const cv::Mat& p_matImageRIGHT,
                                                   const cv::KeyPoint& p_cKeyPoint,
-                                                  const CDescriptor& p_matDescriptorNew,
+                                                  const CDescriptor& p_matDescriptorLEFT,
                                                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                  const Eigen::Vector3d& p_vecCameraOrientation,
-                                                  const MatrixProjection& p_matProjectionWORLDtoLEFT )
+                                                  const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                                                  const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                                                  const MatrixProjection& p_matProjectionWORLDtoRIGHT )
 {
     //ds buffer point
     cv::Point2f ptUVLEFT( p_cKeyPoint.pt );
@@ -1611,9 +1634,9 @@ void CFundamentalMatcher::_addMeasurementToLandmarkLEFT( const UIDFrame p_uFrame
     assert( m_pCameraLEFT->m_cFOV.contains( p_cKeyPoint.pt ) );
 
     //ds triangulate point
-    const CMatchTriangulation cMatch( m_pTriangulator->getPointTriangulatedCompactInRIGHT( p_matImageRIGHT, p_cKeyPoint, p_matDescriptorNew ) );
-    const CPoint3DCAMERA vecPointXYZLEFT( cMatch.vecPointXYZCAMERA );
-    const cv::Point2f ptUVRIGHT( cMatch.ptUVCAMERA );
+    const CMatchTriangulation cMatchRIGHT( m_pTriangulator->getPointTriangulatedCompactInRIGHT( p_matImageRIGHT, p_cKeyPoint, p_matDescriptorLEFT ) );
+    const CPoint3DCAMERA vecPointXYZLEFT( cMatchRIGHT.vecPointXYZCAMERA );
+    const cv::Point2f ptUVRIGHT( cMatchRIGHT.ptUVCAMERA );
 
     //ds depth
     const double dDepthMeters = vecPointXYZLEFT.z( );
@@ -1628,18 +1651,17 @@ void CFundamentalMatcher::_addMeasurementToLandmarkLEFT( const UIDFrame p_uFrame
 
     //ds update landmark (NO EXCEPTIONS HERE)
     p_pLandmark->bIsCurrentlyVisible        = true;
-    p_pLandmark->matDescriptorLASTLEFT      = p_matDescriptorNew;
-    p_pLandmark->matDescriptorLASTRIGHT     = cMatch.matDescriptorCAMERA;
     p_pLandmark->uFailedSubsequentTrackings = 0;
     p_pLandmark->addMeasurement( p_uFrame,
                                  ptUVLEFT,
                                  ptUVRIGHT,
+                                 p_matDescriptorLEFT,
+                                 cMatchRIGHT.matDescriptorCAMERA,
                                  vecPointXYZLEFT,
-                                 p_matTransformationLEFTtoWORLD*vecPointXYZLEFT,
-                                 p_matTransformationLEFTtoWORLD.translation( ),
-                                 p_vecCameraOrientation,
+                                 p_matTransformationLEFTtoWORLD,
+                                 p_matTransformationWORLDtoLEFT,
                                  p_matProjectionWORLDtoLEFT,
-                                 cMatch.matDescriptorCAMERA );
+                                 p_matProjectionWORLDtoRIGHT );
 
     //ds add to vector for fast search
     m_vecVisibleLandmarks.push_back( p_pLandmark );
@@ -1648,8 +1670,9 @@ void CFundamentalMatcher::_addMeasurementToLandmarkLEFT( const UIDFrame p_uFrame
 void CFundamentalMatcher::_addMeasurementToLandmarkSTEREO( const UIDFrame p_uFrame,
                                                            CMatchPoseOptimizationSTEREO& p_cMatchSTEREO,
                                                            const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                           const Eigen::Vector3d& p_vecCameraOrientation,
-                                                           const MatrixProjection& p_matProjectionWORLDtoLEFT )
+                                                           const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                                                           const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                                                           const MatrixProjection& p_matProjectionWORLDtoRIGHT )
 {
     //ds input validation
     assert( m_pCameraLEFT->m_cFOV.contains( p_cMatchSTEREO.ptUVLEFT ) );
@@ -1659,18 +1682,17 @@ void CFundamentalMatcher::_addMeasurementToLandmarkSTEREO( const UIDFrame p_uFra
 
     //ds update landmark (NO EXCEPTIONS HERE)
     p_cMatchSTEREO.pLandmark->bIsCurrentlyVisible        = true;
-    p_cMatchSTEREO.pLandmark->matDescriptorLASTLEFT      = p_cMatchSTEREO.matDescriptorLEFT;
-    p_cMatchSTEREO.pLandmark->matDescriptorLASTRIGHT     = p_cMatchSTEREO.matDescriptorRIGHT;
     p_cMatchSTEREO.pLandmark->uFailedSubsequentTrackings = 0;
     p_cMatchSTEREO.pLandmark->addMeasurement( p_uFrame,
                                               p_cMatchSTEREO.ptUVLEFT,
                                               p_cMatchSTEREO.ptUVRIGHT,
+                                              p_cMatchSTEREO.matDescriptorLEFT,
+                                              p_cMatchSTEREO.matDescriptorRIGHT,
                                               p_cMatchSTEREO.vecPointXYZLEFT,
-                                              p_matTransformationLEFTtoWORLD*p_cMatchSTEREO.vecPointXYZLEFT,
-                                              p_matTransformationLEFTtoWORLD.translation( ),
-                                              p_vecCameraOrientation,
+                                              p_matTransformationLEFTtoWORLD,
+                                              p_matTransformationWORLDtoLEFT,
                                               p_matProjectionWORLDtoLEFT,
-                                              p_cMatchSTEREO.matDescriptorLEFT );
+                                              p_matProjectionWORLDtoRIGHT );
 
     //ds add to vector for fast search
     m_vecVisibleLandmarks.push_back( p_cMatchSTEREO.pLandmark );
@@ -1684,8 +1706,9 @@ void CFundamentalMatcher::_addMeasurementToLandmarkSTEREO( const UIDFrame p_uFra
                                                            const CDescriptor& p_matDescriptorLEFT,
                                                            const CDescriptor& p_matDescriptorRIGHT,
                                                            const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
-                                                           const Eigen::Vector3d& p_vecCameraOrientation,
-                                                           const MatrixProjection& p_matProjectionWORLDtoLEFT )
+                                                           const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                                                           const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                                                           const MatrixProjection& p_matProjectionWORLDtoRIGHT )
 {
     //ds input validation
     assert( m_pCameraLEFT->m_cFOV.contains( p_ptUVLEFT ) );
@@ -1695,18 +1718,17 @@ void CFundamentalMatcher::_addMeasurementToLandmarkSTEREO( const UIDFrame p_uFra
 
     //ds update landmark (NO EXCEPTIONS HERE)
     p_pLandmark->bIsCurrentlyVisible        = true;
-    p_pLandmark->matDescriptorLASTLEFT      = p_matDescriptorLEFT;
-    p_pLandmark->matDescriptorLASTRIGHT     = p_matDescriptorRIGHT;
     p_pLandmark->uFailedSubsequentTrackings = 0;
     p_pLandmark->addMeasurement( p_uFrame,
                                  p_ptUVLEFT,
                                  p_ptUVRIGHT,
+                                 p_matDescriptorLEFT,
+                                 p_matDescriptorRIGHT,
                                  p_vecPointXYZLEFT,
-                                 p_matTransformationLEFTtoWORLD*p_vecPointXYZLEFT,
-                                 p_matTransformationLEFTtoWORLD.translation( ),
-                                 p_vecCameraOrientation,
+                                 p_matTransformationLEFTtoWORLD,
+                                 p_matTransformationWORLDtoLEFT,
                                  p_matProjectionWORLDtoLEFT,
-                                 p_matDescriptorLEFT );
+                                 p_matProjectionWORLDtoRIGHT );
 
     //ds add to vector for fast search
     m_vecVisibleLandmarks.push_back( p_pLandmark );

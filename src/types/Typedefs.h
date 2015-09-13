@@ -23,8 +23,8 @@ typedef Eigen::Vector3d CPoint3DCAMERA;
 typedef Eigen::Vector3d CPoint3DWORLD;
 typedef Eigen::Vector4d CPoint3DInWorldFrameHomogenized;
 typedef cv::Scalar      CColorCodeBGR;
+//typedef cv::Matx< uchar, 1, 64 > CDescriptor;
 typedef cv::Mat         CDescriptor;
-typedef double          TFloatingPointNumber;
 typedef uint64_t        UIDLandmark;
 typedef uint64_t        UIDDescriptor;
 typedef uint64_t        UIDDetectionPoint;
@@ -44,5 +44,10 @@ typedef Eigen::Vector3d CLinearAccelerationWORLD;
 typedef Eigen::Matrix< double, 4, 4 > EigenMatrix4d;
 typedef Eigen::Matrix< double, 6, 1 > EigenVector6d;
 typedef Eigen::Matrix< double, 6, 6 > EigenMatrix6d;
+
+/*ds multiple descriptors
+template< uint32_t uRows >
+using CDescriptors = cv::Matx< uchar, uRows, 64 >;*/
+typedef cv::Mat CDescriptors;
 
 #endif //TYPEDEFS_H

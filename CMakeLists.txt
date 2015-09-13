@@ -70,19 +70,19 @@ endforeach()
 set(SOURCEFILES
 src/configuration/CConfigurationCamera.cpp
 src/types/CLandmark.cpp
+src/types/CKeyFrame.cpp
 src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
 src/core/CFundamentalMatcher.cpp
 src/optimization/Cg2oOptimizer.cpp
 src/gui/CViewerScene.cpp
-src/types/C67DTree.cpp
-src/optimization/closure_buffer.cpp
-src/optimization/closure_checker.cpp)
+src/types/C67DTree.cpp)
 
 set(SOURCEFILES_MOCKED
 src/configuration/CConfigurationCamera.cpp
 src/types/CLandmark.cpp
+src/types/CKeyFrame.cpp
 src/utility/CLogger.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CMockedMatcherEpipolar.cpp

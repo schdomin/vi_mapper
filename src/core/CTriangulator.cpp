@@ -11,8 +11,6 @@ CTriangulator::CTriangulator( const std::shared_ptr< CStereoCamera > p_pStereoCa
                                                                                             m_pExtractor( p_pExtractor ),
                                                                                             m_pMatcher( p_pMatcher ),
                                                                                             m_fMatchingDistanceCutoff( p_fMatchingDistanceCutoff ),
-                                                                                            m_uLimitedSearchRangeToLEFT( 50 ),
-                                                                                            m_uLimitedSearchRangeToRIGHT( 10 ),
                                                                                             m_uLimitedSearchRange( m_uLimitedSearchRangeToLEFT+m_uLimitedSearchRangeToRIGHT ),
                                                                                             m_uAdaptiveSteps( 10 )
 {
@@ -225,7 +223,7 @@ const CMatchTriangulation CTriangulator::getPointTriangulatedCompactInLEFT( cons
     }
 
     //ds compute descriptors
-    cv::Mat matPoolDescriptors;
+    CDescriptors matPoolDescriptors;
     m_pExtractor->compute( p_matImageLEFT, vecPoolKeyPoints, matPoolDescriptors );
 
     //ds check if we failed to compute descriptors
@@ -289,7 +287,7 @@ const CMatchTriangulation CTriangulator::getPointTriangulatedCompactInRIGHT( con
     }
 
     //ds compute descriptors
-    cv::Mat matPoolDescriptors;
+    CDescriptors matPoolDescriptors;
     m_pExtractor->compute( p_matImageRIGHT, vecPoolKeyPoints, matPoolDescriptors );
 
     //ds check if we failed to compute descriptors

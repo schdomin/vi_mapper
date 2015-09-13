@@ -6,7 +6,6 @@
 #include "g2o/core/block_solver.h"
 #include "g2o/core/hyper_graph.h"
 #include "g2o/core/solver.h"
-#include "g2o/core/robust_kernel_impl.h"
 #include "g2o/core/optimization_algorithm_levenberg.h"
 #include "g2o/core/optimization_algorithm_gauss_newton.h"
 #include "g2o/solvers/cholmod/linear_solver_cholmod.h"
@@ -66,7 +65,7 @@ Cg2oOptimizer::Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraST
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) iterations: %u\n", m_uIterations );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement PointXYZ: %f\n", m_dMaximumReliableDepthForPointXYZ );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement UVDepth: %f\n", m_dMaximumReliableDepthForUVDepth );
-    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum optimization error (landmark): %f\n", m_dMaximumErrorPerOptimization );
+    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum optimization error (landmark): %f\n", m_dMaximumErrorSquared );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) instance allocated\n" );
     CLogger::closeBox( );
 }
@@ -116,7 +115,7 @@ Cg2oOptimizer::Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraST
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) iterations: %u\n", m_uIterations );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement PointXYZ: %f\n", m_dMaximumReliableDepthForPointXYZ );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum reliable depth for measurement UVDepth: %f\n", m_dMaximumReliableDepthForUVDepth );
-    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum optimization error (landmark): %f\n", m_dMaximumErrorPerOptimization );
+    std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) maximum optimization error (landmark): %f\n", m_dMaximumErrorSquared );
     std::printf( "<Cg2oOptimizer>(Cg2oOptimizer) instance allocated\n" );
     CLogger::closeBox( );
 }
@@ -162,7 +161,7 @@ void Cg2oOptimizer::optimizeTailLoopClosuresOnly( const UIDKeyFrame& p_uIDBeginK
         }
 
         //ds update checker window
-        m_cClosureBuffer.updateList( 3 );
+        //m_cClosureBuffer.updateList( 3 );
 
         //ds update from
         pVertexPoseFrom = pVertexPoseCurrent;
@@ -357,7 +356,7 @@ void Cg2oOptimizer::optimizeContinuous( const UIDKeyFrame& p_uIDBeginKeyFrame )
 bool Cg2oOptimizer::isOptimized( const CLandmark* p_pLandmark )
 {
     //ds criteria
-    return ( Cg2oOptimizer::m_uMinimumOptimizations < p_pLandmark->uOptimizationsSuccessful ) && ( Cg2oOptimizer::m_dMaximumErrorPerOptimization > p_pLandmark->dCurrentAverageSquaredError );
+    return ( Cg2oOptimizer::m_uMinimumOptimizations < p_pLandmark->uOptimizationsSuccessful ) && ( Cg2oOptimizer::m_dMaximumErrorSquared > p_pLandmark->dCurrentAverageSquaredError );
 }
 
 bool Cg2oOptimizer::isKeyFramed( const CLandmark* p_pLandmark )
@@ -562,9 +561,8 @@ void Cg2oOptimizer::_setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const
     //ds if found
     if( itClosure != m_cOptimizerSparse.vertices( ).end( ) )
     {
-        //ds extract the pose and fix it
+        //ds extract the pose
          pVertexClosure = dynamic_cast< g2o::VertexSE3* >( itClosure->second );
-         pVertexClosure->setFixed( true );
     }
     else
     {
@@ -595,7 +593,16 @@ void Cg2oOptimizer::_setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const
     //ds information quality (10x more relevant than regular pose measurement)
     pEdgeLoopClosure->setInformation( Eigen::Matrix< double, 6, 6 >( arrInformationMatrixLoopClosure ) );
 
-    //ds add closure to buffer
+    /*ds set kernel (instead of doing closure evaluation)
+    g2o::RobustKernelDCS* pKernel = new g2o::RobustKernelDCS( );
+    pKernel->setDelta( 2000.0 );
+    pEdgeLoopClosure->setRobustKernel( pKernel );*/
+    pEdgeLoopClosure->setRobustKernel( new g2o::RobustKernelCauchy( ) );
+
+    //ds add to optimizer
+    m_cOptimizerSparse.addEdge( pEdgeLoopClosure );
+
+    /*ds add closure to buffer
     m_cClosureBuffer.addEdge( pEdgeLoopClosure );
     m_cClosureBuffer.addVertex( p_pVertexPoseCurrent );
 
@@ -622,7 +629,7 @@ void Cg2oOptimizer::_setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const
         }
           }
         }
-    }
+    }*/
 }
 
 void Cg2oOptimizer::_setLandmarkMeasurements( g2o::VertexSE3* p_pVertexPoseCurrent,
@@ -659,7 +666,14 @@ void Cg2oOptimizer::_setLandmarkMeasurements( g2o::VertexSE3* p_pVertexPoseCurre
             //ds maximum depth to produce a reliable XYZ estimate
             if( m_dMaximumReliableDepthForPointXYZ > dDepthMeters )
             {
-                m_cOptimizerSparse.addEdge( _getEdgePointXYZ( p_pVertexPoseCurrent, pVertexLandmark, pMeasurementLandmark->vecPointXYZLEFT ) );
+                //ds retrieve the edge
+                g2o::EdgeSE3PointXYZ* pEdgePointXYZ = _getEdgePointXYZ( p_pVertexPoseCurrent, pVertexLandmark, pMeasurementLandmark->vecPointXYZLEFT );
+
+                //ds set robust kernel
+                //pEdgePointXYZ->setRobustKernel( new g2o::RobustKernelCauchy( ) );
+
+                //ds add the edge to the graph
+                m_cOptimizerSparse.addEdge( pEdgePointXYZ );
                 ++p_uMeasurementsStoredPointXYZ;
             }
 

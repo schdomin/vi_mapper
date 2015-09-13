@@ -27,8 +27,8 @@ private:
     const float m_fMatchingDistanceCutoff;
 
     //ds triangulation
-    const uint32_t m_uLimitedSearchRangeToLEFT;
-    const uint32_t m_uLimitedSearchRangeToRIGHT;
+    const uint32_t m_uLimitedSearchRangeToLEFT  = 50;
+    const uint32_t m_uLimitedSearchRangeToRIGHT = 10;
     const uint32_t m_uLimitedSearchRange;
     const uint32_t m_uAdaptiveSteps;
 
