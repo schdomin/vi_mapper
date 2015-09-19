@@ -110,16 +110,16 @@ private:
 
     //ds internal
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
-    const uint8_t m_uRecursionLimitEpipolarLines      = 2; //3
-    const uint8_t m_uRecursionStepSize                = 2;
-    UIDLandmark m_uNumberOfFailedLandmarkOptimizationsTotal = 0;
-    UIDLandmark m_uNumberOfInvalidLandmarksTotal      = 0;
+    const uint8_t m_uRecursionLimitEpipolarLines               = 2; //3
+    const uint8_t m_uRecursionStepSize                         = 2;
+    UIDLandmark m_uNumberOfFailedLandmarkOptimizationsTotal    = 0;
+    UIDLandmark m_uNumberOfInvalidLandmarksTotal               = 0;
     UIDLandmark m_uNumberOfDetectionsPoseOptimizationDirect    = 0;
     UIDLandmark m_uNumberOfDetectionsPoseOptimizationDetection = 0;
-    UIDLandmark m_uNumberOfDetectionsEpipolar         = 0;
+    UIDLandmark m_uNumberOfDetectionsEpipolar                  = 0;
 
     //ds posit solving (PO: Pose optimizatin)
-    const uint8_t m_uSearchBlockSizePoseOptimization                 = 10; //15
+    const uint8_t m_uSearchBlockSizePoseOptimization                 = 15; //15
     const uint8_t m_uMinimumPointsForPoseOptimization                = 25; //30
     const uint8_t m_uMinimumInliersPoseOptimization                  = 10; //10
     const uint8_t m_uCapIterationsPoseOptimization                   = 100;

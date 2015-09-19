@@ -14,6 +14,7 @@ struct CMeasurementLandmark
     const Eigen::Isometry3d matTransformationWORLDtoLEFT;
     const MatrixProjection matProjectionWORLDtoLEFT;
     const MatrixProjection matProjectionWORLDtoRIGHT;
+    const uint32_t uOptimizations;
 
     CMeasurementLandmark( const UIDLandmark& p_uID,
                           const cv::Point2d& p_ptUVLEFT,
@@ -23,7 +24,8 @@ struct CMeasurementLandmark
                           const CPoint3DWORLD& p_vecPointXYZWORLDOptimized,
                           const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
                           const MatrixProjection& p_matProjectionWORLDtoLEFT,
-                          const MatrixProjection& p_matProjectionWORLDtoRIGHT ): uID( p_uID ),
+                          const MatrixProjection& p_matProjectionWORLDtoRIGHT,
+                          const uint32_t& p_uOptimizations ): uID( p_uID ),
                                                                                  ptUVLEFT( p_ptUVLEFT ),
                                                                                  ptUVRIGHT( p_ptUVRIGHT ),
                                                                                  vecPointXYZLEFT( p_vecPointXYZ ),
@@ -31,7 +33,8 @@ struct CMeasurementLandmark
                                                                                  vecPointXYZWORLDOptimized( p_vecPointXYZWORLDOptimized ),
                                                                                  matTransformationWORLDtoLEFT( p_matTransformationWORLDtoLEFT ),
                                                                                  matProjectionWORLDtoLEFT( p_matProjectionWORLDtoLEFT ),
-                                                                                 matProjectionWORLDtoRIGHT( p_matProjectionWORLDtoRIGHT )
+                                                                                 matProjectionWORLDtoRIGHT( p_matProjectionWORLDtoRIGHT ),
+                                                                                 uOptimizations( p_uOptimizations )
     {
         //ds input validation
         assert( ptUVLEFT.y == ptUVRIGHT.y );

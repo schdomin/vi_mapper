@@ -40,9 +40,6 @@ catkin_package(CATKIN_DEPENDS roscpp std_msgs genmsg sensor_msgs fps_mapper)
 #ds add c++11 support, no optimization, all warnings
 add_definitions(-O3 -march=native -Wall -pedantic -std=c++11)
 
-#ds configure QT
-#set(QMAKE_CXXFLAGS_CXX11 "-std=c++11" ${CMAKE_MODULE_PATH})
-
 #ds include dirs
 include_directories(${EIGEN3_INCLUDE_DIR})
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -72,6 +69,7 @@ src/configuration/CConfigurationCamera.cpp
 src/types/CLandmark.cpp
 src/types/CKeyFrame.cpp
 src/utility/CLogger.cpp
+src/utility/CIMUInterpolator.cpp
 src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
 src/core/CFundamentalMatcher.cpp
@@ -96,7 +94,8 @@ ${G2O_TYPES_SLAM3D}
 ${G2O_SOLVER_CHOLMOD}
 ${CHOLMOD_LIBRARY}
 ${G2O_STUFF_LIBRARY}
-${FLANN_LIBRARIES})
+${FLANN_LIBRARIES}
+-fopenmp)
 
 set(LIBRARIES_VISUALIZATION
 ${OPENGL_LIBRARIES}
@@ -119,7 +118,7 @@ ${G2O_STUFF_LIBRARY}
 ${G2O_TYPES_SBA})
 
 add_executable(message_dumper_node src/streaming/message_dumper_node.cpp)
-add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp src/vision/CMiniVisionToolbox.cpp src/configuration/CConfigurationCamera.cpp src/gui/CViewerCloud.cpp)
+add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp src/vision/CMiniVisionToolbox.cpp src/gui/CViewerCloud.cpp src/types/CKeyFrame.cpp)
 #add_executable(stereo_detector_node src/analysis/stereo_detector_node.cpp)
 #add_executable(stereo_detector_blocking_node src/analysis/stereo_detector_blocking_node.cpp)
 #add_executable(stereo_detector_alberto_node src/main/stereo_detector_alberto_node.cpp src/core/CEpipolarDetectorBRIEF.cpp src/utility/CMiniVisionToolbox.cpp)
@@ -140,7 +139,7 @@ target_link_libraries(test_cloud_matching ${OpenCV_LIBRARIES} ${LIBRARIES_VISUAL
 #target_link_libraries(stereo_detector_blocking_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_detector_alberto_node ${LIBRARIES_GENERAL})
 #target_link_libraries(stereo_detector_mocked ${LIBRARIES_MOCKED})
-#target_link_libraries(test_depth ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} -fopenmp)
+#target_link_libraries(test_depth ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 #target_link_libraries(stereo_single ${LIBRARIES_GENERAL})
 #target_link_libraries(stereo_parallel ${LIBRARIES_GENERAL})
 target_link_libraries(stereo_fps ${LIBRARIES_GENERAL} ${LIBRARIES_VISUALIZATION})

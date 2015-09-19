@@ -2,12 +2,11 @@
 #include <qapplication.h>
 
 //ds custom
-#include "utility/CCloudStreamer.h"
-#include "utility/CCloudMatcher.h"
+#include "types/CKeyFrame.h"
 #include "vision/CMiniVisionToolbox.h"
-#include "configuration/CConfigurationCamera.h"
+//#include "configuration/CConfigurationCamera.h"
 #include "gui/CViewerCloud.h"
-#include "vision/CStereoCamera.h"
+//#include "vision/CStereoCamera.h"
 
 int main( int argc, char** argv )
 {
@@ -24,24 +23,24 @@ int main( int argc, char** argv )
     }
 
     //ds clouds
-    std::vector< CDescriptorVectorPointCloud > vecClouds;
+    std::vector< CKeyFrame* > vecClouds;
 
-    try
+    //ds load clouds
+    while( 1 < argc-vecClouds.size( ) )
     {
-        //ds load clouds
-        while( 1 < argc-vecClouds.size( ) )
+        std::printf( "(main) loading cloud: %s - ", argv[vecClouds.size( )+1] );
+
+        try
         {
-            std::printf( "(main) loading cloud: %s - ", argv[vecClouds.size( )+1] );
-            vecClouds.push_back( CCloudstreamer::loadCloud( argv[vecClouds.size( )+1] ) );
-            std::printf( "points: %lu\n", vecClouds.back( ).vecPoints.size( ) );
+            //ds try to create a keyframe with the cloud
+            vecClouds.push_back( new CKeyFrame( argv[vecClouds.size( )+1] ) );
+            std::printf( "points: %lu\n", vecClouds.back( )->vecCloud->size( ) );
         }
-    }
-    catch( const CExceptionInvalidFile& p_cException )
-    {
-        std::printf( "\n(main) unable to load cloud, exception: '%s'\n", p_cException.what( ) );
-        std::printf( "(main) terminated: %s\n", argv[0] );
-        std::fflush( stdout);
-        return 0;
+        catch( std::exception& p_cException )
+        {
+            //ds failed to load
+            std::printf( "unable to load cloud, exception: '%s'\n", p_cException.what( ) );
+        }
     }
 
     std::printf( "(main) successfully loaded %lu clouds\n", vecClouds.size( ) );
@@ -53,16 +52,16 @@ int main( int argc, char** argv )
     //const CStereoCamera cCameraSTEREO( CConfigurationCamera::LEFT::cPinholeCamera, CConfigurationCamera::RIGHT::cPinholeCamera );
 
     //ds match the query cloud (last one)
-    const CDescriptorVectorPointCloud cCloudQuery = vecClouds.back( );
+    const CKeyFrame* pCloudQuery = vecClouds.back( );
 
     //ds against one training cloud each (also itself for consistency purposes)
-    for( const CDescriptorVectorPointCloud& cCloudReference: vecClouds )
+    for( const CKeyFrame* pCloudReference: vecClouds )
     {
         //ds get matches
-        const std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( CCloudMatcher::getMatches( cCloudQuery.vecPoints, cCloudReference.vecPoints ) );
+        const std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( pCloudReference->getMatches( pCloudQuery->vecCloud ) );
         const uint32_t uMinimumInliers = 10;
 
-        std::printf( "(main) clouds [%06lu] > [%06lu] matches: %3lu | ", cCloudQuery.uID, cCloudReference.uID, vecMatches->size( ) );
+        std::printf( "(main) clouds [%06lu] > [%06lu] matches: %3lu | ", pCloudQuery->uID, pCloudReference->uID, vecMatches->size( ) );
 
         if( uMinimumInliers < vecMatches->size( ) )
         {
@@ -589,7 +588,7 @@ int main( int argc, char** argv )
 */
 
             //ds transformation between this keyframe and the loop closure one (take current measurement as prior)
-            Eigen::Isometry3d matTransformationToCLOSURE( cCloudReference.matTransformationLEFTtoWORLD.inverse( )*cCloudQuery.matTransformationLEFTtoWORLD );
+            Eigen::Isometry3d matTransformationToCLOSURE( pCloudReference->matTransformationLEFTtoWORLD.inverse( )*pCloudQuery->matTransformationLEFTtoWORLD );
             //Eigen::Isometry3d matTransformationToCLOSURE( Eigen::Matrix4d::Identity( ) );
             matTransformationToCLOSURE.translation( ) = Eigen::Vector3d::Zero( );
             const Eigen::Isometry3d matTransformationToClosureInitial( matTransformationToCLOSURE );

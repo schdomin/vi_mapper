@@ -81,11 +81,11 @@ void CViewerScene::draw()
     glBegin( GL_LINES );
     for( CKeyFrame* pKeyFrame: *m_vecKeyFrames )
     {
-        //ds draw loop closing line if set
-        if( 0 != pKeyFrame->pLoopClosure )
+        //ds draw loop closing lines if set
+        for( const CKeyFrame::CMatchICP* pClosure: pKeyFrame->vecLoopClosures )
         {
             const CPoint3DWORLD vecPositionXYZCurrent( pKeyFrame->matTransformationLEFTtoWORLD.translation( ) );
-            const CPoint3DWORLD vecPositionLoopClosure( pKeyFrame->pLoopClosure->pKeyFrameReference->matTransformationLEFTtoWORLD.translation( ) );
+            const CPoint3DWORLD vecPositionLoopClosure( pClosure->pKeyFrameReference->matTransformationLEFTtoWORLD.translation( ) );
             glVertex3f( vecPositionXYZCurrent.x( ), vecPositionXYZCurrent.y( ), vecPositionXYZCurrent.z( ) );
             glVertex3f( vecPositionLoopClosure.x( ), vecPositionLoopClosure.y( ), vecPositionLoopClosure.z( ) );
         }
@@ -166,8 +166,8 @@ void CViewerScene::draw()
         const qglviewer::Vec vecPositionInitial( pLandmarkInScene->vecPointXYZInitial );
         const qglviewer::Vec vecPositionOptimized( pLandmarkInScene->vecPointXYZOptimized );
 
-        //ds check if landmark is visible
-        if( pLandmarkInScene->bIsCurrentlyVisible )
+        //ds check if landmark is visible and not too far off (visibility reasons)
+        if( pLandmarkInScene->bIsCurrentlyVisible && ( pLandmarkInScene->vecPointXYZInitial-pLandmarkInScene->vecPointXYZOptimized ).squaredNorm( ) < 100.0 )
         {
             //ds draw the line between original and optimized
             glColor3f( 1.0, 0.1, 0.1 );
@@ -197,7 +197,7 @@ void CViewerScene::draw()
         else
         {
             //ds draw landmark if valid
-            if( Cg2oOptimizer::isOptimized( pLandmarkInScene ) )
+            if( pLandmarkInScene->bIsOptimal && 1 < pLandmarkInScene->uNumberOfKeyFramePresences )
             {
                 //ds enable transparency
                 glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );

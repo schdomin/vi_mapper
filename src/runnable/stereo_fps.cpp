@@ -96,6 +96,7 @@ int main( int argc, char **argv )
     //ds log configuration
     std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
     std::printf( "(main) strInfileMessageDump := '%s'\n", strInfileMessageDump.c_str( ) );
+    //std::printf( "(main) openCV build information: \n%s", cv::getBuildInformation( ).c_str( ) );
     std::fflush( stdout );
     CLogger::closeBox( );
 

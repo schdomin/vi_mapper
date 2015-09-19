@@ -91,13 +91,13 @@ public:
         {
             for( uint8_t v = 0; v < 4; ++v )
             {
-                CCloudstreamer::readDatum( ifMessages, matPose(u,v) );
+                CLogger::readDatum( ifMessages, matPose(u,v) );
             }
         }
 
         //ds parse number of points
         std::vector< CLandmark* >::size_type uNumberOfPoints;
-        CCloudstreamer::readDatum( ifMessages, uNumberOfPoints );
+        CLogger::readDatum( ifMessages, uNumberOfPoints );
 
         //ds points in the cloud (preallocation ignored since const elements)
         std::vector< CDescriptorVectorPoint3DWORLD > vecPoints;
@@ -108,27 +108,27 @@ public:
             //ds point field
             CPoint3DWORLD vecPointXYZWORLD;
             CPoint3DCAMERA vecPointXYZCAMERA;
-            CCloudstreamer::readDatum( ifMessages, vecPointXYZWORLD.x( ) );
-            CCloudstreamer::readDatum( ifMessages, vecPointXYZWORLD.y( ) );
-            CCloudstreamer::readDatum( ifMessages, vecPointXYZWORLD.z( ) );
-            CCloudstreamer::readDatum( ifMessages, vecPointXYZCAMERA.x( ) );
-            CCloudstreamer::readDatum( ifMessages, vecPointXYZCAMERA.y( ) );
-            CCloudstreamer::readDatum( ifMessages, vecPointXYZCAMERA.z( ) );
+            CLogger::readDatum( ifMessages, vecPointXYZWORLD.x( ) );
+            CLogger::readDatum( ifMessages, vecPointXYZWORLD.y( ) );
+            CLogger::readDatum( ifMessages, vecPointXYZWORLD.z( ) );
+            CLogger::readDatum( ifMessages, vecPointXYZCAMERA.x( ) );
+            CLogger::readDatum( ifMessages, vecPointXYZCAMERA.y( ) );
+            CLogger::readDatum( ifMessages, vecPointXYZCAMERA.z( ) );
 
             assert( 0.0 < vecPointXYZCAMERA.z( ) );
 
             cv::Point2d ptUVLEFT;
             cv::Point2d ptUVRIGHT;
-            CCloudstreamer::readDatum( ifMessages, ptUVLEFT.x );
-            CCloudstreamer::readDatum( ifMessages, ptUVLEFT.y );
-            CCloudstreamer::readDatum( ifMessages, ptUVRIGHT.x );
-            CCloudstreamer::readDatum( ifMessages, ptUVRIGHT.y );
+            CLogger::readDatum( ifMessages, ptUVLEFT.x );
+            CLogger::readDatum( ifMessages, ptUVLEFT.y );
+            CLogger::readDatum( ifMessages, ptUVRIGHT.x );
+            CLogger::readDatum( ifMessages, ptUVRIGHT.y );
 
             assert( ptUVLEFT.y == ptUVRIGHT.y );
 
             //ds number of descriptors
             std::vector< CMeasurementLandmark* >::size_type uNumberOfDescriptors;
-            CCloudstreamer::readDatum( ifMessages, uNumberOfDescriptors );
+            CLogger::readDatum( ifMessages, uNumberOfDescriptors );
 
             //ds descriptor vector (preallocate)
             std::vector< CDescriptor > vecDescriptors( uNumberOfDescriptors );
@@ -137,12 +137,12 @@ public:
             for( std::vector< CMeasurementLandmark* >::size_type v = 0; v < uNumberOfDescriptors; ++v )
             {
                 //ds current descriptor
-                CDescriptor matDescriptor;
+                CDescriptor matDescriptor( 1, 64, CV_8U );
 
                 //ds every descriptor contains 64 fields
                 for( uint8_t w = 0; w < 64; ++w )
                 {
-                    CCloudstreamer::readDatum( ifMessages, matDescriptor.data[w] );
+                    CLogger::readDatum( ifMessages, matDescriptor.data[w] );
                 }
 
                 vecDescriptors[v] = matDescriptor;
@@ -153,20 +153,6 @@ public:
         }
 
         return CDescriptorVectorPointCloud( uID, matPose, vecPoints );
-    }
-
-private:
-
-    template < class T > static void writeDatum( std::ostream& p_osStream, const T& p_tValue )
-    {
-        const char * pValue = reinterpret_cast< const char* >( &p_tValue );
-        p_osStream.write( pValue, sizeof(T) );
-    }
-
-    template < class T > static void readDatum( std::istream& p_isStream, T& p_tValue )
-    {
-        char * pValue = reinterpret_cast< char* >( &p_tValue );
-        p_isStream.read( pValue, sizeof(T) );
     }
 
 };

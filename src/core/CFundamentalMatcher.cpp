@@ -88,7 +88,7 @@ const std::shared_ptr< const std::vector< CLandmark* > > CFundamentalMatcher::ge
 
     for( CLandmark* pLandmark: m_vecVisibleLandmarks )
     {
-        if( Cg2oOptimizer::isOptimized( pLandmark ) )
+        if( pLandmark->bIsOptimal )
         {
             vecVisibleLandmarks->push_back( pLandmark );
         }
@@ -106,7 +106,9 @@ const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > CFun
     {
         //ds trigger optimization manually
         pLandmark->optimize( p_uFrame );
-        if( Cg2oOptimizer::isOptimized( pLandmark ) )
+
+        //ds check if optimal
+        if( pLandmark->bIsOptimal )
         {
             vecCloud->push_back( CDescriptorVectorPoint3DWORLD( pLandmark->uID,
                                                                 pLandmark->vecPointXYZOptimized,
@@ -604,7 +606,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UID
                 }
                 else
                 {
-                    throw CExceptionPoseOptimization( "unable to optimize pose - insufficient accuracy (error average: "+std::to_string( dErrorSquaredAverage )+" inliers: " +std::to_string( uInliersCurrent )+" risk: "+std::to_string( dOptimizationRISK )+")" );
+                    throw CExceptionPoseOptimization( "insufficient accuracy (error average: "+std::to_string( dErrorSquaredAverage )+" inliers: " +std::to_string( uInliersCurrent )+" risk: "+std::to_string( dOptimizationRISK )+")" );
                 }
             }
             else
@@ -616,11 +618,11 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UID
         }
 
         //ds system did not converge
-        throw CExceptionPoseOptimization( "unable to optimize pose - system did not converge" );
+        throw CExceptionPoseOptimization( "system did not converge" );
     }
     else
     {
-        throw CExceptionPoseOptimization( "unable to optimize pose - insufficient number of points: " + std::to_string( vecMatchesForPoseOptimization.size( ) ) + ")" );
+        throw CExceptionPoseOptimization( "insufficient number of points: " + std::to_string( vecMatchesForPoseOptimization.size( ) ) );
     }
 }
 
@@ -905,10 +907,10 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
             }
 
             //ds check if we can skip this landmark due to invalid optimization (at least one time optimized but currently failed)
-            else if( 0 < pLandmark->uOptimizationsSuccessful && !Cg2oOptimizer::isOptimized( pLandmark ) )
+            else if( 0 < pLandmark->uOptimizationsSuccessful && !pLandmark->bIsOptimal )
             {
-                cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
-                cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 0, 255 ), -1 );
+                cv::circle( p_matDisplayLEFT, pLandmark->getLastDetectionLEFT( ), 4, CColorCodeBGR( 0, 255, 255 ), -1 );
+                cv::circle( p_matDisplayRIGHT, pLandmark->getLastDetectionRIGHT( ), 4, CColorCodeBGR( 0, 255, 255 ), -1 );
                 pLandmark->bIsCurrentlyVisible = false;
                 ++uNumberOfInvalidLandmarks;
             }

@@ -8,8 +8,6 @@
 #include "vision/CStereoCamera.h"
 #include "CTriangulator.h"
 #include "CFundamentalMatcher.h"
-#include "utility/CCloudMatcher.h"
-#include "utility/CCloudStreamer.h"
 #include "types/CKeyFrame.h"
 #include "optimization/Cg2oOptimizer.h"
 #include "utility/CIMUInterpolator.h"
@@ -39,15 +37,15 @@ private:
     UIDFrame m_uFrameCount = 0;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
-    CAngularVelocityLEFT m_vecVelocityAngularFilteredLAST;
-    CLinearAccelerationLEFT m_vecLinearAccelerationFilteredLAST;
-    double m_dTimestampLASTSeconds = 0.0;
+    CAngularVelocityLEFT m_vecVelocityAngularFilteredLAST       = {0.0, 0.0, 0.0};
+    CLinearAccelerationLEFT m_vecLinearAccelerationFilteredLAST = {0.0, 0.0, 0.0};
+    double m_dTimestampLASTSeconds                              = 0.0;
     CPoint3DWORLD m_vecPositionKeyFrameLAST;
-    Eigen::Vector3d m_vecCameraOrientationAccumulated;
-    const double m_dTranslationDeltaForKeyFrameMetersL2;
-    const double m_dAngleDeltaForKeyFrameRadiansL2;
-    const UIDFrame m_uFrameDifferenceForKeyFrame;
-    UIDFrame m_uFrameKeyFrameLAST = 0;
+    Eigen::Vector3d m_vecCameraOrientationAccumulated   = {0.0, 0.0, 0.0};
+    const double m_dTranslationDeltaForKeyFrameMetersL2 = 0.25;
+    const double m_dAngleDeltaForKeyFrameRadiansL2      = 0.25;
+    const UIDFrame m_uFrameDifferenceForKeyFrame        = 100;
+    UIDFrame m_uFrameKeyFrameLAST                       = 0;
     CPoint3DWORLD m_vecPositionCurrent;
     CPoint3DWORLD m_vecPositionLAST;
     double m_dTranslationDeltaSquaredNormCurrent = 0.0;
@@ -55,14 +53,13 @@ private:
     //ds feature related
     //const uint32_t m_uKeyPointSize;
     const std::shared_ptr< cv::FeatureDetector > m_pDetector;
-    const std::shared_ptr< cv::FeatureDetector > m_pDetectorLowQuality;
     const std::shared_ptr< cv::DescriptorExtractor > m_pExtractor;
     const std::shared_ptr< cv::DescriptorMatcher > m_pMatcher;
     const double m_dMatchingDistanceCutoffTriangulation;
     const double m_dMatchingDistanceCutoffPoseOptimization;
     const double m_dMatchingDistanceCutoffEpipolar;
 
-    const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark;
+    const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark = 5;
     const uint8_t m_uVisibleLandmarksMinimum;
     const double m_dMinimumDepthMeters = 0.05;
     const double m_dMaximumDepthMeters = 100.0;
@@ -70,27 +67,26 @@ private:
     std::shared_ptr< CTriangulator > m_pTriangulator;
     CFundamentalMatcher m_cMatcher;
 
-    //ds detection
-    UIDFrame m_uIDFrameDetectionLAST = 0;
-
     //ds tracking (we use the ID counter instead of accessing the vector size every time for speed)
     UIDLandmark m_uAvailableLandmarkID          = 0;
     UIDLandmark m_uNumberofVisibleLandmarksLAST = 0;
     std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
+    //std::shared_ptr< std::array< CLandmark*, 8388608 > > m_arrLandmarks;
+    const double m_dMaximumMotionScalingForOptimization = 1.15;
 
-    //ds g2o data
-    const UIDLandmark m_uMinimumLandmarksForKeyFrame;
+    //ds g2o optimization
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
-    UIDKeyFrame m_uIDProcessedKeyFrameLAST = 0;
-    UIDKeyFrame m_uIDLoopClosureOptimizationLAST       = 0;
-    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization;
-    const UIDKeyFrame m_uIDDeltaLoopClosureForOptimization;
-    Cg2oOptimizer m_cOptimizer;
+    const UIDLandmark m_uMinimumLandmarksForKeyFrame    = 50;
+    UIDKeyFrame m_uIDProcessedKeyFrameLAST              = 0;
+    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 10;
+    Cg2oOptimizer m_cGraphOptimizer;
 
     //ds loop closing
     const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 10;
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 10;
-    const double m_dLoopClosingRadiusSquaredMeters          = 25.0;
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25;
+    const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
+    UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
+    const double m_dLoopClosingRadiusSquaredMeters          = 100.0;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -100,9 +96,9 @@ private:
     cv::Mat m_matDisplayLowerReference;
     bool m_bIsFrameAvailable = false;
     std::pair< bool, Eigen::Isometry3d > m_prFrameLEFTtoWORLD;
-    uint32_t m_uFramesCurrentCycle        = 0;
-    double m_dPreviousFrameRate           = 0.0;
-    double m_dPreviousFrameTime           = 0.0;
+    uint32_t m_uFramesCurrentCycle = 0;
+    double m_dPreviousFrameRate    = 0.0;
+    double m_dPreviousFrameTime    = 0.0;
 
 //ds accessors
 public:
@@ -119,7 +115,7 @@ public:
     const bool isFrameAvailable( ) const { return m_bIsFrameAvailable; }
     const std::pair< bool, Eigen::Isometry3d > getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_prFrameLEFTtoWORLD; }
     void finalize( );
-    void sanitizeFiletree( ){ m_cOptimizer.clearFiles( ); }
+    void sanitizeFiletree( ){ m_cGraphOptimizer.clearFiles( ); }
 
 //ds helpers
 private:
@@ -141,15 +137,12 @@ private:
                            cv::Mat& p_matDisplaySTEREO );
 
     //ds loop closing
-    const CKeyFrame::CMatchICP* _getLoopClosureKeyFrameFCFS( const UIDKeyFrame& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
-
-    //ds sliding window keyframe detection
-    const bool _containsSlidingWindowKeyFrame( ) const;
+    const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresKeyFrameFCFS( const UIDKeyFrame& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
 
     //ds control
     void _shutDown( );
     void _updateFrameRateForInfoBox( const uint32_t& p_uFrameProbeRange = 10 );
-    void _drawInfoBox( cv::Mat& p_matDisplay ) const;
+    void _drawInfoBox( cv::Mat& p_matDisplay, const double& p_dMotionScaling ) const;
 
 };
 

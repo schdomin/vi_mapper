@@ -41,13 +41,16 @@ public:
     CPoint3DWORLD vecPointXYZOptimized;
     const CPoint2DHomogenized vecUVReferenceLEFT;
 
+    //ds optimization
     uint8_t uFailedSubsequentTrackings = 0;
     uint32_t uOptimizationsSuccessful  = 0;
     uint32_t uOptimizationsFailed      = 0;
     double dCurrentAverageSquaredError = 0.0;
+    bool bIsOptimal                    = false;
     CPoint3DWORLD vecPointXYZMean;
 
-    bool bIsCurrentlyVisible;
+    //ds mapping
+    bool bIsCurrentlyVisible            = false;
     uint32_t uNumberOfKeyFramePresences = 0;
 
     //ds needed for cloud matching
@@ -59,11 +62,9 @@ private:
     //ds all measurements of this landmark
     std::vector< CMeasurementLandmark* > m_vecMeasurements;
 
-    double m_dDepthLastOptimizationMeters;
-
     //ds last camera position for calibration
-    CPoint3DWORLD m_vecCameraPositionLAST;
-    Eigen::Vector3d m_vecCameraOrientationAccumulated;
+    //CPoint3DWORLD m_vecCameraPositionLAST;
+    //Eigen::Vector3d m_vecCameraOrientationAccumulated;
 
     //ds projection matrices (used for optimization)
     const MatrixProjection m_matProjectionLEFT;
@@ -78,12 +79,12 @@ public:
     //ds optimization configuration (shared among all landmarks)
     //static constexpr double m_dDistanceDeltaForOptimizationMeters = 0.1; //ds squared measurement
     //static constexpr double m_dAngleDeltaForOptimizationRadians   = 0.5; //ds squared measurement
-    static constexpr uint32_t uCapIterations                    = 100;
+    static constexpr uint32_t uCapIterations                  = 100;
     //static constexpr double m_dLevenbergDamping                   = 5.0;
     //const double m_dFactorDynamicDamping        = 1.05;
-    static constexpr double dConvergenceDelta                   = 1e-5;
-    //static constexpr double m_dKernelMaximumError                 = 25.0;
-    //static constexpr double m_dMaximumErrorSquaredAveragePixels   = 20.0;
+    static constexpr double dConvergenceDelta                 = 1e-5;
+    static constexpr double dKernelMaximumErrorSquaredPixels  = 10.0;
+    static constexpr double dMaximumErrorSquaredAveragePixels = 9.0;
     //static constexpr uint8_t m_uMinimumInliers                    = 10;
 
 public:
@@ -100,6 +101,7 @@ public:
                          const MatrixProjection& p_matProjectionWORLDtoLEFT,
                          const MatrixProjection& p_matProjectionWORLDtoRIGHT );
 
+    //ds getters ONLY used for wrapping
     const cv::Point2d getLastDetectionLEFT( ) const { return m_vecMeasurements.back( )->ptUVLEFT; }
     const cv::Point2d getLastDetectionRIGHT( ) const { return m_vecMeasurements.back( )->ptUVRIGHT; }
     const CDescriptor getLastDescriptorLEFT( ) const { return vecDescriptorsLEFT.back( ); }
@@ -115,8 +117,6 @@ private:
     //ds calibrate 3d point
     const CPoint3DWORLD _getOptimizedLandmarkLEFT3D( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
     const CPoint3DWORLD _getOptimizedLandmarkSTEREOUV( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
-    const CPoint3DWORLD _getOptimizedLandmarkIDLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
-    const CPoint3DWORLD _getOptimizedLandmarkKRDLMA( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess );
     const CPoint3DWORLD _getOptimizedLandmarkIDWA( );
 
 };

@@ -41,13 +41,13 @@ public:
     template < class T > static void writeDatum( std::ostream& p_osStream, const T& p_tValue )
     {
         const char * pValue = reinterpret_cast< const char* >( &p_tValue );
-        p_osStream.write( pValue, sizeof(T) );
+        p_osStream.write( pValue, sizeof( T ) );
     }
 
     template < class T > static void readDatum( std::istream& p_isStream, T& p_tValue )
     {
         char * pValue = reinterpret_cast< char* >( &p_tValue );
-        p_isStream.read( pValue, sizeof(T) );
+        p_isStream.read( pValue, sizeof( T ) );
     }
 
 //ds logging

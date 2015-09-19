@@ -32,7 +32,11 @@ public:
                const CLinearAccelerationIMU& p_vecLinearAcceleration,
                const std::vector< const CMeasurementLandmark* >& p_vecMeasurements,
                const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloud,
-               const CMatchICP* p_pLoopClosure );
+               const std::vector< const CMatchICP* > p_vecLoopClosures );
+
+    //ds keyframe loading from file (used for offline cloud matching)
+    CKeyFrame( const std::string& p_strFile );
+
     ~CKeyFrame( );
 
 public:
@@ -44,11 +48,21 @@ public:
     const std::vector< const CMeasurementLandmark* > vecMeasurements;
     bool bIsOptimized = false;
     const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > vecCloud;
-    const CMatchICP* pLoopClosure;
+    const std::vector< const CMatchICP* > vecLoopClosures;
+
+private:
+
+    //ds cloud matching
+    static constexpr double m_dCloudMatchingWeightEuclidian        = 10.0;
+    static constexpr double m_dCloudMatchingMatchingDistanceCutoff = 75.0;
 
 public:
 
-    void saveCloudToFile( );
+    void saveCloudToFile( ) const;
+    std::shared_ptr< const std::vector< CMatchCloud > > getMatches( const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery ) const;
+
+    //ds offline loading
+    std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > getCloudFromFile( const std::string& p_strFile );
 
 };
 
