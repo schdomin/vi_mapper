@@ -15,10 +15,13 @@ public:
     {
         const CKeyFrame* pKeyFrameReference;
         const Eigen::Isometry3d matTransformationToClosure;
+        const std::shared_ptr< const std::vector< CMatchCloud > > vecMatches;
 
         CMatchICP( const CKeyFrame* p_pKeyFrameReference,
-                   const Eigen::Isometry3d& p_matTransformationToReference ): pKeyFrameReference( p_pKeyFrameReference ),
-                                                                              matTransformationToClosure( p_matTransformationToReference )
+                   const Eigen::Isometry3d& p_matTransformationToReference,
+                   const std::shared_ptr< const std::vector< CMatchCloud > > p_vecMatches ): pKeyFrameReference( p_pKeyFrameReference ),
+                                                                                             matTransformationToClosure( p_matTransformationToReference ),
+                                                                                             vecMatches( p_vecMatches )
         {
             //ds nothing to do
         }

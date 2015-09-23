@@ -17,7 +17,7 @@ public:
 private:
 
     std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > > m_vecCalibration;
-    std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type uMeasurementsForOptimization = 10; //10
+    std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type uMeasurementsForOptimization = 100; //10
     double m_dLastTimestamp                             = 0.0;
     const double m_dCalibrationConvergenceDeltaRotation = 1e-3;
     const double m_dCalibrationConvergenceDeltaFinal    = 1e-3;

@@ -38,7 +38,7 @@ message("using OpenCV version: ${OpenCV_VERSION}")
 catkin_package(CATKIN_DEPENDS roscpp std_msgs genmsg sensor_msgs fps_mapper)
 
 #ds add c++11 support, no optimization, all warnings
-add_definitions(-O3 -march=native -Wall -pedantic -std=c++11)
+add_definitions(-O3 -march=native -Wall -pedantic -std=c++11 -pthread)
 
 #ds include dirs
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -95,7 +95,8 @@ ${G2O_SOLVER_CHOLMOD}
 ${CHOLMOD_LIBRARY}
 ${G2O_STUFF_LIBRARY}
 ${FLANN_LIBRARIES}
--fopenmp)
+-fopenmp
+-pthread)
 
 set(LIBRARIES_VISUALIZATION
 ${OPENGL_LIBRARIES}

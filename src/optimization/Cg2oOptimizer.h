@@ -48,13 +48,20 @@ private:
 
     const double m_dMaximumReliableDepthForPointXYZ  = 2.5;
     const double m_dMaximumReliableDepthForUVDepth   = 7.5;
-    static constexpr uint8_t m_uMinimumOptimizations = 0;
-    static constexpr double m_dMaximumErrorSquared   = 9.0; //0.09;
-    static constexpr uint8_t m_uMinimumKeyFramePresences = 0;
 
     //ds optimized structures
     std::vector< CLandmark* > m_vecLandmarksInGraph;
     std::vector< CKeyFrame* > m_vecKeyFramesInGraph;
+
+    //ds currently movable poses
+    std::vector< g2o::VertexSE3* > m_vecActivePosesInGraph;
+
+//ds information matrices ground structures
+private:
+
+    const Eigen::Matrix< double, 6, 6 > m_matInformationPose;
+    const Eigen::Matrix< double, 6, 6 > m_matInformationLoopClosure;
+    const Eigen::Matrix< double, 3, 3 > m_matInformationLandmarkClosure;
 
 public:
 
@@ -98,6 +105,7 @@ private:
 
     void _applyOptimization( const std::vector< CLandmark* >& p_vecChunkLandmarks );
     void _applyOptimization( const std::vector< CKeyFrame* >& p_vecChunkKeyFrames );
+    void _fixateTrajectory( );
 
 
 };

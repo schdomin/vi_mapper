@@ -48,7 +48,7 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMo
     m_vecKeyFrames->clear( );
 
     //ds set opencv parallelization threads
-    cv::setNumThreads( 0 );
+    cv::setNumThreads( 4 );
 
     //ds initialize reference frames with black images
     m_matDisplayLowerReference = cv::Mat::zeros( m_pCameraSTEREO->m_uPixelHeight, 2*m_pCameraSTEREO->m_uPixelWidth, CV_8UC3 );
@@ -66,7 +66,7 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMo
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <CIMUInterpolator> maximum timestamp delta: %f\n", CIMUInterpolator::dMaximumDeltaTimeSeconds );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <CIMUInterpolator> imprecision angular velocity: %f\n", CIMUInterpolator::m_dImprecisionAngularVelocity );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <CIMUInterpolator> imprecision linear acceleration: %f\n", CIMUInterpolator::m_dImprecisionLinearAcceleration );
-    std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <CIMUInterpolator> bias linear acceleration x/y/z: %3.1f/%3.1f/%3.1f\n", CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[0],
+    std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <CIMUInterpolator> bias linear acceleration x/y/z: %4.2f/%4.2f/%4.2f\n", CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[0],
                                                                                                                                                   CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[1],
                                                                                                                                                   CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[2] );
     std::printf( "<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> cap iterations: %u\n", CLandmark::uCapIterations );
@@ -295,8 +295,8 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     //ds if we lose more than 75% landmarks in one frame
     if( 0.75 < static_cast< double >( iLandmarksLost )/m_uNumberofVisibleLandmarksLAST )
     {
-        std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) lost track (landmarks lost: %i), total delta: %f (%f %f %f), motion scaling: %f\n", iLandmarksLost, m_vecVelocityAngularFilteredLAST.squaredNorm( ), m_vecVelocityAngularFilteredLAST.x( ), m_vecVelocityAngularFilteredLAST.y( ), m_vecVelocityAngularFilteredLAST.z( ), dMotionScaling );
-        //m_uWaitKeyTimeoutMS = 0;
+        std::printf( "<CTrackerStereoMotionModel>(_trackLandmarks) lost track (landmarks visible: %3lu lost: %3i), total delta: %f (%f %f %f), motion scaling: %f\n", uNumberOfVisibleLandmarks, iLandmarksLost, m_vecVelocityAngularFilteredLAST.squaredNorm( ), m_vecVelocityAngularFilteredLAST.x( ), m_vecVelocityAngularFilteredLAST.y( ), m_vecVelocityAngularFilteredLAST.z( ), dMotionScaling );
+        m_uWaitKeyTimeoutMS = 0;
     }
 
 
@@ -384,8 +384,8 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
             if( m_dMaximumMotionScalingForOptimization > dMotionScaling )
             {
                 //ds check if optimization is required (based on key frame id or loop closing) TODO beautify this case
-                if( m_uIDDeltaKeyFrameForOptimization < iIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST ||
-                    m_uLoopClosingKeyFrameWaitingQueue < m_uLoopClosingKeyFramesInQueue )
+                if( m_uIDDeltaKeyFrameForOptimization < iIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST                                                                              ||
+                   ( m_uLoopClosingKeyFrameWaitingQueue < m_uLoopClosingKeyFramesInQueue && m_uIDDeltaKeyFrameForOptimization < iIDKeyFrameCurrent-m_uIDLoopClosureOptimizedLAST ) )
                 {
                     //ds optimize the segment
                     //m_cOptimizer.optimizeTail( m_uIDProcessedKeyFrameLAST );
@@ -401,7 +401,13 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                     //m_vecVelocityAngularFilteredLAST    += CMiniVisionToolbox::toOrientationRodrigues( matTransformationLEFTtoLEFTOptimized.linear( ) )/( p_dDeltaTimeSeconds );
                     //m_vecLinearAccelerationFilteredLAST += matTransformationLEFTtoLEFTOptimized.translation( )/( 0.5*p_dDeltaTimeSeconds*p_dDeltaTimeSeconds );
 
-                    //ds update transformations with optimized ones
+                    //ds if loop closure triggered
+                    if( !vecLoopClosures.empty( ) )
+                    {
+                        m_uIDLoopClosureOptimizedLAST = iIDKeyFrameCurrent;
+                    }
+
+                    //ds update transformations with optimized ones (mock identity transform from LAST as we also move the landmarks)
                     m_uLoopClosingKeyFramesInQueue     = 0;
                     m_uIDProcessedKeyFrameLAST         = iIDKeyFrameCurrent+1; //ds +1 for continuous optimization
                     matTransformationLEFTtoWORLD       = m_vecKeyFrames->back( )->matTransformationLEFTtoWORLD;
@@ -758,9 +764,9 @@ const std::vector< const CKeyFrame::CMatchICP* > CTrackerStereoMotionModel::_get
                     {
                         //std::printf( "%4.1f %4.1f %4.1f | ", matTransformationToClosure.translation( ).x( ), matTransformationToClosure.translation( ).y( ), matTransformationToClosure.translation( ).z( ) );
                         //std::printf( "system converged in %2u iterations, average error: %5.3f (inliers: %2u) - MATCH\n", uLS, dErrorAverage, uInliers );
-                        std::printf( "<CTrackerStereoMotionModel>(_getLoopClosuresKeyFrameFCFS) found closure: [%06lu] > [%06lu] (matches: %3lu, iterations: %2u, average error: %5.3f, inliers: %2u)\n",
-                                     p_uID, pKeyFrameReference->uID, vecMatches->size( ), uLS, dErrorAverage, uInliers );
-                        vecLoopClosures.push_back( new CKeyFrame::CMatchICP( pKeyFrameReference, matTransformationToClosure ) );
+                        //std::printf( "<CTrackerStereoMotionModel>(_getLoopClosuresKeyFrameFCFS) found closure: [%06lu] > [%06lu] (matches: %3lu, iterations: %2u, average error: %5.3f, inliers: %2u)\n",
+                        //             p_uID, pKeyFrameReference->uID, vecMatches->size( ), uLS, dErrorAverage, uInliers );
+                        vecLoopClosures.push_back( new CKeyFrame::CMatchICP( pKeyFrameReference, matTransformationToClosure, vecMatches ) );
                         break;
                     }
                     else

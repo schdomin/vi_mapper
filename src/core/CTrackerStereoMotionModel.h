@@ -72,7 +72,7 @@ private:
     UIDLandmark m_uNumberofVisibleLandmarksLAST = 0;
     std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
     //std::shared_ptr< std::array< CLandmark*, 8388608 > > m_arrLandmarks;
-    const double m_dMaximumMotionScalingForOptimization = 1.15;
+    const double m_dMaximumMotionScalingForOptimization = 1.1;
 
     //ds g2o optimization
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
@@ -86,6 +86,7 @@ private:
     const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25;
     const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
     UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
+    UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
     const double m_dLoopClosingRadiusSquaredMeters          = 100.0;
 
     //ds control

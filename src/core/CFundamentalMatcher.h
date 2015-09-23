@@ -118,7 +118,7 @@ private:
     UIDLandmark m_uNumberOfDetectionsPoseOptimizationDetection = 0;
     UIDLandmark m_uNumberOfDetectionsEpipolar                  = 0;
 
-    //ds posit solving (PO: Pose optimizatin)
+    //ds posit solving
     const uint8_t m_uSearchBlockSizePoseOptimization                 = 15; //15
     const uint8_t m_uMinimumPointsForPoseOptimization                = 25; //30
     const uint8_t m_uMinimumInliersPoseOptimization                  = 10; //10
