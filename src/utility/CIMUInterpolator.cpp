@@ -220,9 +220,6 @@ const Eigen::Isometry3d getTransformation( const double& p_dTimestampSeconds ) c
 
 const CLinearAccelerationWORLD CIMUInterpolator::getLinearAccelerationFiltered( const CLinearAccelerationWORLD& p_vecLinearAcceleration )
 {
-    //ds sanity check (TODO this will fail on a plane)
-    assert( 0.0 > p_vecLinearAcceleration.z( ) );
-
     const double dAccelerationX = p_vecLinearAcceleration.x( )-CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[0];
     const double dAccelerationY = p_vecLinearAcceleration.y( )-CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[1];
     const double dAccelerationZ = p_vecLinearAcceleration.z( )-CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[2];

@@ -305,8 +305,8 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkSTEREOUV( const UIDFrame& p_
             //ds compute average error
             const double dErrorSquaredAveragePixels = dErrorSquaredTotalPixels/m_vecMeasurements.size( );
 
-            //ds if acceptable
-            if( 0 < uInliers )
+            //ds if acceptable inlier/outlier ratio
+            if( CLandmark::dMinimumRatioInliersToOutliers < static_cast< double >( uInliers )/m_vecMeasurements.size( ) )
             {
                 //ds success
                 ++uOptimizationsSuccessful;

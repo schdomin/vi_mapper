@@ -43,7 +43,7 @@ private:
     g2o::SparseOptimizer m_cOptimizerSparse;
     const UIDKeyFrame m_uIDShift      = 1000000; //ds required to navigate between landmarks and poses
     g2o::VertexSE3 *m_pVertexPoseLAST = 0;
-    const uint32_t m_uIterations      = 100;
+    const uint32_t m_uIterations      = 1000;
     uint32_t m_uOptimizations         = 0;
 
     const double m_dMaximumReliableDepthForPointXYZ  = 2.5;

@@ -504,7 +504,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UID
                     const double dErrorSquaredPixels = vecError.transpose( )*vecError;
 
                     //ds check if outlier
-                    double dWeight = 1.0;
+                    double dWeight = 1.0+cMatch.pLandmark->uOptimizationsSuccessful/10.0;
                     if( m_dMaximumErrorInlierSquaredPixelsPoseOptimization < dErrorSquaredPixels )
                     {
                         dWeight = m_dMaximumErrorInlierSquaredPixelsPoseOptimization/dErrorSquaredPixels;

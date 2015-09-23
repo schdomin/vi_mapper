@@ -373,11 +373,11 @@ g2o::EdgeSE3LinearAcceleration* Cg2oOptimizer::_getEdgeLinearAcceleration( g2o::
     pEdgeLinearAcceleration->setVertex( 0, p_pVertexPose );
     pEdgeLinearAcceleration->setMeasurement( p_vecLinearAccelerationNormalized );
     pEdgeLinearAcceleration->setParameterId( 0, EG2OParameterID::eOFFSET_IMUtoLEFT );
-    const double arrInformationMatrixLinearAcceleration[9] = { 1000, 0, 0, 0, 1000, 0, 0, 0, 1000 };
+    const double arrInformationMatrixLinearAcceleration[9] = { 100, 0, 0, 0, 100, 0, 0, 0, 100 };
     pEdgeLinearAcceleration->setInformation( g2o::Matrix3D( arrInformationMatrixLinearAcceleration ) );
 
     //ds set robust kernel
-    pEdgeLinearAcceleration->setRobustKernel( new g2o::RobustKernelCauchy( ) );
+    //pEdgeLinearAcceleration->setRobustKernel( new g2o::RobustKernelCauchy( ) );
 
     return pEdgeLinearAcceleration;
 }
