@@ -53,8 +53,8 @@ private:
     std::vector< CLandmark* > m_vecLandmarksInGraph;
     std::vector< CKeyFrame* > m_vecKeyFramesInGraph;
 
-    //ds currently movable poses
-    std::vector< g2o::VertexSE3* > m_vecActivePosesInGraph;
+    //ds first pose vertex (for full graph drawing)
+    g2o::VertexSE3 *m_pVertexPoseFIRST = 0;
 
 //ds information matrices ground structures
 private:
@@ -69,10 +69,13 @@ public:
     void optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame );
     void optimizeContinuous( const UIDKeyFrame& p_uIDBeginKeyFrame );
 
-    const uint32_t getNumberOfSegmentOptimizations( ) const { return m_uOptimizations; }
+    const uint32_t getNumberOfOptimizations( ) const { return m_uOptimizations; }
 
     //ds clears g2o files in logging directory
     void clearFiles( ) const;
+
+    //ds saves final graph
+    void saveFinalGraph( );
 
 private:
 
@@ -105,7 +108,6 @@ private:
 
     void _applyOptimization( const std::vector< CLandmark* >& p_vecChunkLandmarks );
     void _applyOptimization( const std::vector< CKeyFrame* >& p_vecChunkKeyFrames );
-    void _fixateTrajectory( );
 
 
 };

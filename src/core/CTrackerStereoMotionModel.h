@@ -63,6 +63,8 @@ private:
     const uint8_t m_uVisibleLandmarksMinimum;
     const double m_dMinimumDepthMeters = 0.05;
     const double m_dMaximumDepthMeters = 100.0;
+    const UIDFrame m_uMaximumNumberOfFramesWithoutDetection = 20;
+    UIDFrame m_uNumberOfFramesWithoutDetection              = 0;
 
     std::shared_ptr< CTriangulator > m_pTriangulator;
     CFundamentalMatcher m_cMatcher;
@@ -82,12 +84,12 @@ private:
     Cg2oOptimizer m_cGraphOptimizer;
 
     //ds loop closing
-    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 10;
+    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20;
     const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25;
     const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
     UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
-    const double m_dLoopClosingRadiusSquaredMeters          = 100.0;
+    const double m_dLoopClosingRadiusSquaredMeters          = 1000.0;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -100,6 +102,7 @@ private:
     uint32_t m_uFramesCurrentCycle = 0;
     double m_dPreviousFrameRate    = 0.0;
     double m_dPreviousFrameTime    = 0.0;
+    double m_dDistanceTraveledMeters = 0.0;
 
 //ds accessors
 public:
@@ -117,6 +120,7 @@ public:
     const std::pair< bool, Eigen::Isometry3d > getFrameLEFTtoWORLD( ){ m_bIsFrameAvailable = false; return m_prFrameLEFTtoWORLD; }
     void finalize( );
     void sanitizeFiletree( ){ m_cGraphOptimizer.clearFiles( ); }
+    const double getDistanceTraveled( ) const { return m_dDistanceTraveledMeters; }
 
 //ds helpers
 private:
@@ -138,7 +142,8 @@ private:
                            cv::Mat& p_matDisplaySTEREO );
 
     //ds loop closing
-    const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresKeyFrameFCFS( const UIDKeyFrame& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
+    const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresForKeyFrame( const UIDKeyFrame& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
+    const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresForKeyFrameDeep( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
 
     //ds control
     void _shutDown( );

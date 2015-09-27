@@ -150,6 +150,9 @@ int main( int argc, char **argv )
         return 1;
     }
 
+    //ds count invalid frames
+    UIDFrame uInvalidFrames = 0;
+
     //ds allocate a libqglviewer
     CViewerScene cViewer( cTracker.getLandmarksHandle( ), cTracker.getKeyFramesHandle( ), cTracker.getLoopClosingRadius( ) );
     cViewer.setWindowTitle( "CViewerScene: WORLD" );
@@ -205,42 +208,50 @@ int main( int argc, char **argv )
         //ds as soon as we have data in all the stacks - process
         if( 0 != pMessageCameraLEFT && 0 != pMessageCameraRIGHT && 0 != pMessageIMU )
         {
-            //ds check timestamp mismatch
-            if( pMessageCameraLEFT->timestamp( ) != pMessageCameraRIGHT->timestamp( ) )
-            {
-                std::printf( "(main) timestamp mismatch LEFT: %f RIGHT: %f - processing skipped\n", pMessageCameraLEFT->timestamp( ), pMessageCameraRIGHT->timestamp( ) );
-            }
-            else
+            //ds if the timestamps match (optimally the case)
+            if( pMessageCameraLEFT->timestamp( ) == pMessageCameraRIGHT->timestamp( ) )
             {
                 //ds synchronization expected
-                assert( pMessageCameraLEFT->timestamp( ) == pMessageCameraRIGHT->timestamp( ) );
-                assert( pMessageIMU->timestamp( )        == pMessageCameraLEFT->timestamp( ) );
-                assert( pMessageIMU->timestamp( )        == pMessageCameraRIGHT->timestamp( ) );
+                assert( pMessageIMU->timestamp( ) == pMessageCameraLEFT->timestamp( ) );
+                assert( pMessageIMU->timestamp( ) == pMessageCameraRIGHT->timestamp( ) );
 
                 //ds callback with triplet
                 cTracker.receivevDataVI( pMessageCameraLEFT, pMessageCameraRIGHT, pMessageIMU );
+
+                //ds reset holders
+                pMessageCameraLEFT.reset( );
+                pMessageCameraRIGHT.reset( );
+                pMessageIMU.reset( );
+
+                //ds check reset
+                assert( 0 == pMessageCameraLEFT );
+                assert( 0 == pMessageCameraRIGHT );
+                assert( 0 == pMessageIMU );
             }
+            else
+            {
+                //ds check timestamp mismatch
+                if( pMessageCameraLEFT->timestamp( ) < pMessageCameraRIGHT->timestamp( ) )
+                {
+                    std::printf( "(main) timestamp mismatch LEFT: %f < RIGHT: %f - processing skipped\n", pMessageCameraLEFT->timestamp( ), pMessageCameraRIGHT->timestamp( ) );
+                    pMessageCameraLEFT.reset( );
+                }
+                else
+                {
+                    std::printf( "(main) timestamp mismatch LEFT: %f > RIGHT: %f - processing skipped\n", pMessageCameraLEFT->timestamp( ), pMessageCameraRIGHT->timestamp( ) );
+                    pMessageCameraRIGHT.reset( );
+                }
 
-            //ds reset holders
-            pMessageCameraLEFT.reset( );
-            pMessageCameraRIGHT.reset( );
-            pMessageIMU.reset( );
-
-            //ds check reset
-            assert( 0 == pMessageCameraLEFT );
-            assert( 0 == pMessageCameraRIGHT );
-            assert( 0 == pMessageIMU );
+                ++uInvalidFrames;
+            }
         }
     }
 
     //ds get end time
-    const double dDuration     = CLogger::getTimeSeconds( )-dTimeStartSeconds;
-    const UIDFrame uFrameCount = cTracker.getFrameCount( );
-
-    std::printf( "(main) dataset completed\n" );
-    std::printf( "(main) duration: %fs\n", dDuration );
-    std::printf( "(main) total frames: %lu\n", uFrameCount );
-    std::printf( "(main) frame rate (avg): %f FPS\n", uFrameCount/dDuration );
+    const double dDuration       = CLogger::getTimeSeconds( )-dTimeStartSeconds;
+    const UIDFrame uFrameCount   = cTracker.getFrameCount( );
+    const double dDurationOnline = uFrameCount/20.0;
+    const double dDistance       = cTracker.getDistanceTraveled( );
 
     if( 1 < uFrameCount )
     {
@@ -253,6 +264,17 @@ int main( int argc, char **argv )
             cViewer.manualDraw( );
         }
     }
+
+    //ds summary
+    CLogger::openBox( );
+    std::printf( "(main) dataset completed\n" );
+    std::printf( "(main) distance traveled: %fm\n", dDistance );
+    std::printf( "(main) duration: %fs (online: %fs, x%f)\n", dDuration, dDurationOnline, dDuration/dDurationOnline );
+    std::printf( "(main) traveling speed (online): %fm/s\n", dDistance/dDurationOnline );
+    std::printf( "(main) total frames: %lu\n", uFrameCount );
+    std::printf( "(main) frame rate (avg): %f FPS\n", uFrameCount/dDuration );
+    std::printf( "(main) invalid frames: %li (%4.2f)\n", uInvalidFrames, static_cast< double >( uInvalidFrames )/uFrameCount );
+    CLogger::closeBox( );
 
     //ds exit
     std::printf( "(main) terminated: %s\n", argv[0] );

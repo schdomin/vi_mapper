@@ -83,7 +83,7 @@ public:
     //static constexpr double m_dLevenbergDamping                   = 5.0;
     //const double m_dFactorDynamicDamping        = 1.05;
     static constexpr double dConvergenceDelta                 = 1e-5;
-    static constexpr double dMinimumRatioInliersToOutliers    = 0.75;
+    static constexpr double dMinimumRatioInliersToOutliers    = 0.5;
     static constexpr double dKernelMaximumErrorSquaredPixels  = 10.0;
     static constexpr double dMaximumErrorSquaredAveragePixels = 9.0;
     //static constexpr uint8_t m_uMinimumInliers                    = 10;
