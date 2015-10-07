@@ -108,9 +108,45 @@ void CLandmark::optimize( const UIDFrame& p_uFrame )
     //ds default false - gets set in optimization
     bIsOptimal = false;
 
-    //ds update position
-    //vecPointXYZOptimized = _getOptimizedLandmarkLEFT3D( p_uFrame, vecPointXYZOptimized );
-    vecPointXYZOptimized = _getOptimizedLandmarkSTEREOUV( p_uFrame, vecPointXYZOptimized );
+    //ds update position - if we have at least n measurements
+    if( CLandmark::uMinimumMeasurementsForOptimization < m_vecMeasurements.size( ) )
+    {
+        //vecPointXYZOptimized = _getOptimizedLandmarkLEFT3D( p_uFrame, vecPointXYZOptimized );
+        vecPointXYZOptimized = _getOptimizedLandmarkSTEREOUV( p_uFrame, vecPointXYZOptimized );
+    }
+}
+
+//ds measurements reset
+void CLandmark::clearMeasurements( const CPoint3DWORLD& p_vecXYZWORLD,
+                                   const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                                   const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                                   const MatrixProjection& p_matProjectionWORLDtoRIGHT )
+{
+    //ds get a copy of the last measurement and modify it to the new conditions
+    CMeasurementLandmark* pMeasurementLast = new CMeasurementLandmark( uID,
+                                                                       m_vecMeasurements.back( )->ptUVLEFT,
+                                                                       m_vecMeasurements.back( )->ptUVRIGHT,
+                                                                       m_vecMeasurements.back( )->vecPointXYZLEFT,
+                                                                       p_vecXYZWORLD,
+                                                                       vecPointXYZOptimized,
+                                                                       p_matTransformationWORLDtoLEFT,
+                                                                       p_matProjectionWORLDtoLEFT,
+                                                                       p_matProjectionWORLDtoRIGHT,
+                                                                       uOptimizationsSuccessful );
+
+    //ds free positions
+    for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
+    {
+        delete pMeasurement;
+    }
+
+    //ds clear vector
+    m_vecMeasurements.clear( );
+    uOptimizationsFailed     = 0;
+    uOptimizationsSuccessful = 0;
+
+    //ds add last
+    m_vecMeasurements.push_back( pMeasurementLast );
 }
 
 const CPoint3DWORLD CLandmark::_getOptimizedLandmarkLEFT3D( const UIDFrame& p_uFrame, const CPoint3DWORLD& p_vecInitialGuess )

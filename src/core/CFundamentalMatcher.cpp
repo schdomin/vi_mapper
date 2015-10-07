@@ -558,8 +558,11 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UID
             const double dErrorSquaredAverage = dErrorSquaredTotalCurrent/uPoints;
 
             //ds check if converged (descent not required)
-            if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorSquaredTotalPrevious-dErrorSquaredTotalCurrent ) )
+            if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorSquaredTotalPrevious-dErrorSquaredTotalCurrent ) && 1 < uLS )
             {
+                //ds leaving the loop - log here
+                CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
+
                 //ds compute quality identifiers
                 const Eigen::Vector3d vecDeltaTranslationOptimized( matTransformationWORLDtoLEFT.translation( )-p_matTransformationWORLDtoLEFTLAST.translation( ) );
                 const double dNormOptimizationTranslation = vecDeltaTranslationOptimized.squaredNorm( );
@@ -639,11 +642,6 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
 {
     assert( 1.0 <= p_dMotionScaling );
 
-    //ds vectors for pose solver
-    //gtools::Vector3dVector vecLandmarksWORLD;
-    //gtools::Vector2dVector vecImagePointsLEFT;
-    //gtools::Vector2dVector vecImagePointsRIGHT;
-
     //ds found landmarks in this frame
     std::vector< CMatchPoseOptimizationSTEREO > vecMatchesForPoseOptimization;
 
@@ -708,7 +706,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
                 //ds check RIGHT
                 catch( const CExceptionNoMatchFound& p_cException )
                 {
-                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) landmark [%06lu] direct detection LEFT failed: %s\n", pLandmark->uID, p_cException.what( ) );
+                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREOUVfromLAST) landmark [%06lu] direct detection LEFT failed: %s\n", pLandmark->uID, p_cException.what( ) );
 
                     //ds check RIGHT
                     try
@@ -749,7 +747,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
                     }
                     catch( const CExceptionNoMatchFound& p_cException )
                     {
-                        //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) landmark [%06lu] direct detection RIGHT failed: %s\n", pLandmark->uID, p_cException.what( ) );
+                        //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREOUVfromLAST) landmark [%06lu] direct detection RIGHT failed: %s\n", pLandmark->uID, p_cException.what( ) );
                         vecLandmarksNotDetectedByDirectDetection.push_back( pLandmark );
                     }
                 }
@@ -758,7 +756,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
     }
 
     m_uNumberOfDetectionsPoseOptimizationDirect = vecMatchesForPoseOptimization.size( );
-    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) direct detection points: %lu (%4.2f)\n", vecMatchesForPoseOptimization.size( ), vecMatchesForPoseOptimization.size( )/( vecMatchesForPoseOptimization.size( )+vecLandmarksNotDetectedByDirectDetection.size( )+1e-5 ) );
+    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREOUVfromLAST) direct detection points: %lu (%4.2f)\n", vecMatchesForPoseOptimization.size( ), vecMatchesForPoseOptimization.size( )/( vecMatchesForPoseOptimization.size( )+vecLandmarksNotDetectedByDirectDetection.size( )+1e-5 ) );
 
     //ds try to find the other landmarks by searching areas around the reprojection (COSTLY)
     for( CLandmark* pLandmark: vecLandmarksNotDetectedByDirectDetection )
@@ -788,7 +786,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
 
                 //ds search rectangle
                 const cv::Rect cSearchROILEFT( ptUpperLeftLEFT, ptLowerRightLEFT );
-                cv::rectangle( p_matDisplayLEFT, cSearchROILEFT, CColorCodeBGR( 255, 0, 0 ) );
+                cv::rectangle( p_matDisplayLEFT, cSearchROILEFT, CColorCodeBGR( 0, 0, 255 ) );
 
                 //ds run detection on current frame
                 std::vector< cv::KeyPoint > vecKeyPointsLEFT;
@@ -862,7 +860,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
             catch( const CExceptionNoMatchFound& p_cException )
             {
                 //ds origin
-                //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) landmark [%06lu] LEFT failed: %s\n", pLandmark->uID, p_cException.what( ) );
+                //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREOUVfromLAST) landmark [%06lu] LEFT failed: %s\n", pLandmark->uID, p_cException.what( ) );
 
                 //ds try to find the landmarks on RIGHT and check epipolar LEFT
                 try
@@ -879,7 +877,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
 
                     //ds search rectangle
                     const cv::Rect cSearchROIRIGHT( ptUpperLeftRIGHT, ptLowerRightRIGHT );
-                    cv::rectangle( p_matDisplayRIGHT, cSearchROIRIGHT, CColorCodeBGR( 255, 0, 0 ) );
+                    cv::rectangle( p_matDisplayRIGHT, cSearchROIRIGHT, CColorCodeBGR( 0, 0, 255 ) );
 
                     //ds run detection on current frame
                     std::vector< cv::KeyPoint > vecKeyPointsRIGHT;
@@ -948,7 +946,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
                 }
                 catch( const CExceptionNoMatchFound& p_cException )
                 {
-                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) landmark [%06lu] RIGHT failed: %s\n", pLandmark->uID, p_cException.what( ) );
+                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREOUVfromLAST) landmark [%06lu] RIGHT failed: %s\n", pLandmark->uID, p_cException.what( ) );
                 }
             }
         }
@@ -1059,9 +1057,12 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
             //ds average error
             const double dErrorSquaredAverage = dErrorSquaredTotalCurrent/uPoints;
 
-            //ds check if converged (descent not required)
-            if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorSquaredTotalPrevious-dErrorSquaredTotalCurrent ) )
+            //ds check if converged and at least 2 iterations are done (descent not required)
+            if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorSquaredTotalPrevious-dErrorSquaredTotalCurrent ) && 1 < uLS )
             {
+                //ds log here
+                CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
+
                 //ds compute quality identifiers
                 const Eigen::Vector3d vecDeltaTranslationOptimized( matTransformationWORLDtoLEFT.translation( )-p_matTransformationWORLDtoLEFTLAST.translation( ) );
                 const double dNormOptimizationTranslation = vecDeltaTranslationOptimized.squaredNorm( );
@@ -1070,7 +1071,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
                 //ds check translational change
                 if( m_dTranslationResolutionOptimization > dNormOptimizationTranslation )
                 {
-                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) ignoring translation from optimization: %f\n", dNormOptimizationTranslation );
+                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREOUVfromLAST) ignoring translation from optimization: %f\n", dNormOptimizationTranslation );
 
                     //ds don't integrate translational part
                     matTransformationWORLDtoLEFT.translation( ) = p_matTransformationWORLDtoLEFTLAST.translation( );
@@ -1079,7 +1080,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
                 //ds check rotational change
                 if( m_dRotationResolutionOptimization > dNormRotationMatrix )
                 {
-                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREO) ignoring rotation from optimization: %f\n", dNormRotationMatrix );
+                    //std::printf( "<CFundamentalMatcher>(getPoseOptimizedSTEREOUVfromLAST) ignoring rotation from optimization: %f\n", dNormRotationMatrix );
 
                     //ds don't integrate rotational part
                     matTransformationWORLDtoLEFT.linear( ) = p_matTransformationWORLDtoLEFTLAST.linear( );
@@ -1443,7 +1444,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
                                 throw CExceptionEpipolarLine( "<CFundamentalMatcher>(getVisibleLandmarksFundamental) projection out of sight" );
                             }
 
-                            //ds compute the projection of the point (line) in the current frame (working in normalized coordinates)
+                            //ds compute the projection of the point (line) in the current frame
                             const Eigen::Vector3d vecCoefficients( matFundamental*pLandmark->vecUVReferenceLEFT );
 
                             //ds line length for this projection based on principal weighting
@@ -1854,10 +1855,10 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
     m_uNumberOfFailedLandmarkOptimizationsTotal += uNumberOfFailedLandmarkOptimizations;
     m_uNumberOfInvalidLandmarksTotal            += uNumberOfInvalidLandmarks;
 
-    /*if( 25 < uNumberOfFailedLandmarkOptimizations+uNumberOfInvalidLandmarks )
+    if( 50 < uNumberOfFailedLandmarkOptimizations+uNumberOfInvalidLandmarks )
     {
         std::printf( "<CFundamentalMatcher>(getMeasurementsEpipolar) erased landmarks - failed optimization: %2lu, invalid optimization: %2lu\n", uNumberOfFailedLandmarkOptimizations, uNumberOfInvalidLandmarks );
-    }*/
+    }
 
     //ds update active measurement points
     m_vecDetectionPointsActive.swap( vecDetectionPointsActive );
@@ -1927,6 +1928,54 @@ void CFundamentalMatcher::drawVisibleLandmarks( cv::Mat& p_matDisplayLEFT, cv::M
         //ds also draw reprojections
         cv::circle( p_matDisplayLEFT, m_pCameraLEFT->getProjection( vecXYZLEFT ), 6, CColorCodeBGR( 0, uGreenValue, 0 ), 1 );
         cv::circle( p_matDisplayRIGHT, m_pCameraRIGHT->getProjection( vecXYZLEFT ), 6, CColorCodeBGR( 0, uGreenValue, 0 ), 1 );
+    }
+}
+
+//ds shifts all active landmarks
+void CFundamentalMatcher::shiftActiveLandmarks( const Eigen::Vector3d& p_vecTranslation )
+{
+    //ds active measurements
+    for( const CDetectionPoint& cDetectionPoint: m_vecDetectionPointsActive )
+    {
+        //ds loop over the points for the current scan
+        for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
+        {
+            //ds shift the landmark
+            pLandmark->vecPointXYZOptimized += p_vecTranslation;
+        }
+    }
+}
+
+//ds rotates all active landmarks
+void CFundamentalMatcher::rotateActiveLandmarks( const Eigen::Matrix3d& p_matRotation )
+{
+    //ds active measurements
+    for( const CDetectionPoint& cDetectionPoint: m_vecDetectionPointsActive )
+    {
+        //ds loop over the points for the current scan
+        for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
+        {
+            //ds shift the landmark
+            pLandmark->vecPointXYZOptimized = p_matRotation*pLandmark->vecPointXYZOptimized;
+        }
+    }
+}
+
+void CFundamentalMatcher::clearActiveLandmarksMeasurements( const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT )
+{
+    //ds precompute intrinsics
+    const MatrixProjection matProjectionWORLDtoLEFT( m_pCameraLEFT->m_matProjection*p_matTransformationWORLDtoLEFT.matrix( ) );
+    const MatrixProjection matProjectionWORLDtoRIGHT( m_pCameraRIGHT->m_matProjection*p_matTransformationWORLDtoLEFT.matrix( ) );
+
+    //ds active measurements
+    for( const CDetectionPoint& cDetectionPoint: m_vecDetectionPointsActive )
+    {
+        //ds loop over the points for the current scan
+        for( CLandmark* pLandmark: *cDetectionPoint.vecLandmarks )
+        {
+            //ds clear landmark measurements
+            pLandmark->clearMeasurements( pLandmark->vecPointXYZOptimized, p_matTransformationWORLDtoLEFT, matProjectionWORLDtoLEFT, matProjectionWORLDtoLEFT );
+        }
     }
 }
 

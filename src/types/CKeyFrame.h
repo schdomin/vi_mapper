@@ -4,6 +4,7 @@
 #include "CLandmark.h"
 #include "TypesCloud.h"
 #include "utility/CLogger.h"
+#include "g2o/types/slam3d/types_slam3d.h"
 
 class CKeyFrame
 {
@@ -56,8 +57,8 @@ public:
 private:
 
     //ds cloud matching
-    static constexpr double m_dCloudMatchingWeightEuclidian        = 10.0;
-    static constexpr double m_dCloudMatchingMatchingDistanceCutoff = 75.0;
+    static constexpr double m_dCloudMatchingWeightEuclidian        = 10.0;  //10.0
+    static constexpr double m_dCloudMatchingMatchingDistanceCutoff = 125.0; //75.0
 
 public:
 

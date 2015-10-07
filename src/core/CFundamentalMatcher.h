@@ -125,8 +125,8 @@ private:
     const uint8_t m_uCapIterationsPoseOptimization                   = 100;
     const double m_dConvergenceDeltaPoseOptimization                 = 1e-5;
     const double m_dMaximumErrorInlierSquaredPixelsPoseOptimization  = 10.0;
-    const double m_dMaximumErrorSquaredAveragePoseOptimization       = 9.75;
-    const double m_dMaximumRISK                                      = 1.5;
+    const double m_dMaximumErrorSquaredAveragePoseOptimization       = 12.5; //ds as optimized points are weighted more
+    const double m_dMaximumRISK                                      = 2.0;
 
     //ds if the optimized pose has an combined squared translational change less than this value it gets ignored
     const double m_dTranslationResolutionOptimization = 0.001;
@@ -198,6 +198,12 @@ public:
 
     //ds draws currently visible landmarks to the screen
     void drawVisibleLandmarks( cv::Mat& p_matDisplayLEFT, cv::Mat& p_matDisplayRIGHT, const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT ) const;
+
+    //ds shift active landmarks
+    void shiftActiveLandmarks( const Eigen::Vector3d& p_vecTranslation );
+    void rotateActiveLandmarks( const Eigen::Matrix3d& p_matRotation );
+    void clearActiveLandmarksMeasurements( const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT );
+    void refreshActiveLandmarksMeasurements( const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT );
 
     //ds returns copy of the vector holding the currently visible landmarks
     const std::vector< CLandmark* > getVisibleLandmarks( ) const { return m_vecVisibleLandmarks; }

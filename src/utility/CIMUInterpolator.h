@@ -16,6 +16,8 @@ public:
 //ds fields
 private:
 
+    std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > > m_vecMeasurements;
+
     std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > > m_vecCalibration;
     std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type uMeasurementsForOptimization = 100; //10
     double m_dLastTimestamp                             = 0.0;
@@ -41,6 +43,7 @@ public:
 //ds accessors
 public:
 
+    void addMeasurement( const CLinearAccelerationIMU& p_vecAccelerationLinear, const CAngularVelocityIMU& p_vecVelocityAngular );
     void addMeasurementCalibration( const CLinearAccelerationIMU& p_vecAccelerationLinear, const CAngularVelocityIMU& p_vecVelocityAngular );
 
     void calibrateOffsets( );
@@ -48,6 +51,14 @@ public:
 
     const bool isCalibrated( ) const;
     const Eigen::Isometry3d getTransformationWORLDtoCAMERA( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA ) const;
+    const Eigen::Isometry3d getTransformationWORLDtoCAMERA( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA,
+                                                            const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const;
+
+    const CLinearAccelerationIMU getLinearAccelerationAveraged( const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const;
+    const Eigen::Matrix3d getRotationWORLDtoCAMERA( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA,
+                                                    const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const;
+    const Eigen::Matrix3d getRotationCAMERAtoWORLD( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA,
+                                                    const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const;
 
 //ds statics
 public:
@@ -57,6 +68,10 @@ public:
 
     //ds nasty ghastly hacky function
     inline static const int8_t sign( const double& p_fNumber );
+
+private:
+
+    const Eigen::Matrix3d _getRotationIMUtoWORLD( const Eigen::Vector3d& p_LinearAcceleration ) const;
 
 };
 

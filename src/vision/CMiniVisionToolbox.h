@@ -35,6 +35,7 @@ public:
 
     static const Eigen::Matrix3d fromOrientationRodrigues( const Eigen::Vector3d& p_vecOrientation );
     static const Eigen::Vector3d toOrientationRodrigues( const Eigen::Matrix3d& p_matRotation );
+    static const Eigen::Matrix3d fromRotationAngles( const Eigen::Vector3d& p_vecRotationAnglesRadians );
     static const Eigen::Quaterniond fromEulerAngles( const Eigen::Vector3d& p_vecEulerAngles );
 
     static const Eigen::Vector2d getPointUndistorted( const Eigen::Vector2i& p_vecPointDistorted, const Eigen::Vector2d& p_vecPrincipalPoint, const Eigen::Vector4d& p_vecDistortionCoefficients );

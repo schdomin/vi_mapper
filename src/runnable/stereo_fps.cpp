@@ -101,7 +101,7 @@ int main( int argc, char **argv )
     CLogger::closeBox( );
 
     //ds evaluate IMU situation first
-    CIMUInterpolator cIMUInterpolator;
+    std::shared_ptr< CIMUInterpolator > pIMUInterpolator( std::make_shared< CIMUInterpolator >( ) );
 
     //ds stop time
     const double dTimeStartSeconds = CLogger::getTimeSeconds( );
@@ -112,7 +112,7 @@ int main( int argc, char **argv )
     std::shared_ptr< txt_io::PinholeImageMessage > pMessageCameraRIGHT( 0 );
 
     //ds playback the dump - IMU calibration
-    while( cMessageReader.good( ) && !cIMUInterpolator.isCalibrated( ) )
+    while( cMessageReader.good( ) && !pIMUInterpolator->isCalibrated( ) )
     {
         //ds retrieve a message
         txt_io::BaseMessage* msgBase = cMessageReader.readMessage( );
@@ -127,16 +127,16 @@ int main( int argc, char **argv )
                 pMessageIMU = std::shared_ptr< txt_io::CIMUMessage >( dynamic_cast< txt_io::CIMUMessage* >( msgBase ) );
 
                 //ds add to interpolator
-                cIMUInterpolator.addMeasurementCalibration( pMessageIMU->getLinearAcceleration( ), pMessageIMU->getAngularVelocity( ) );
+                pIMUInterpolator->addMeasurementCalibration( pMessageIMU->getLinearAcceleration( ), pMessageIMU->getAngularVelocity( ) );
             }
         }
     }
 
     //ds must be calibrated
-    assert( cIMUInterpolator.isCalibrated( ) );
+    assert( pIMUInterpolator->isCalibrated( ) );
 
     //ds allocate the tracker
-    CTrackerStereoMotionModel cTracker( eMode, cIMUInterpolator, uWaitKeyTimeout );
+    CTrackerStereoMotionModel cTracker( eMode, pIMUInterpolator, uWaitKeyTimeout );
     try
     {
         //ds prepare file structure
@@ -182,11 +182,8 @@ int main( int argc, char **argv )
                 //ds IMU message
                 pMessageIMU = std::shared_ptr< txt_io::CIMUMessage >( dynamic_cast< txt_io::CIMUMessage* >( msgBase ) );
 
-                //ds add to interpolator if not converged yet
-                if( !cIMUInterpolator.isCalibrated( ) )
-                {
-                    cIMUInterpolator.addMeasurementCalibration( pMessageIMU->getLinearAcceleration( ), pMessageIMU->getAngularVelocity( ) );
-                }
+                //ds add to interpolator
+                pIMUInterpolator->addMeasurement( pMessageIMU->getLinearAcceleration( ), pMessageIMU->getAngularVelocity( ) );
             }
             else
             {

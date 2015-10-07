@@ -53,13 +53,14 @@ int main( int argc, char** argv )
 
     //ds match the query cloud (last one)
     const CKeyFrame* pCloudQuery = vecClouds.back( );
+    vecClouds.pop_back( );
 
-    //ds against one training cloud each (also itself for consistency purposes)
+    //ds against one training cloud each
     for( const CKeyFrame* pCloudReference: vecClouds )
     {
         //ds get matches
         const std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( pCloudReference->getMatches( pCloudQuery->vecCloud ) );
-        const uint32_t uMinimumInliers = 10;
+        const uint32_t uMinimumInliers = 15;
 
         std::printf( "(main) clouds [%06lu] > [%06lu] matches: %3lu | ", pCloudQuery->uID, pCloudReference->uID, vecMatches->size( ) );
 

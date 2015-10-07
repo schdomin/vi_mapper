@@ -20,7 +20,7 @@ public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
-                               const CIMUInterpolator& p_cIMUInterpolator,
+                               const std::shared_ptr< CIMUInterpolator > p_pIMUInterpolator,
                                const uint32_t& p_uWaitKeyTimeoutMS = 1 );
     ~CTrackerStereoMotionModel( );
 
@@ -74,22 +74,32 @@ private:
     UIDLandmark m_uNumberofVisibleLandmarksLAST = 0;
     std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
     //std::shared_ptr< std::array< CLandmark*, 8388608 > > m_arrLandmarks;
-    const double m_dMaximumMotionScalingForOptimization = 1.1;
+    const double m_dMaximumMotionScalingForOptimization = 1.05;
+    double m_dMotionScalingLAST                         = 1.0;
+    uint8_t m_uCountInstability                         = 0;
 
     //ds g2o optimization
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
     const UIDLandmark m_uMinimumLandmarksForKeyFrame    = 50;
     UIDKeyFrame m_uIDProcessedKeyFrameLAST              = 0;
-    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 10;
+    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 20; //10
     Cg2oOptimizer m_cGraphOptimizer;
+    Eigen::Vector3d m_vecTranslationToG2o;
 
     //ds loop closing
-    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20;
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25;
+    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20; //20
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 15; //25
     const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
     UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
     const double m_dLoopClosingRadiusSquaredMeters          = 1000.0;
+
+    //ds IMU calibration
+    const std::shared_ptr< CIMUInterpolator > m_pIMU;
+    std::vector< Eigen::Vector3d > vecTranslationDeltas;
+    const std::vector< Eigen::Vector3d >::size_type m_uIMULogbackSize = 200;
+    Eigen::Vector3d m_vecGradientXYZ;
+    bool m_bAvailable = true;
 
     //ds control
     const EPlaybackMode m_eMode;
@@ -143,7 +153,12 @@ private:
 
     //ds loop closing
     const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresForKeyFrame( const UIDKeyFrame& p_uID, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
-    const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresForKeyFrameDeep( const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery );
+
+    //ds reference frame update
+    void _updateWORLDFrame( const Eigen::Vector3d& p_vecTranslationWORLD );
+
+    //ds translation window to detect steady states
+    void _initializeTranslationWindow( );
 
     //ds control
     void _shutDown( );

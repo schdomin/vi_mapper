@@ -2,6 +2,7 @@
 #define CLANDMARK_H
 
 #include "types/Types.h"
+#include "g2o/types/slam3d/types_slam3d.h"
 
 class CLandmark
 {
@@ -87,6 +88,7 @@ public:
     static constexpr double dKernelMaximumErrorSquaredPixels  = 10.0;
     static constexpr double dMaximumErrorSquaredAveragePixels = 9.0;
     //static constexpr uint8_t m_uMinimumInliers                    = 10;
+    static constexpr std::vector< CMeasurementLandmark* >::size_type uMinimumMeasurementsForOptimization = 5;
 
 public:
 
@@ -103,15 +105,21 @@ public:
                          const MatrixProjection& p_matProjectionWORLDtoRIGHT );
 
     //ds getters ONLY used for wrapping
-    const cv::Point2d getLastDetectionLEFT( ) const { return m_vecMeasurements.back( )->ptUVLEFT; }
-    const cv::Point2d getLastDetectionRIGHT( ) const { return m_vecMeasurements.back( )->ptUVRIGHT; }
+    const cv::Point2d getLastDetectionLEFT( ) const { assert( 0 != m_vecMeasurements.back( ) ); return m_vecMeasurements.back( )->ptUVLEFT; }
+    const cv::Point2d getLastDetectionRIGHT( ) const { assert( 0 != m_vecMeasurements.back( ) ); return m_vecMeasurements.back( )->ptUVRIGHT; }
     const CDescriptor getLastDescriptorLEFT( ) const { return vecDescriptorsLEFT.back( ); }
     const CDescriptor getLastDescriptorRIGHT( ) const { return vecDescriptorsRIGHT.back( ); }
     const CMeasurementLandmark* getLastMeasurement( ) const { return m_vecMeasurements.back( ); }
-    const double getLastDepth( ) const { return m_vecMeasurements.back( )->vecPointXYZLEFT.z( ); }
-    const CPoint3DCAMERA getLastPointXYZLEFT( ) const { return m_vecMeasurements.back( )->vecPointXYZLEFT; }
+    const double getLastDepth( ) const { assert( 0 != m_vecMeasurements.back( ) ); return m_vecMeasurements.back( )->vecPointXYZLEFT.z( ); }
+    const CPoint3DCAMERA getLastPointXYZLEFT( ) const { assert( 0 != m_vecMeasurements.back( ) ); return m_vecMeasurements.back( )->vecPointXYZLEFT; }
     const std::vector< CMeasurementLandmark* >::size_type getNumberOfMeasurements( ) const { return m_vecMeasurements.size( ); }
     void optimize( const UIDFrame& p_uFrame );
+
+    //ds measurements reset
+    void clearMeasurements( const CPoint3DWORLD& p_vecXYZWORLD,
+                            const Eigen::Isometry3d& p_matTransformationWORLDtoLEFT,
+                            const MatrixProjection& p_matProjectionWORLDtoLEFT,
+                            const MatrixProjection& p_matProjectionWORLDtoRIGHT );
 
 private:
 

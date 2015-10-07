@@ -40,6 +40,48 @@ const Eigen::Vector3d CMiniVisionToolbox::toOrientationRodrigues( const Eigen::M
     return CWrapperOpenCV::fromCVVector< double, 3 >( vecOrientation );
 }
 
+//ds source: https://en.wikipedia.org/wiki/Rotation_matrix https://en.wikipedia.org/wiki/Rotation_formalisms_in_three_dimensions
+const Eigen::Matrix3d CMiniVisionToolbox::fromRotationAngles( const Eigen::Vector3d& p_vecRotationAnglesRadians )
+{
+    //ds rotation matrices
+    /*Eigen::Matrix3d matRotationX( Eigen::Matrix3d::Identity( ) );
+    Eigen::Matrix3d matRotationY( Eigen::Matrix3d::Identity( ) );
+    Eigen::Matrix3d matRotationZ( Eigen::Matrix3d::Identity( ) );*/
+
+    //ds set X matrix
+    const double dCosPhi = std::cos( p_vecRotationAnglesRadians.x( ) );
+    const double dSinPhi = std::sin( p_vecRotationAnglesRadians.x( ) );
+    /*matRotationX(1,1) = dCosineX;
+    matRotationX(1,2) = -dSineX;
+    matRotationX(2,1) = dSineX;
+    matRotationX(2,2) = dCosineX;*/
+
+    //ds set Y matrix
+    const double dCosThe = std::cos( p_vecRotationAnglesRadians.y( ) );
+    const double dSinThe = std::sin( p_vecRotationAnglesRadians.y( ) );
+    /*matRotationY(0,0) = dCosineY;
+    matRotationY(0,2) = dSineY;
+    matRotationY(2,0) = -dSineY;
+    matRotationY(2,2) = dCosineY;*/
+
+    //ds set Z matrix
+    const double dCosPsi = std::cos( p_vecRotationAnglesRadians.z( ) );
+    const double dSinPsi = std::sin( p_vecRotationAnglesRadians.z( ) );
+    /*matRotationZ(0,0) = dCosineZ;
+    matRotationZ(0,1) = -dSineZ;
+    matRotationZ(1,0) = dSineZ;
+    matRotationZ(1,1) = dCosineZ;*/
+
+    //ds one-step computation
+    Eigen::Matrix3d matRotation( Eigen::Matrix3d::Identity( ) );
+    matRotation << dCosThe*dCosPsi, dCosPhi*dSinPsi+dSinPhi*dSinThe*dCosPsi, dSinPhi*dSinPsi-dCosPhi*dSinThe*dCosPsi,
+                  -dCosThe*dSinPsi, dCosPhi*dCosPsi-dSinPhi*dSinThe*dSinPsi, dSinPhi*dCosPsi+dCosPhi*dSinThe*dSinPsi,
+                           dSinThe,                        -dSinPhi*dCosThe,                         dCosPhi*dCosThe;
+
+    //return matRotationZ*matRotationY*matRotationX;
+    return matRotation;
+}
+
 const Eigen::Quaterniond CMiniVisionToolbox::fromEulerAngles( const Eigen::Vector3d& p_vecEulerAngles )
 {
     //ds allocate a quaternion

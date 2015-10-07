@@ -246,11 +246,11 @@ public:
 
     const double getPrincipalWeightU( const cv::Point2d& p_ptUV ) const
     {
-        return std::fabs( p_ptUV.x-m_dCx )/100.0;
+        return std::sqrt( std::fabs( p_ptUV.x-m_dCx ) )/10.0;
     }
     const double getPrincipalWeightV( const cv::Point2d& p_ptUV ) const
     {
-        return std::fabs( p_ptUV.y-m_dCy )/100.0;
+        return std::sqrt( std::fabs( p_ptUV.y-m_dCy ) )/10.0;
     }
 
 //ds helpers

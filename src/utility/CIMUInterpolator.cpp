@@ -4,6 +4,7 @@
 
 CIMUInterpolator::CIMUInterpolator( ): m_vecOffsetAccelerationLinear( 0.0, 0.0, 0.0 ), m_vecOffsetVelocityAngular( 0.0, 0.0, 0.0 )
 {
+    m_vecMeasurements.clear( );
     m_vecCalibration.clear( );
 
     CLogger::openBox( );
@@ -17,6 +18,11 @@ CIMUInterpolator::CIMUInterpolator( ): m_vecOffsetAccelerationLinear( 0.0, 0.0, 
 CIMUInterpolator::~CIMUInterpolator( )
 {
     //ds nothing to do
+}
+
+void CIMUInterpolator::addMeasurement( const CLinearAccelerationIMU& p_vecAccelerationLinear, const CAngularVelocityIMU& p_vecVelocityAngular )
+{
+    m_vecMeasurements.push_back( std::make_pair( p_vecAccelerationLinear, p_vecVelocityAngular ) );
 }
 
 void CIMUInterpolator::addMeasurementCalibration( const CLinearAccelerationIMU& p_vecAccelerationLinear, const CAngularVelocityIMU& p_vecVelocityAngular )
@@ -89,7 +95,7 @@ void CIMUInterpolator::calibrateOffsets( )
     }
     else
     {
-        std::printf( "<CIMUInterpolator>(calibrateOffsets) converged - IMU calibration complete\n" );
+        std::printf( "<CIMUInterpolator>(calibrateOffsets) converged - IMU calibration complete (measurements: %lu)\n", m_vecCalibration.size( ) );
         m_bIsCalibrated = true;
     }
 }
@@ -131,18 +137,8 @@ void CIMUInterpolator::calibrateRotation( )
     }
     else
     {
-        //ds converged - we can compute the rotation
-        const Eigen::Vector3d vecIMU( m_vecOffsetAccelerationLinear.normalized( ) );
-        const Eigen::Vector3d vecGraviation( 0.0, 0.0, -1.0 );
-
-        //ds compute rotation matrix
-        const Eigen::Vector3d vecCross( vecIMU.cross( vecGraviation ) );
-        const double dSine   = vecCross.norm( );
-        const double dCosine = vecIMU.transpose( )*vecGraviation;
-        const Eigen::Matrix3d matSkew( CMiniVisionToolbox::getSkew( vecCross ) );
-
         //ds set member
-        m_matRotationIMUtoWORLD = Eigen::Matrix3d::Identity( ) + matSkew + ( 1-dCosine )/( dSine*dSine )*matSkew*matSkew;
+        m_matRotationIMUtoWORLD = _getRotationIMUtoWORLD( m_vecOffsetAccelerationLinear );
         m_matRotationWORLDtoIMU = m_matRotationIMUtoWORLD.transpose( );
         m_bIsRotationComputed   = true;
 
@@ -169,6 +165,61 @@ const Eigen::Isometry3d CIMUInterpolator::getTransformationWORLDtoCAMERA( const 
     matTransformationWORLDtoCAMERA.linear( ) = p_matRotationIMUtoCAMERA*m_matRotationWORLDtoIMU;
 
     return matTransformationWORLDtoCAMERA;
+}
+
+const Eigen::Isometry3d CIMUInterpolator::getTransformationWORLDtoCAMERA( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA,
+                                                                          const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const
+{
+    //ds allocate isometry
+    Eigen::Isometry3d matTransformationWORLDtoCAMERA( Eigen::Matrix4d::Identity( ) );
+
+    //ds compute IMU to WORLD
+    const Eigen::Matrix3d matRotationWORLDtoIMU( ( _getRotationIMUtoWORLD( getLinearAccelerationAveraged( p_uNumberOfMeasurements ) ) ).transpose( ) );
+
+    //ds set rotational part
+    matTransformationWORLDtoCAMERA.linear( ) = p_matRotationIMUtoCAMERA*matRotationWORLDtoIMU;
+
+    return matTransformationWORLDtoCAMERA;
+}
+
+const CLinearAccelerationIMU CIMUInterpolator::getLinearAccelerationAveraged( const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const
+{
+    assert( p_uNumberOfMeasurements <= m_vecMeasurements.size( ) );
+
+    //ds set start index
+    const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type uIndexStart = m_vecMeasurements.size( )-p_uNumberOfMeasurements;
+
+    assert( 0 <= uIndexStart );
+    assert( uIndexStart < m_vecMeasurements.size( ) );
+
+    //ds acceleration sum
+    CLinearAccelerationIMU vecLinearAcceleration( 0.0, 0.0, 0.0 );
+
+    //ds loop over the elements
+    for( std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type u = uIndexStart; u < m_vecMeasurements.size( ); ++u )
+    {
+        vecLinearAcceleration += m_vecMeasurements[u].first;
+    }
+
+    //ds return average
+    return vecLinearAcceleration/p_uNumberOfMeasurements;
+}
+
+const Eigen::Matrix3d CIMUInterpolator::getRotationWORLDtoCAMERA( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA,
+                                                                  const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const
+{
+    //ds compute IMU to WORLD
+    const Eigen::Matrix3d matRotationWORLDtoIMU( ( _getRotationIMUtoWORLD( getLinearAccelerationAveraged( p_uNumberOfMeasurements ) ) ).transpose( ) );
+
+    //ds return the rotation matrix
+    return p_matRotationIMUtoCAMERA*matRotationWORLDtoIMU;
+}
+
+const Eigen::Matrix3d CIMUInterpolator::getRotationCAMERAtoWORLD( const Eigen::Matrix3d& p_matRotationIMUtoCAMERA,
+                                                                  const std::vector< std::pair< CLinearAccelerationIMU, CAngularVelocityIMU > >::size_type& p_uNumberOfMeasurements ) const
+{
+    //ds return the rotation matrix
+    return ( getRotationWORLDtoCAMERA( p_matRotationIMUtoCAMERA, p_uNumberOfMeasurements ) ).transpose( );
 }
 
 /*void addMeasurement( Eigen::Vector3d& p_vecAccelerationLinear, const Eigen::Vector3d& p_vecVelocityAngular, const double& p_dTimestampSeconds )
@@ -230,9 +281,9 @@ const CLinearAccelerationWORLD CIMUInterpolator::getLinearAccelerationFiltered( 
 
     CLinearAccelerationWORLD vecLinearAccelerationFiltered( 0.0, 0.0, 0.0 );
 
-    if( 0.0 < dAbsoluteAccelerationX ){ vecLinearAccelerationFiltered.x( ) = CIMUInterpolator::sign( dAccelerationX )*dAbsoluteAccelerationX; }
-    if( 0.0 < dAbsoluteAccelerationY ){ vecLinearAccelerationFiltered.y( ) = CIMUInterpolator::sign( dAccelerationY )*dAbsoluteAccelerationY; }
-    if( 0.0 < dAbsoluteAccelerationZ ){ vecLinearAccelerationFiltered.z( ) = CIMUInterpolator::sign( dAccelerationZ )*dAbsoluteAccelerationZ; }
+    if( 0.0 < dAbsoluteAccelerationX ){ vecLinearAccelerationFiltered.x( ) = CIMUInterpolator::sign( dAccelerationX )*std::sqrt( dAbsoluteAccelerationX ); }
+    if( 0.0 < dAbsoluteAccelerationY ){ vecLinearAccelerationFiltered.y( ) = CIMUInterpolator::sign( dAccelerationY )*std::sqrt( dAbsoluteAccelerationY ); }
+    if( 0.0 < dAbsoluteAccelerationZ ){ vecLinearAccelerationFiltered.z( ) = CIMUInterpolator::sign( dAccelerationZ )*std::sqrt( dAbsoluteAccelerationZ ); }
 
     return vecLinearAccelerationFiltered;
 }
@@ -269,4 +320,20 @@ const int8_t CIMUInterpolator::sign( const double& p_fNumber )
     //ds never gets called, just pleasing the compiler
     assert( false );
     return 0;
+}
+
+const Eigen::Matrix3d CIMUInterpolator::_getRotationIMUtoWORLD( const Eigen::Vector3d& p_LinearAcceleration ) const
+{
+    //ds converged - we can compute the rotation
+    const Eigen::Vector3d vecIMU( p_LinearAcceleration.normalized( ) );
+    const Eigen::Vector3d vecGraviation( 0.0, 0.0, -1.0 );
+
+    //ds compute rotation matrix
+    const Eigen::Vector3d vecCross( vecIMU.cross( vecGraviation ) );
+    const double dSine   = vecCross.norm( );
+    const double dCosine = vecIMU.transpose( )*vecGraviation;
+    const Eigen::Matrix3d matSkew( CMiniVisionToolbox::getSkew( vecCross ) );
+
+    //ds return the rotation matrix
+    return Eigen::Matrix3d::Identity( ) + matSkew + ( 1-dCosine )/( dSine*dSine )*matSkew*matSkew;
 }

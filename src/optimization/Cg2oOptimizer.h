@@ -2,8 +2,6 @@
 #define CG2OOPTIMIZER_H
 
 #include "g2o/core/sparse_optimizer.h"
-#include "g2o/types/slam3d/types_slam3d.h"
-#include "g2o/core/robust_kernel_impl.h"
 
 #include "vision/CStereoCamera.h"
 #include "types/CLandmark.h"
@@ -41,20 +39,24 @@ private:
     const std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
 
     g2o::SparseOptimizer m_cOptimizerSparse;
-    const UIDKeyFrame m_uIDShift      = 1000000; //ds required to navigate between landmarks and poses
-    g2o::VertexSE3 *m_pVertexPoseLAST = 0;
-    const uint32_t m_uIterations      = 1000;
-    uint32_t m_uOptimizations         = 0;
+    const UIDKeyFrame m_uIDShift       = 1000000; //ds required to navigate between landmarks and poses
+    g2o::VertexSE3* m_pVertexPoseLAST  = 0;
+    const uint32_t m_uIterations       = 1000;
+    uint32_t m_uOptimizations          = 0;
 
-    const double m_dMaximumReliableDepthForPointXYZ  = 2.5;
-    const double m_dMaximumReliableDepthForUVDepth   = 7.5;
+    const double m_dMaximumReliableDepthForPointXYZ    = 2.5;
+    const double m_dMaximumReliableDepthForUVDepth     = 7.5;
+    const double m_dMaximumReliableDepthForUVDisparity = 100.0;
+    const double m_dMaximumReliableDepthForPointXYZL2    = 10.0;
+    const double m_dMaximumReliableDepthForUVDepthL2     = 50.0;
+    const double m_dMaximumReliableDepthForUVDisparityL2 = 10000.0;
 
     //ds optimized structures
     std::vector< CLandmark* > m_vecLandmarksInGraph;
     std::vector< CKeyFrame* > m_vecKeyFramesInGraph;
 
     //ds first pose vertex (for full graph drawing)
-    g2o::VertexSE3 *m_pVertexPoseFIRST = 0;
+    g2o::VertexSE3* m_pVertexPoseFIRSTNOTINGRAPH = 0;
 
 //ds information matrices ground structures
 private:
@@ -65,9 +67,9 @@ private:
 
 public:
 
-    void optimizeTailLoopClosuresOnly( const UIDKeyFrame& p_uIDBeginKeyFrame );
+    void optimizeTailLoopClosuresOnly( const UIDKeyFrame& p_uIDBeginKeyFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
     void optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame );
-    void optimizeContinuous( const UIDKeyFrame& p_uIDBeginKeyFrame );
+    void optimizeContinuous( const UIDFrame& p_uFrame, const UIDKeyFrame& p_uIDBeginKeyFrame, const std::vector< CLandmark* >::size_type p_uIDBeginLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
 
     const uint32_t getNumberOfOptimizations( ) const { return m_uOptimizations; }
 
@@ -75,7 +77,51 @@ public:
     void clearFiles( ) const;
 
     //ds saves final graph
-    void saveFinalGraph( );
+    void saveFinalGraph( const Eigen::Vector3d& p_vecTranslationToG2o );
+
+    /*ds first pose
+    void updateSTART( const Eigen::Vector3d& p_vecTranslationWORLD )
+    {
+        //ds try to retrieve vertex
+        const g2o::HyperGraph::VertexIDMap::iterator itPoseSTART( m_cOptimizerSparse.vertices( ).find( m_uIDShift-1 ) );
+
+        //ds has to be found
+        assert( itPoseSTART != m_cOptimizerSparse.vertices( ).end( ) );
+
+        //ds extract and update the estimate
+        g2o::VertexSE3* pVertex = dynamic_cast< g2o::VertexSE3* >( itPoseSTART->second );
+        Eigen::Isometry3d matPoseSTARTShifted( pVertex->estimate( ) );
+        matPoseSTARTShifted.translation( ) -= p_vecTranslationWORLD;
+        pVertex->setEstimate( matPoseSTARTShifted );
+    }
+
+    //ds change vertex
+    void updateEstimate( const CKeyFrame* p_pKeyFrame )
+    {
+        //ds try to retrieve vertex
+        const g2o::HyperGraph::VertexIDMap::iterator itKeyFrame( m_cOptimizerSparse.vertices( ).find( p_pKeyFrame->uID+m_uIDShift ) );
+
+        //ds if found
+        if( itKeyFrame != m_cOptimizerSparse.vertices( ).end( ) )
+        {
+            //ds extract and update the estimate
+            g2o::VertexSE3* pVertex = dynamic_cast< g2o::VertexSE3* >( itKeyFrame->second );
+            pVertex->setEstimate( p_pKeyFrame->matTransformationLEFTtoWORLD );
+        }
+    }
+    void updateEstimate( const CLandmark* p_pLandmark )
+    {
+        //ds try to retrieve vertex
+        const g2o::HyperGraph::VertexIDMap::iterator itLandmark( m_cOptimizerSparse.vertices( ).find( p_pLandmark->uID ) );
+
+        //ds if found
+        if( itLandmark != m_cOptimizerSparse.vertices( ).end( ) )
+        {
+            //ds extract and update the estimate
+            g2o::VertexPointXYZ* pVertex = dynamic_cast< g2o::VertexPointXYZ* >( itLandmark->second );
+            pVertex->setEstimate( p_pLandmark->vecPointXYZOptimized );
+        }
+    }*/
 
 private:
 
@@ -97,17 +143,17 @@ private:
                                                             const double& p_dBaselineMeters,
                                                             const double& p_dInformationFactor ) const;
 
-    void _loadLandmarksToGraph( const std::vector< CLandmark* >& p_vecChunkLandmarks );
-    g2o::VertexSE3* _setAndgetPose( g2o::VertexSE3* p_pVertexPoseFrom, const CKeyFrame* pKeyFrameCurrent );
-    void _setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const CKeyFrame* pKeyFrameCurrent, const CKeyFrame::CMatchICP* p_pClosure );
+    void _loadLandmarksToGraph( const std::vector< CLandmark* >::size_type& p_uIDLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
+    g2o::VertexSE3* _setAndgetPose( g2o::VertexSE3* p_pVertexPoseFrom, CKeyFrame* pKeyFrameCurrent, const Eigen::Vector3d& p_vecTranslationToG2o );
+    void _setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const CKeyFrame* pKeyFrameCurrent, const CKeyFrame::CMatchICP* p_pClosure, const Eigen::Vector3d& p_vecTranslationToG2o );
     void _setLandmarkMeasurementsWORLD( g2o::VertexSE3* p_pVertexPoseCurrent,
                            const CKeyFrame* pKeyFrameCurrent,
                            UIDLandmark& p_uMeasurementsStoredPointXYZ,
                            UIDLandmark& p_uMeasurementsStoredUVDepth,
                            UIDLandmark& p_uMeasurementsStoredUVDisparity );
 
-    void _applyOptimization( const std::vector< CLandmark* >& p_vecChunkLandmarks );
-    void _applyOptimization( const std::vector< CKeyFrame* >& p_vecChunkKeyFrames );
+    void _applyOptimization( const std::vector< CLandmark* >& p_vecChunkLandmarks, const Eigen::Vector3d& p_vecTranslationToG2o );
+    void _applyOptimization( const std::vector< CKeyFrame* >& p_vecChunkKeyFrames, const Eigen::Vector3d& p_vecTranslationToG2o );
 
 
 };
