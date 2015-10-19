@@ -43,6 +43,7 @@ private:
     g2o::VertexSE3* m_pVertexPoseLAST  = 0;
     const uint32_t m_uIterations       = 1000;
     uint32_t m_uOptimizations          = 0;
+    double m_dCurrentTrajectoryWeight  = 1.0;
 
     const double m_dMaximumReliableDepthForPointXYZ    = 2.5;
     const double m_dMaximumReliableDepthForUVDepth     = 7.5;
@@ -57,6 +58,9 @@ private:
 
     //ds first pose vertex (for full graph drawing)
     g2o::VertexSE3* m_pVertexPoseFIRSTNOTINGRAPH = 0;
+
+    //ds stiffness for loop closing
+    std::vector< g2o::EdgeSE3* > m_vecPoseEdges;
 
 //ds information matrices ground structures
 private:
@@ -77,7 +81,10 @@ public:
     void clearFiles( ) const;
 
     //ds saves final graph
-    void saveFinalGraph( const Eigen::Vector3d& p_vecTranslationToG2o );
+    void saveFinalGraph( const UIDFrame& p_uFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
+
+    //ds manual loop closing
+    void updateLoopClosuresFrom( const std::vector< CKeyFrame* >::size_type& p_uIDBeginKeyFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
 
     /*ds first pose
     void updateSTART( const Eigen::Vector3d& p_vecTranslationWORLD )
@@ -152,8 +159,8 @@ private:
                            UIDLandmark& p_uMeasurementsStoredUVDepth,
                            UIDLandmark& p_uMeasurementsStoredUVDisparity );
 
-    void _applyOptimization( const std::vector< CLandmark* >& p_vecChunkLandmarks, const Eigen::Vector3d& p_vecTranslationToG2o );
-    void _applyOptimization( const std::vector< CKeyFrame* >& p_vecChunkKeyFrames, const Eigen::Vector3d& p_vecTranslationToG2o );
+    void _applyOptimization( const UIDFrame& p_uFrame, const std::vector< CLandmark* >::size_type& p_uIDLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
+    void _applyOptimization( const Eigen::Vector3d& p_vecTranslationToG2o );
 
 
 };

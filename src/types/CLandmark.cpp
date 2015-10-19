@@ -359,6 +359,7 @@ const CPoint3DWORLD CLandmark::_getOptimizedLandmarkSTEREOUV( const UIDFrame& p_
                 //std::printf( "<CLandmark>(_getOptimizedLandmarkSTEREOUV) [%06lu] converged (%2u) in %3u iterations to (%6.2f %6.2f %6.2f) from (%6.2f %6.2f %6.2f) ARSS: %6.2f (inliers: %u/%lu)\n",
                 //             uID, uOptimizationsSuccessful, uIteration, vecX(0), vecX(1), vecX(2), p_vecInitialGuess(0), p_vecInitialGuess(1), p_vecInitialGuess(2), dCurrentAverageSquaredError, uInliers, m_vecMeasurements.size( ) );
 
+                //ds update the estimate
                 return vecX.block< 3,1 >(0,0);
             }
             else

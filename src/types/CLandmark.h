@@ -80,13 +80,13 @@ public:
     //ds optimization configuration (shared among all landmarks)
     //static constexpr double m_dDistanceDeltaForOptimizationMeters = 0.1; //ds squared measurement
     //static constexpr double m_dAngleDeltaForOptimizationRadians   = 0.5; //ds squared measurement
-    static constexpr uint32_t uCapIterations                  = 100;
+    static constexpr uint32_t uCapIterations                  = 500; //ds 100 KITTI: 200
     //static constexpr double m_dLevenbergDamping                   = 5.0;
     //const double m_dFactorDynamicDamping        = 1.05;
     static constexpr double dConvergenceDelta                 = 1e-5;
     static constexpr double dMinimumRatioInliersToOutliers    = 0.5;
-    static constexpr double dKernelMaximumErrorSquaredPixels  = 10.0;
-    static constexpr double dMaximumErrorSquaredAveragePixels = 9.0;
+    static constexpr double dKernelMaximumErrorSquaredPixels  = 20.0; //ds 10.0 KITTI: 20.0
+    static constexpr double dMaximumErrorSquaredAveragePixels = 17.5; //ds 9.0 KITTI: 17.5
     //static constexpr uint8_t m_uMinimumInliers                    = 10;
     static constexpr std::vector< CMeasurementLandmark* >::size_type uMinimumMeasurementsForOptimization = 5;
 

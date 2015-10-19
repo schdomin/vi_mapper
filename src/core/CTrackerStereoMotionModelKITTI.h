@@ -1,5 +1,5 @@
-#ifndef CTRACKERSTEREOMOTIONMODEL_H
-#define CTRACKERSTEREOMOTIONMODEL_H
+#ifndef CTRACKERSTEREOMOTIONMODELKITTI_H
+#define CTRACKERSTEREOMOTIONMODELKITTI_H
 
 #include "txt_io/imu_message.h"
 #include "txt_io/pinhole_image_message.h"
@@ -12,17 +12,16 @@
 #include "optimization/Cg2oOptimizer.h"
 #include "utility/CIMUInterpolator.h"
 
-class CTrackerStereoMotionModel
+class CTrackerStereoMotionModelKITTI
 {
 
 //ds ctor/dtor
 public:
 
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-    CTrackerStereoMotionModel( const EPlaybackMode& p_eMode,
-                               const std::shared_ptr< CIMUInterpolator > p_pIMUInterpolator,
-                               const uint32_t& p_uWaitKeyTimeoutMS = 1 );
-    ~CTrackerStereoMotionModel( );
+    CTrackerStereoMotionModelKITTI( const EPlaybackMode& p_eMode,
+                                    const uint32_t& p_uWaitKeyTimeoutMS = 1 );
+    ~CTrackerStereoMotionModelKITTI( );
 
 //ds members
 private:
@@ -37,8 +36,6 @@ private:
     UIDFrame m_uFrameCount = 0;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
-    CAngularVelocityLEFT m_vecVelocityAngularFilteredLAST       = {0.0, 0.0, 0.0};
-    CLinearAccelerationLEFT m_vecLinearAccelerationFilteredLAST = {0.0, 0.0, 0.0};
     double m_dTimestampLASTSeconds                              = 0.0;
     CPoint3DWORLD m_vecPositionKeyFrameLAST;
     Eigen::Vector3d m_vecCameraOrientationAccumulated   = {0.0, 0.0, 0.0};
@@ -74,10 +71,7 @@ private:
     UIDLandmark m_uNumberofVisibleLandmarksLAST = 0;
     std::shared_ptr< std::vector< CLandmark* > > m_vecLandmarks;
     //std::shared_ptr< std::array< CLandmark*, 8388608 > > m_arrLandmarks;
-    const double m_dMaximumMotionScalingForOptimization = 1.05;
-    double m_dMotionScalingLAST                         = 1.0;
     uint8_t m_uCountInstability                         = 0;
-    std::vector< Eigen::Vector3d > m_vecRotations;
 
     //ds g2o optimization
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
@@ -96,7 +90,6 @@ private:
     const double m_dLoopClosingRadiusSquaredMeters          = 1000.0;
 
     //ds robocentric world frame refreshing
-    const std::shared_ptr< CIMUInterpolator > m_pIMU;
     std::vector< Eigen::Vector3d > m_vecTranslationDeltas;
     const std::vector< Eigen::Vector3d >::size_type m_uIMULogbackSize = 200;
     Eigen::Vector3d m_vecGradientXYZ;
@@ -119,8 +112,7 @@ private:
 public:
 
     void receivevDataVI( const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageLEFT,
-                         const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT,
-                         const std::shared_ptr< txt_io::CIMUMessage > p_pIMU );
+                         const std::shared_ptr< txt_io::PinholeImageMessage > p_pImageRIGHT );
 
     const UIDFrame getFrameCount( ) const { return m_uFrameCount; }
     const bool isShutdownRequested( ) const { return m_bIsShutdownRequested; }
@@ -171,4 +163,4 @@ private:
 
 };
 
-#endif //#define CTRACKERSTEREOMOTIONMODEL_H
+#endif //#define CTRACKERSTEREOMOTIONMODELKITTI_H

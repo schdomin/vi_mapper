@@ -6,13 +6,15 @@ CKeyFrame::CKeyFrame( const UIDKeyFrame& p_uID,
                       const CLinearAccelerationIMU& p_vecLinearAcceleration,
                       const std::vector< const CMeasurementLandmark* >& p_vecMeasurements,
                       const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloud,
-                      const std::vector< const CMatchICP* > p_vecLoopClosures ): uID( p_uID ),
+                      const std::vector< const CMatchICP* > p_vecLoopClosures,
+                      const double& p_dInformationFactor ): uID( p_uID ),
                                                                                 uFrameOfCreation( p_uFrame ),
                                                                                 matTransformationLEFTtoWORLD( p_matTransformationLEFTtoWORLD ),
                                                                                 vecLinearAccelerationNormalized( p_vecLinearAcceleration ),
                                                                                 vecMeasurements( p_vecMeasurements ),
                                                                                 vecCloud( p_vecCloud ),
-                                                                                vecLoopClosures( p_vecLoopClosures )
+                                                                                vecLoopClosures( p_vecLoopClosures ),
+                                                                                dInformationFactor( p_dInformationFactor )
 {
     assert( !vecCloud->empty( ) );
 
@@ -26,7 +28,8 @@ CKeyFrame::CKeyFrame( const std::string& p_strFile ): uID( std::stoi( p_strFile.
                                                       vecLinearAccelerationNormalized( CLinearAccelerationIMU( 0.0, 0.0, 0.0 ) ),
                                                       vecMeasurements( std::vector< const CMeasurementLandmark* >( 0 ) ),
                                                       vecCloud( getCloudFromFile( p_strFile ) ),
-                                                      vecLoopClosures( std::vector< const CMatchICP* >( 0 ) )
+                                                      vecLoopClosures( std::vector< const CMatchICP* >( 0 ) ),
+                                                      dInformationFactor( 1.0 )
 {
     assert( 0 != vecCloud );
 }
