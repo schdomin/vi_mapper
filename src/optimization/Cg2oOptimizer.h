@@ -43,7 +43,6 @@ private:
     g2o::VertexSE3* m_pVertexPoseLAST  = 0;
     const uint32_t m_uIterations       = 1000;
     uint32_t m_uOptimizations          = 0;
-    double m_dCurrentTrajectoryWeight  = 1.0;
 
     const double m_dMaximumReliableDepthForPointXYZ    = 2.5;
     const double m_dMaximumReliableDepthForUVDepth     = 7.5;
@@ -73,7 +72,11 @@ public:
 
     void optimizeTailLoopClosuresOnly( const UIDKeyFrame& p_uIDBeginKeyFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
     void optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame );
-    void optimizeContinuous( const UIDFrame& p_uFrame, const UIDKeyFrame& p_uIDBeginKeyFrame, const std::vector< CLandmark* >::size_type p_uIDBeginLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
+    void optimizeContinuous( const UIDFrame& p_uFrame,
+                             const UIDKeyFrame& p_uIDBeginKeyFrame,
+                             const std::vector< CLandmark* >::size_type p_uIDBeginLandmark,
+                             const Eigen::Vector3d& p_vecTranslationToG2o,
+                             const bool& p_bLoopClosed );
 
     const uint32_t getNumberOfOptimizations( ) const { return m_uOptimizations; }
 

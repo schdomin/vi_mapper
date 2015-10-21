@@ -126,7 +126,7 @@ private:
     const double m_dConvergenceDeltaPoseOptimization                 = 1e-5;
     const double m_dMaximumErrorInlierSquaredPixelsPoseOptimization  = 10.0;
     const double m_dMaximumErrorSquaredAveragePoseOptimization       = 12.5; //ds as optimized points are weighted more
-    const double m_dMaximumRISK                                      = 1.5;
+    const double m_dMaximumRISK                                      = 2.0;
 
     //ds if the optimized pose has an combined squared translational change less than this value it gets ignored
     const double m_dTranslationResolutionOptimization = 0.001;

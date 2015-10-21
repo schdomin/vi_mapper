@@ -262,7 +262,11 @@ void Cg2oOptimizer::optimizeTail( const UIDKeyFrame& p_uIDBeginKeyFrame )
     ++m_uOptimizations;*/
 }
 
-void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame, const UIDKeyFrame& p_uIDBeginKeyFrame, const std::vector< CLandmark* >::size_type p_uIDBeginLandmark, const Eigen::Vector3d& p_vecTranslationToG2o )
+void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
+                                        const UIDKeyFrame& p_uIDBeginKeyFrame,
+                                        const std::vector< CLandmark* >::size_type p_uIDBeginLandmark,
+                                        const Eigen::Vector3d& p_vecTranslationToG2o,
+                                        const bool& p_bLoopClosed )
 {
     const double dTimeStartSeconds = CLogger::getTimeSeconds( );
 
@@ -275,7 +279,44 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame, const UIDKeyFr
 
     //ds sane input
     ++m_uOptimizations;
-    m_dCurrentTrajectoryWeight = std::sqrt( m_uOptimizations );
+
+    //ds check if we have a loop closure (landmark free optimization)
+    if( p_bLoopClosed )
+    {
+        //ds closure count
+        uint32_t uLoopClosures = 0;
+
+        //ds loop over the camera vertices vector
+        for( CKeyFrame* pKeyFrame: vecChunkKeyFrames )
+        {
+            //ds add current camera pose
+            g2o::VertexSE3* pVertexPoseCurrent = _setAndgetPose( m_pVertexPoseLAST, pKeyFrame, p_vecTranslationToG2o );
+
+            //ds check if we got loop closures for this frame
+            for( const CKeyFrame::CMatchICP* pClosure: pKeyFrame->vecLoopClosures )
+            {
+                //ds set it to the graph
+                _setLoopClosure( pVertexPoseCurrent, pKeyFrame, pClosure, p_vecTranslationToG2o );
+                ++uLoopClosures;
+            }
+
+            //ds always save acceleration data
+            //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
+
+            //ds update last
+            m_pVertexPoseLAST = pVertexPoseCurrent;
+        }
+
+        std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimizing LOOP CLOSURES: %u\n", p_uFrame, uLoopClosures );
+
+        //ds initialize optimization
+        m_cOptimizerSparse.initializeOptimization( );
+
+        //ds do iterations
+        m_cOptimizerSparse.optimize( m_uIterations );
+
+        std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimization complete (total duration: %.2fs)\n", p_uFrame, CLogger::getTimeSeconds( )-dTimeStartSeconds );
+    }
 
     //ds set landmarks
     _loadLandmarksToGraph( p_uIDBeginLandmark, p_vecTranslationToG2o );
@@ -285,30 +326,45 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame, const UIDKeyFr
     UIDLandmark uMeasurementsStoredPointXYZ    = 0;
     UIDLandmark uMeasurementsStoredUVDepth     = 0;
     UIDLandmark uMeasurementsStoredUVDisparity = 0;
-    uint32_t    uLoopClosures                  = 0;
 
-    //ds loop over the camera vertices vector
-    for( CKeyFrame* pKeyFrame: vecChunkKeyFrames )
+    //ds if loop closed - we dont have to add the frames again
+    if( p_bLoopClosed )
     {
-        //ds add current camera pose
-        g2o::VertexSE3* pVertexPoseCurrent = _setAndgetPose( m_pVertexPoseLAST, pKeyFrame, p_vecTranslationToG2o );
-
-        //ds check if we got loop closures for this frame
-        for( const CKeyFrame::CMatchICP* pClosure: pKeyFrame->vecLoopClosures )
+        //ds loop over the camera vertices vector
+        for( CKeyFrame* pKeyFrame: vecChunkKeyFrames )
         {
-            //ds set it to the graph
-            _setLoopClosure( pVertexPoseCurrent, pKeyFrame, pClosure, p_vecTranslationToG2o );
-            ++uLoopClosures;
+            //ds find the corresponding pose in the current graph
+            const g2o::HyperGraph::VertexIDMap::iterator itPoseCurrent( m_cOptimizerSparse.vertices( ).find( pKeyFrame->uID+m_uIDShift ) );
+            assert( m_cOptimizerSparse.vertices( ).end( ) != itPoseCurrent );
+
+            //ds get current camera pose
+            g2o::VertexSE3* pVertexPoseCurrent = dynamic_cast< g2o::VertexSE3* >( itPoseCurrent->second );
+            assert( 0 != pVertexPoseCurrent );
+
+            //ds always save acceleration data
+            //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
+
+            //ds set landmark measurements
+            _setLandmarkMeasurementsWORLD( pVertexPoseCurrent, pKeyFrame, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity );
         }
+    }
+    else
+    {
+        //ds loop over the camera vertices vector
+        for( CKeyFrame* pKeyFrame: vecChunkKeyFrames )
+        {
+            //ds add current camera pose
+            g2o::VertexSE3* pVertexPoseCurrent = _setAndgetPose( m_pVertexPoseLAST, pKeyFrame, p_vecTranslationToG2o );
 
-        //ds always save acceleration data
-        //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
+            //ds always save acceleration data
+            //m_cOptimizerSparse.addEdge( _getEdgeLinearAcceleration( pVertexPoseCurrent, pKeyFrame->vecLinearAccelerationNormalized ) );
 
-        //ds set landmark measurements
-        _setLandmarkMeasurementsWORLD( pVertexPoseCurrent, pKeyFrame, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity );
+            //ds set landmark measurements
+            _setLandmarkMeasurementsWORLD( pVertexPoseCurrent, pKeyFrame, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity );
 
-        //ds update last
-        m_pVertexPoseLAST = pVertexPoseCurrent;
+            //ds update last
+            m_pVertexPoseLAST = pVertexPoseCurrent;
+        }
     }
 
     //ds we always process all keyframes
@@ -334,8 +390,8 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame, const UIDKeyFr
     std::string strPrefix( chBuffer );
     m_cOptimizerSparse.save( ( strPrefix + ".g2o" ).c_str( ) );
 
-    std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimizing [keyframes: %06lu-%06lu (%3lu) landmarks: %06lu-%06lu][measurements xyz: %3lu depth: %3lu disparity: %3lu, closures: %3u] \n",
-                 p_uFrame, vecChunkKeyFrames.front( )->uID, vecChunkKeyFrames.back( )->uID, m_vecKeyFramesInGraph.size( ), p_uIDBeginLandmark, m_vecLandmarksInGraph.back( )->uID, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity, uLoopClosures );
+    std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimizing [keyframes: %06lu-%06lu (%3lu) landmarks: %06lu-%06lu][measurements xyz: %3lu depth: %3lu disparity: %3lu] \n",
+                 p_uFrame, vecChunkKeyFrames.front( )->uID, vecChunkKeyFrames.back( )->uID, m_vecKeyFramesInGraph.size( ), p_uIDBeginLandmark, m_vecLandmarksInGraph.back( )->uID, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity );
 
     //ds initialize optimization
     m_cOptimizerSparse.initializeOptimization( );
@@ -642,7 +698,7 @@ void Cg2oOptimizer::_loadLandmarksToGraph( const std::vector< CLandmark* >::size
 
                     ++uLandmarksAlreadyInGraph;
                 }
-                else
+                else if( 1e9 > ( pLandmark->vecPointXYZOptimized+p_vecTranslationToG2o ).squaredNorm( ) )
                 {
                     //ds set landmark vertex
                     g2o::VertexPointXYZ* pVertexLandmark = new g2o::VertexPointXYZ( );
@@ -902,7 +958,8 @@ void Cg2oOptimizer::_applyOptimization( const UIDFrame& p_uFrame, const std::vec
             else
             {
                 //ds check if not madly optimized (might happen with disparity egdes)
-                if( 1e7 > ( pLandmark->vecPointXYZOptimized-pVertex->estimate( ) ).squaredNorm( ) )
+                if( 1e9 > pVertex->estimate( ).squaredNorm( )                                                           &&
+                    1e6 > ( pLandmark->vecPointXYZOptimized+p_vecTranslationToG2o-pVertex->estimate( ) ).squaredNorm( ) )
                 {
                     //ds update position
                     pLandmark->vecPointXYZOptimized = pVertex->estimate( )-p_vecTranslationToG2o;

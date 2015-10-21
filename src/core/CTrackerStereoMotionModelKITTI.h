@@ -39,8 +39,8 @@ private:
     double m_dTimestampLASTSeconds                              = 0.0;
     CPoint3DWORLD m_vecPositionKeyFrameLAST;
     Eigen::Vector3d m_vecCameraOrientationAccumulated   = {0.0, 0.0, 0.0};
-    const double m_dTranslationDeltaForKeyFrameMetersL2 = 0.25;
-    const double m_dAngleDeltaForKeyFrameRadiansL2      = 0.25;
+    const double m_dTranslationDeltaForKeyFrameMetersL2 = 1.0;
+    const double m_dAngleDeltaForKeyFrameRadiansL2      = 0.025;
     const UIDFrame m_uFrameDifferenceForKeyFrame        = 100;
     UIDFrame m_uFrameKeyFrameLAST                       = 0;
     CPoint3DWORLD m_vecPositionCurrent;
@@ -83,7 +83,7 @@ private:
 
     //ds loop closing
     const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20; //20
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25; //25
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 20; //25
     const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
     UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;

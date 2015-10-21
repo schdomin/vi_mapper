@@ -262,7 +262,7 @@ void CTrackerStereoMotionModel::finalize( )
         }
 
         //ds last optmization
-        m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecTranslationToG2o );
+        m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecTranslationToG2o, !vecClosedKeyFrames.empty( ) );
 
         //ds save final graph
         m_cGraphOptimizer.saveFinalGraph( m_uFrameCount, m_vecTranslationToG2o );
@@ -526,13 +526,16 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                 if( m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST                                                                              ||
                    ( m_uLoopClosingKeyFrameWaitingQueue < m_uLoopClosingKeyFramesInQueue && m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDLoopClosureOptimizedLAST ) )
                 {
+                    //ds check if we have closures
+                    const bool bLoopClosed = ( 0 < m_uLoopClosingKeyFramesInQueue );
+
                     //ds compute first used landmarks in the keyframe chunk TODO: sometimes invalid ID's returned - FIXIT
                     const std::vector< CLandmark* >::size_type uIDBeginLandmark = std::min( m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecLandmarks->back( )->uID );
 
                     //ds optimize the segment (in global frame)
                     //m_cOptimizer.optimizeTail( m_uIDProcessedKeyFrameLAST );
                     //m_cOptimizer.optimizeTailLoopClosuresOnly( m_uIDProcessedKeyFrameLAST );
-                    m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, uIDBeginLandmark, m_vecTranslationToG2o );
+                    m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, uIDBeginLandmark, m_vecTranslationToG2o, bLoopClosed );
 
                     //ds has to work
                     assert( m_vecKeyFrames->back( )->bIsOptimized );
@@ -545,7 +548,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                     //m_vecLinearAccelerationFilteredLAST += matTransformationLEFTtoLEFTOptimized.translation( )/( 0.5*p_dDeltaTimeSeconds*p_dDeltaTimeSeconds );
 
                     //ds if loop closure triggered
-                    if( !vecLoopClosures.empty( ) )
+                    if( bLoopClosed )
                     {
                         m_uIDLoopClosureOptimizedLAST = uIDKeyFrameCurrent;
                     }

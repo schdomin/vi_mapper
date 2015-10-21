@@ -236,7 +236,7 @@ void CTrackerStereoMotionModelKITTI::finalize( )
         }
 
         //ds last optmization
-        m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecTranslationToG2o );
+        m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecTranslationToG2o, !vecClosedKeyFrames.empty( ) );
 
         //ds save final graph
         m_cGraphOptimizer.saveFinalGraph( m_uFrameCount, m_vecTranslationToG2o );
@@ -403,8 +403,13 @@ void CTrackerStereoMotionModelKITTI::_trackLandmarks( const cv::Mat& p_matImageL
     //ds update scene in viewer
     m_prFrameLEFTtoWORLD = std::pair< bool, Eigen::Isometry3d >( false, matTransformationLEFTtoWORLD );
 
-    //ds accumulate orientation
-    m_vecCameraOrientationAccumulated += p_vecRotationTotal;
+    //ds current rotation change
+    const Eigen::Vector3d vecRotationTotal = m_matTransformationLEFTLASTtoLEFTNOW.linear( ).eulerAngles( 2, 1, 0 );
+    if( 2.0 > vecRotationTotal.squaredNorm( ) )
+    {
+        //ds accumulate orientation here (last to now computed)
+        m_vecCameraOrientationAccumulated += vecRotationTotal;
+    }
 
     //ds position delta
     m_dTranslationDeltaSquaredNormCurrent = ( m_vecPositionCurrent-m_vecPositionKeyFrameLAST ).squaredNorm( );
@@ -456,69 +461,76 @@ void CTrackerStereoMotionModelKITTI::_trackLandmarks( const cv::Mat& p_matImageL
                                                       vecLoopClosures,
                                                       1.0 ) );
 
-            //ds check if optimization is required (based on key frame id or loop closing) TODO beautify this case
-            if( m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST                                                                              ||
-               ( m_uLoopClosingKeyFrameWaitingQueue < m_uLoopClosingKeyFramesInQueue && m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDLoopClosureOptimizedLAST ) )
+            //ds if stable
+            if( 0.002 > vecRotationTotal.squaredNorm( ) && 0 == m_uCountInstability )
             {
-                //ds compute first used landmarks in the keyframe chunk TODO: sometimes invalid ID's returned - FIXIT
-                const std::vector< CLandmark* >::size_type uIDBeginLandmark = std::min( m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecLandmarks->back( )->uID );
-
-                //ds optimize the segment (in global frame)
-                //m_cOptimizer.optimizeTail( m_uIDProcessedKeyFrameLAST );
-                //m_cOptimizer.optimizeTailLoopClosuresOnly( m_uIDProcessedKeyFrameLAST );
-                m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, uIDBeginLandmark, m_vecTranslationToG2o );
-
-                //ds has to work
-                assert( m_vecKeyFrames->back( )->bIsOptimized );
-
-                //ds compute transformation induced through optimization
-                //const Eigen::Isometry3d matTransformationLEFTtoLEFTOptimized = m_vecKeyFrames->back( )->matTransformationLEFTtoWORLD.inverse( )*matTransformationLEFTtoWORLD;
-
-                //ds adjust angular velocity and acceleration
-                //m_vecVelocityAngularFilteredLAST    += CMiniVisionToolbox::toOrientationRodrigues( matTransformationLEFTtoLEFTOptimized.linear( ) )/( p_dDeltaTimeSeconds );
-                //m_vecLinearAccelerationFilteredLAST += matTransformationLEFTtoLEFTOptimized.translation( )/( 0.5*p_dDeltaTimeSeconds*p_dDeltaTimeSeconds );
-
-                //ds if loop closure triggered
-                if( !vecLoopClosures.empty( ) )
+                //ds check if optimization is required (based on key frame id or loop closing) TODO beautify this case
+                if( m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST                                                                              ||
+                   ( m_uLoopClosingKeyFrameWaitingQueue < m_uLoopClosingKeyFramesInQueue && m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDLoopClosureOptimizedLAST ) )
                 {
-                    m_uIDLoopClosureOptimizedLAST = uIDKeyFrameCurrent;
-                }
+                    //ds check if we have closures
+                    const bool bLoopClosed = ( 0 < m_uLoopClosingKeyFramesInQueue );
 
-                //ds update transformations with optimized ones (mock identity transform from LAST as we also move the landmarks)
-                m_uLoopClosingKeyFramesInQueue     = 0;
-                m_uIDProcessedKeyFrameLAST         = uIDKeyFrameCurrent+1; //ds +1 for continuous optimization
-                matTransformationLEFTtoWORLD       = m_vecKeyFrames->back( )->matTransformationLEFTtoWORLD;
-                m_vecPositionCurrent               = matTransformationLEFTtoWORLD.translation( );
-                matTransformationWORLDtoLEFT       = matTransformationLEFTtoWORLD.inverse( );
-                m_matTransformationWORLDtoLEFTLAST = matTransformationWORLDtoLEFT;
+                    //ds compute first used landmarks in the keyframe chunk TODO: sometimes invalid ID's returned - FIXIT
+                    const std::vector< CLandmark* >::size_type uIDBeginLandmark = std::min( m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecLandmarks->back( )->uID );
 
-                //ds if we are in a continuous situation and not too recent
-                if( 125.0 < m_vecGradientXYZ.squaredNorm( ) )
-                {
-                    //ds if not close to the previous world frame
-                    if( 2000.0 < ( m_vecPositionCurrent-m_vecTranslationToG2o ).squaredNorm( ) )
+                    //ds optimize the segment (in global frame)
+                    //m_cOptimizer.optimizeTail( m_uIDProcessedKeyFrameLAST );
+                    //m_cOptimizer.optimizeTailLoopClosuresOnly( m_uIDProcessedKeyFrameLAST );
+                    m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, uIDBeginLandmark, m_vecTranslationToG2o, bLoopClosed );
+
+                    //ds has to work
+                    assert( m_vecKeyFrames->back( )->bIsOptimized );
+
+                    //ds compute transformation induced through optimization
+                    //const Eigen::Isometry3d matTransformationLEFTtoLEFTOptimized = m_vecKeyFrames->back( )->matTransformationLEFTtoWORLD.inverse( )*matTransformationLEFTtoWORLD;
+
+                    //ds adjust angular velocity and acceleration
+                    //m_vecVelocityAngularFilteredLAST    += CMiniVisionToolbox::toOrientationRodrigues( matTransformationLEFTtoLEFTOptimized.linear( ) )/( p_dDeltaTimeSeconds );
+                    //m_vecLinearAccelerationFilteredLAST += matTransformationLEFTtoLEFTOptimized.translation( )/( 0.5*p_dDeltaTimeSeconds*p_dDeltaTimeSeconds );
+
+                    //ds if loop closure triggered
+                    if( bLoopClosed )
                     {
-                        //std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(_trackLandmarks) steady mode entered, absolute delta [%06lu-%06li]: %f\n", m_uFrameCount, uMaximumIndex-m_uIMULogbackSize, static_cast< int64_t >( uMinimumIndex-m_uIMULogbackSize ), m_vecGradientXYZ.squaredNorm( ) );
-
-                        //ds update local frame
-                        _updateWORLDFrame( m_vecPositionCurrent );
-
-                        //ds update g2o distance
-                        m_vecTranslationToG2o += m_vecPositionCurrent;
-
-                        //ds apply reset position
-                        matTransformationLEFTtoWORLD.translation( ) = Eigen::Vector3d::Zero( );
-                        matTransformationWORLDtoLEFT                = matTransformationLEFTtoWORLD.inverse( );
-                        m_matTransformationWORLDtoLEFTLAST          = matTransformationWORLDtoLEFT;
-                        m_vecPositionCurrent                        = matTransformationLEFTtoWORLD.translation( );
-                        m_vecPositionLAST                           = m_vecPositionCurrent;
-
-                        //ds clear active measurements for the landmarks - otherwise we might get inconsistencies with the inner landmark optimization
-                        m_cMatcher.clearActiveLandmarksMeasurements( matTransformationWORLDtoLEFT );
+                        m_uIDLoopClosureOptimizedLAST = uIDKeyFrameCurrent;
                     }
 
-                    //ds always reinitialize translation window
-                    _initializeTranslationWindow( );
+                    //ds update transformations with optimized ones (mock identity transform from LAST as we also move the landmarks)
+                    m_uLoopClosingKeyFramesInQueue     = 0;
+                    m_uIDProcessedKeyFrameLAST         = uIDKeyFrameCurrent+1; //ds +1 for continuous optimization
+                    matTransformationLEFTtoWORLD       = m_vecKeyFrames->back( )->matTransformationLEFTtoWORLD;
+                    m_vecPositionCurrent               = matTransformationLEFTtoWORLD.translation( );
+                    matTransformationWORLDtoLEFT       = matTransformationLEFTtoWORLD.inverse( );
+                    m_matTransformationWORLDtoLEFTLAST = matTransformationWORLDtoLEFT;
+
+                    //ds if we are in a continuous situation and not too recent
+                    if( 125.0 < m_vecGradientXYZ.squaredNorm( ) )
+                    {
+                        //ds if not close to the previous world frame
+                        if( 2000.0 < ( m_vecPositionCurrent-m_vecTranslationToG2o ).squaredNorm( ) )
+                        {
+                            //std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(_trackLandmarks) steady mode entered, absolute delta [%06lu-%06li]: %f\n", m_uFrameCount, uMaximumIndex-m_uIMULogbackSize, static_cast< int64_t >( uMinimumIndex-m_uIMULogbackSize ), m_vecGradientXYZ.squaredNorm( ) );
+
+                            //ds update local frame
+                            _updateWORLDFrame( m_vecPositionCurrent );
+
+                            //ds update g2o distance
+                            m_vecTranslationToG2o += m_vecPositionCurrent;
+
+                            //ds apply reset position
+                            matTransformationLEFTtoWORLD.translation( ) = Eigen::Vector3d::Zero( );
+                            matTransformationWORLDtoLEFT                = matTransformationLEFTtoWORLD.inverse( );
+                            m_matTransformationWORLDtoLEFTLAST          = matTransformationWORLDtoLEFT;
+                            m_vecPositionCurrent                        = matTransformationLEFTtoWORLD.translation( );
+                            m_vecPositionLAST                           = m_vecPositionCurrent;
+
+                            //ds clear active measurements for the landmarks - otherwise we might get inconsistencies with the inner landmark optimization
+                            m_cMatcher.clearActiveLandmarksMeasurements( matTransformationWORLDtoLEFT );
+                        }
+
+                        //ds always reinitialize translation window
+                        _initializeTranslationWindow( );
+                    }
                 }
             }
 
@@ -911,7 +923,7 @@ const std::vector< const CKeyFrame::CMatchICP* > CTrackerStereoMotionModelKITTI:
 
 void CTrackerStereoMotionModelKITTI::_updateWORLDFrame( const Eigen::Vector3d& p_vecTranslationWORLD )
 {
-    std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(_updateWORLDFrame) refreshing WORLD frame - ", m_uFrameCount );
+    //std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(_updateWORLDFrame) refreshing WORLD frame - ", m_uFrameCount );
 
     //ds set initial frame in g2o
     //m_cGraphOptimizer.updateSTART( p_vecTranslationWORLD );
@@ -935,7 +947,7 @@ void CTrackerStereoMotionModelKITTI::_updateWORLDFrame( const Eigen::Vector3d& p
     }
 
     //ds done
-    std::printf( "complete!\n" );
+    //std::printf( "complete!\n" );
 }
 
 void CTrackerStereoMotionModelKITTI::_initializeTranslationWindow( )
@@ -989,7 +1001,7 @@ void CTrackerStereoMotionModelKITTI::_drawInfoBox( cv::Mat& p_matDisplay, const 
     {
         case ePlaybackStepwise:
         {
-            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] STEPWISE | X: %5.1f Y: %5.1f Z: %5.1f DELTA: %4.2f MOTION: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
+            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] STEPWISE | X: %5.1f Y: %5.1f Z: %5.1f DELTA L2: %4.2f MOTION: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
                            m_dTimestampLASTSeconds, m_uFrameCount,
                            m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), m_dTranslationDeltaSquaredNormCurrent, p_dMotionScaling,
                            m_uNumberofVisibleLandmarksLAST, m_cMatcher.getNumberOfDetectionsPoseOptimizationDirect( ), m_cMatcher.getNumberOfDetectionsPoseOptimizationDetection( ), m_cMatcher.getNumberOfDetectionsEpipolar( ), m_cMatcher.getNumberOfFailedLandmarkOptimizations( ), m_cMatcher.getNumberOfInvalidLandmarksTotal( ), m_vecLandmarks->size( ),
@@ -999,7 +1011,7 @@ void CTrackerStereoMotionModelKITTI::_drawInfoBox( cv::Mat& p_matDisplay, const 
         }
         case ePlaybackBenchmark:
         {
-            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] BENCHMARK FPS: %4.1f | X: %5.1f Y: %5.1f Z: %5.1f DELTA: %4.2f SCALING: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
+            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] BENCHMARK FPS: %4.1f | X: %5.1f Y: %5.1f Z: %5.1f DELTA L2: %4.2f SCALING: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
                            m_dTimestampLASTSeconds, m_uFrameCount, m_dPreviousFrameRate,
                            m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), m_dTranslationDeltaSquaredNormCurrent, p_dMotionScaling,
                            m_uNumberofVisibleLandmarksLAST, m_cMatcher.getNumberOfDetectionsPoseOptimizationDirect( ), m_cMatcher.getNumberOfDetectionsPoseOptimizationDetection( ), m_cMatcher.getNumberOfDetectionsEpipolar( ), m_cMatcher.getNumberOfFailedLandmarkOptimizations( ), m_cMatcher.getNumberOfInvalidLandmarksTotal( ), m_vecLandmarks->size( ),
