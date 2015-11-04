@@ -61,7 +61,10 @@ CLandmark::~CLandmark( )
     //ds free positions
     for( const CMeasurementLandmark* pMeasurement: m_vecMeasurements )
     {
-        delete pMeasurement;
+        if( 0 != pMeasurement )
+        {
+            delete pMeasurement;
+        }
     }
 }
 

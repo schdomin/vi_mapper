@@ -85,8 +85,8 @@ public:
     //const double m_dFactorDynamicDamping        = 1.05;
     static constexpr double dConvergenceDelta                 = 1e-5;
     static constexpr double dMinimumRatioInliersToOutliers    = 0.5;
-    static constexpr double dKernelMaximumErrorSquaredPixels  = 10.0; //25.0; //ds REGULAR: 10.0 CAR: 20.0
-    static constexpr double dMaximumErrorSquaredAveragePixels = 9.0; //22.5; //ds REGULAR: 9.0 CAR: 17.5
+    static constexpr double dKernelMaximumErrorSquaredPixels  = 15.0; //ds REGULAR: 10.0 CAR: 20.0
+    static constexpr double dMaximumErrorSquaredAveragePixels = 14.0; //ds REGULAR: 9.0 CAR: 17.5
     //static constexpr uint8_t m_uMinimumInliers                    = 10;
     static constexpr std::vector< CMeasurementLandmark* >::size_type uMinimumMeasurementsForOptimization = 5;
 

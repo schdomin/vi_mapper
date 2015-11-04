@@ -39,7 +39,10 @@ CKeyFrame::~CKeyFrame( )
     //ds free loop closures
     for( const CMatchICP* pClosure: vecLoopClosures )
     {
-        delete pClosure;
+        if( 0 != pClosure )
+        {
+            delete pClosure;
+        }
     }
 }
 

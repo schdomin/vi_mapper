@@ -75,8 +75,9 @@ src/vision/CMiniVisionToolbox.cpp
 src/core/CTriangulator.cpp
 src/core/CFundamentalMatcher.cpp
 src/optimization/Cg2oOptimizer.cpp
-src/gui/CViewerScene.cpp
-src/types/C67DTree.cpp)
+src/optimization/closure_buffer.cpp
+src/optimization/closure_checker.cpp
+src/gui/CViewerScene.cpp)
 
 set(SOURCEFILES_MOCKED
 src/configuration/CConfigurationCamera.cpp
@@ -134,8 +135,9 @@ add_executable(test_cloud_matching src/runnable/test_cloud_matching.cpp src/visi
 add_executable(stereo_fps src/runnable/stereo_fps.cpp src/core/CTrackerStereoMotionModel.cpp ${SOURCEFILES})
 add_executable(stereo_fps_kitti src/runnable/stereo_fps_kitti.cpp src/core/CTrackerStereoMotionModelKITTI.cpp ${SOURCEFILES})
 add_executable(republisher_node src/runnable/republisher_node.cpp)
-add_executable(republisher_node_kitti src/runnable/republisher_node_kitti.cpp)
+add_executable(republisher_kitti src/runnable/republisher_kitti.cpp)
 add_executable(create_trajectory_kitti src/streaming/create_trajectory_kitti.cpp src/configuration/CConfigurationCameraKITTI.cpp)
+add_executable(evaluate_trajectory src/runnable/evaluate_trajectory.cpp src/utility/CLogger.cpp)
 
 #ds link the binaries against catkin
 target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
@@ -150,7 +152,7 @@ target_link_libraries(test_cloud_matching ${OpenCV_LIBRARIES} ${LIBRARIES_VISUAL
 target_link_libraries(stereo_fps ${LIBRARIES_GENERAL} ${LIBRARIES_VISUALIZATION})
 target_link_libraries(stereo_fps_kitti ${LIBRARIES_GENERAL} ${LIBRARIES_VISUALIZATION})
 target_link_libraries(republisher_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
-target_link_libraries(republisher_node_kitti ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
+target_link_libraries(republisher_kitti ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 target_link_libraries(create_trajectory_kitti ${catkin_LIBRARIES} ${LIBRARIES_GENERAL})
 
 message("--------------------------------------------------------------------")

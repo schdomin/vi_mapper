@@ -47,8 +47,8 @@ CFundamentalMatcher::CFundamentalMatcher( const std::shared_ptr< CTriangulator >
 
 CFundamentalMatcher::~CFundamentalMatcher( )
 {
-    CLogger::CLogDetectionEpipolar::close( );
-    CLogger::CLogOptimizationOdometry::close( );
+    //CLogger::CLogDetectionEpipolar::close( );
+    //CLogger::CLogOptimizationOdometry::close( );
     std::printf( "<CFundamentalMatcher>(~CFundamentalMatcher) instance deallocated\n" );
 }
 
@@ -561,7 +561,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UID
             if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorSquaredTotalPrevious-dErrorSquaredTotalCurrent ) && 1 < uLS )
             {
                 //ds leaving the loop - log here
-                CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
+                //CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
 
                 //ds compute quality identifiers
                 const Eigen::Vector3d vecDeltaTranslationOptimized( matTransformationWORLDtoLEFT.translation( )-p_matTransformationWORLDtoLEFTLAST.translation( ) );
@@ -589,7 +589,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UID
                 //ds log resulting trajectory and delta to initial
                 const Eigen::Isometry3d matTransformationLEFTtoWORLD( matTransformationWORLDtoLEFT.inverse( ) );
                 const double dOptimizationRISK = ( matTransformationLEFTtoWORLD.translation( )-p_matTransformationEstimateWORLDtoLEFT.inverse( ).translation( )-p_vecTranslationIMU ).squaredNorm( );
-                CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dNormOptimizationTranslation, dNormRotationMatrix, dOptimizationRISK );
+                //CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dNormOptimizationTranslation, dNormRotationMatrix, dOptimizationRISK );
 
                 //ds if solution is acceptable
                 if( m_dMaximumErrorSquaredAveragePoseOptimization > dErrorSquaredAverage && m_uMinimumInliersPoseOptimization < uInliersCurrent && m_dMaximumRISK > dOptimizationRISK )
@@ -617,7 +617,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUV( const UID
                 dErrorSquaredTotalPrevious = dErrorSquaredTotalCurrent;
             }
 
-            CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
+            //CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
         }
 
         //ds system did not converge
@@ -1061,7 +1061,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
             if( m_dConvergenceDeltaPoseOptimization > std::fabs( dErrorSquaredTotalPrevious-dErrorSquaredTotalCurrent ) && 1 < uLS )
             {
                 //ds log here
-                CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
+                //CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
 
                 //ds compute quality identifiers
                 const Eigen::Vector3d vecDeltaTranslationOptimized( matTransformationWORLDtoLEFT.translation( )-p_matTransformationWORLDtoLEFTLAST.translation( ) );
@@ -1089,7 +1089,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
                 //ds log resulting trajectory and delta to initial
                 const Eigen::Isometry3d matTransformationLEFTtoWORLD( matTransformationWORLDtoLEFT.inverse( ) );
                 const double dOptimizationRISK = ( matTransformationLEFTtoWORLD.translation( )-p_matTransformationEstimateWORLDtoLEFT.inverse( ).translation( )-p_vecTranslationIMU ).squaredNorm( );
-                CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dNormOptimizationTranslation, dNormRotationMatrix, dOptimizationRISK );
+                //CLogger::CLogOptimizationOdometry::addEntryResult( matTransformationLEFTtoWORLD.translation( ), dNormOptimizationTranslation, dNormRotationMatrix, dOptimizationRISK );
 
                 //ds if solution is acceptable
                 if( m_dMaximumErrorSquaredAveragePoseOptimization > dErrorSquaredAverage && m_uMinimumInliersPoseOptimization < uInliersCurrent && m_dMaximumRISK > dOptimizationRISK )
@@ -1117,7 +1117,7 @@ const Eigen::Isometry3d CFundamentalMatcher::getPoseOptimizedSTEREOUVfromLAST( c
                 dErrorSquaredTotalPrevious = dErrorSquaredTotalCurrent;
             }
 
-            CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
+            //CLogger::CLogOptimizationOdometry::addEntryIteration( p_uFrame, uLS, vecMatchesForPoseOptimization.size( ), uInliersCurrent, dErrorSquaredAverage, dErrorSquaredTotalCurrent );
         }
 
         //ds system did not converge
@@ -1328,7 +1328,7 @@ const std::shared_ptr< std::vector< const CMeasurementLandmark* > > CFundamental
         }
 
         //ds log
-        CLogger::CLogDetectionEpipolar::addEntry(  p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
+        //CLogger::CLogDetectionEpipolar::addEntry(  p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecVisibleLandmarksPerDetectionPoint.size( ) );
 
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerDetectionPoint->empty( ) )
@@ -1834,7 +1834,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
         }
 
         //ds log
-        CLogger::CLogDetectionEpipolar::addEntry( p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecMeasurementsPerDetectionPoint.size( ) );
+        //CLogger::CLogDetectionEpipolar::addEntry( p_uFrame, cDetectionPoint.uID, cDetectionPoint.vecLandmarks->size( ), vecActiveLandmarksPerDetectionPoint->size( ), vecMeasurementsPerDetectionPoint.size( ) );
 
         //ds check if we can keep the measurement point
         if( !vecActiveLandmarksPerDetectionPoint->empty( ) )
@@ -1857,7 +1857,7 @@ const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > CFunda
 
     if( 50 < uNumberOfFailedLandmarkOptimizations+uNumberOfInvalidLandmarks )
     {
-        std::printf( "<CFundamentalMatcher>(getMeasurementsEpipolar) erased landmarks - failed optimization: %2lu, invalid optimization: %2lu\n", uNumberOfFailedLandmarkOptimizations, uNumberOfInvalidLandmarks );
+        std::printf( "[%06lu]<CFundamentalMatcher>(getMeasurementsEpipolar) erased landmarks - failed optimization: %2lu, invalid optimization: %2lu\n", p_uFrame, uNumberOfFailedLandmarkOptimizations, uNumberOfInvalidLandmarks );
     }
 
     //ds update active measurement points

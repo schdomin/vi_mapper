@@ -78,6 +78,10 @@ CTrackerStereoMotionModel::CTrackerStereoMotionModel( const EPlaybackMode& p_eMo
                                                                                                                                                   CIMUInterpolator::m_vecBiasLinearAccelerationXYZ[2] );
     std::printf( "[%06lu]<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> cap iterations: %u\n", m_uFrameCount, CLandmark::uCapIterations );
     std::printf( "[%06lu]<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> convergence delta: %f\n", m_uFrameCount, CLandmark::dConvergenceDelta );
+    std::printf( "[%06lu]<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> maximum error L2 inlier: %f\n", m_uFrameCount, CLandmark::dKernelMaximumErrorSquaredPixels );
+    std::printf( "[%06lu]<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) <Landmark> maximum error L2 average: %f\n", m_uFrameCount, CLandmark::dMaximumErrorSquaredAveragePixels );
+    std::printf( "[%06lu]<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) key frame delta for optimization: %lu\n", m_uFrameCount, m_uIDDeltaKeyFrameForOptimization );
+    std::printf( "[%06lu]<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) minimum matches for loop closure: %lu\n", m_uFrameCount, m_uMinimumNumberOfMatchesLoopClosure );
     std::printf( "[%06lu]<CTrackerStereoMotionModel>(CTrackerStereoMotionModel) instance allocated\n", m_uFrameCount );
     CLogger::closeBox( );
 }
@@ -88,12 +92,12 @@ CTrackerStereoMotionModel::~CTrackerStereoMotionModel( )
     for( const CLandmark* pLandmark: *m_vecLandmarks )
     {
         //ds write final state to file before deleting
-        CLogger::CLogLandmarkFinal::addEntry( pLandmark );
+        //CLogger::CLogLandmarkFinal::addEntry( pLandmark );
 
         //ds save optimized landmarks to separate file
         if( pLandmark->bIsOptimal && 1 < pLandmark->uNumberOfKeyFramePresences )
         {
-            CLogger::CLogLandmarkFinalOptimized::addEntry( pLandmark );
+            //CLogger::CLogLandmarkFinalOptimized::addEntry( pLandmark );
         }
 
         delete pLandmark;
@@ -105,12 +109,12 @@ CTrackerStereoMotionModel::~CTrackerStereoMotionModel( )
         delete pKeyFrame;
     }
 
-    //ds close loggers
+    /*ds close loggers
     CLogger::CLogLandmarkCreation::close( );
     CLogger::CLogLandmarkFinal::close( );
     CLogger::CLogLandmarkFinalOptimized::close( );
     CLogger::CLogTrajectory::close( );
-    CLogger::CLogIMUInput::close( );
+    CLogger::CLogIMUInput::close( );*/
 
     std::printf( "[%06lu]<CTrackerStereoMotionModel>(~CTrackerStereoMotionModel) instance deallocated\n", m_uFrameCount );
 }
@@ -206,66 +210,95 @@ void CTrackerStereoMotionModel::finalize( )
         std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) running final optimization\n", m_uFrameCount );
     }
 
-    //ds if we have at least one keyframe
-    if( !m_vecKeyFrames->empty( ) )
+    //ds if we have at least two keyframes
+    if( 1 < m_vecKeyFrames->size( ) )
     {
+        //ds landmark start id
+        const std::vector< CLandmark* >::size_type uIDBeginLandmark = m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST-1 )->vecMeasurements.front( )->uID;
+
         //ds newly closed keyframes
-        std::vector< CKeyFrame* > vecClosedKeyFrames;
+        std::vector< CKeyFrame* > vecClosedKeyFrames( 0 );
 
         //ds if minimum keyframes available
         if( 10 < m_vecKeyFrames->size( ) )
         {
             //ds try to find loop closures for the last 10 keyframes
-            for( std::vector< CKeyFrame* >::const_iterator itKeyFrameForClosure = m_vecKeyFrames->end( )-10; itKeyFrameForClosure != m_vecKeyFrames->end( ); ++itKeyFrameForClosure )
+            for( std::vector< CKeyFrame* >::const_iterator itKeyFrameForClosure = m_vecKeyFrames->end( )-10; itKeyFrameForClosure < m_vecKeyFrames->end( ); ++itKeyFrameForClosure )
             {
                 const CKeyFrame* pKeyFrameForClosure = *itKeyFrameForClosure;
+                assert( 0 != pKeyFrameForClosure );
+
+                std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) checking closures for keyframe: %06lu\n", m_uFrameCount, pKeyFrameForClosure->uID );
 
                 //ds detect loop closures (practically unlimited radius)
                 const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( pKeyFrameForClosure->uID,
                                                                                                                pKeyFrameForClosure->matTransformationLEFTtoWORLD,
                                                                                                                pKeyFrameForClosure->vecCloud,
-                                                                                                               1e9 ) );
+                                                                                                               1e12,
+                                                                                                               20 ) );
+
+                std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) found closures: %lu\n", m_uFrameCount, vecLoopClosures.size( ) );
 
                 //ds if we found closures
                 if( !vecLoopClosures.empty( ) )
                 {
+                    //ds first allocate
+                    CKeyFrame* pClosedKeyFrame = new CKeyFrame( pKeyFrameForClosure->uID,
+                                                                pKeyFrameForClosure->uFrameOfCreation,
+                                                                pKeyFrameForClosure->matTransformationLEFTtoWORLD,
+                                                                pKeyFrameForClosure->vecLinearAccelerationNormalized,
+                                                                pKeyFrameForClosure->vecMeasurements,
+                                                                pKeyFrameForClosure->vecCloud,
+                                                                vecLoopClosures,
+                                                                pKeyFrameForClosure->dInformationFactor );
+
+                    assert( 0 != pClosedKeyFrame );
+
                     //ds create new frame
-                    vecClosedKeyFrames.push_back( new CKeyFrame( pKeyFrameForClosure->uID,
-                                                                 pKeyFrameForClosure->uFrameOfCreation,
-                                                                 pKeyFrameForClosure->matTransformationLEFTtoWORLD,
-                                                                 pKeyFrameForClosure->vecLinearAccelerationNormalized,
-                                                                 pKeyFrameForClosure->vecMeasurements,
-                                                                 pKeyFrameForClosure->vecCloud,
-                                                                 vecLoopClosures,
-                                                                 pKeyFrameForClosure->dInformationFactor ) );
+                    vecClosedKeyFrames.push_back( pClosedKeyFrame );
+
+                    std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) closed keyframe: %06lu\n", m_uFrameCount, pKeyFrameForClosure->uID );
                 }
             }
 
-            //ds check if we could close some frames
+            //ds check if we could close some frames and there was an optimization in the last 10 frames
             if( !vecClosedKeyFrames.empty( ) )
             {
-                std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) closed keyframes: %lu\n", m_uFrameCount, vecClosedKeyFrames.size( ) );
-
                 //ds substitute keyframes in container
                 for( CKeyFrame* pKeyFrameSubstitute: vecClosedKeyFrames )
                 {
                     //ds free reference
-                    delete m_vecKeyFrames->at( pKeyFrameSubstitute->uID );
+                    if( 0 != m_vecKeyFrames->at( pKeyFrameSubstitute->uID ) )
+                    {
+                        delete m_vecKeyFrames->at( pKeyFrameSubstitute->uID );
 
-                    //ds substitute
-                    m_vecKeyFrames->at( pKeyFrameSubstitute->uID ) = pKeyFrameSubstitute;
+                        //ds substitute
+                        m_vecKeyFrames->at( pKeyFrameSubstitute->uID ) = pKeyFrameSubstitute;
+                    }
                 }
 
-                //ds update the already added closures
-                m_cGraphOptimizer.updateLoopClosuresFrom( vecClosedKeyFrames.front( )->uID, m_vecTranslationToG2o );
+                std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) substituted existing key frames\n", m_uFrameCount );
+
+                //ds check if we have to update closures in the graph
+                if( m_uIDProcessedKeyFrameLAST > vecClosedKeyFrames.front( )->uID )
+                {
+                    std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) updating already optimized keyframes: %06lu to %06lu\n", m_uFrameCount, vecClosedKeyFrames.front( )->uID, m_uIDProcessedKeyFrameLAST );
+
+                    //ds update the already added closures
+                    m_cGraphOptimizer.updateLoopClosuresFromKeyFrame( vecClosedKeyFrames.front( )->uID, m_uIDProcessedKeyFrameLAST, m_vecTranslationToG2o );
+                }
             }
         }
 
         //ds last optmization
-        m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecTranslationToG2o, !vecClosedKeyFrames.empty( ) );
+        m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, uIDBeginLandmark, m_vecTranslationToG2o, 1 );
 
         //ds save final graph
         m_cGraphOptimizer.saveFinalGraph( m_uFrameCount, m_vecTranslationToG2o );
+    }
+    else
+    {
+        std::printf( "[%06lu]<CTrackerStereoMotionModel>(finalize) skipped - not enough keyframes\n", m_uFrameCount );
     }
 
     //ds trigger shutdown
@@ -489,7 +522,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
             const UIDKeyFrame uIDKeyFrameCurrent = m_vecKeyFrames->size( );
 
             //ds detect loop closures
-            const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, vecCloud, m_dLoopClosingRadiusSquaredMeters ) );
+            const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, vecCloud, m_dLoopClosingRadiusSquaredMeters, m_uMinimumNumberOfMatchesLoopClosure ) );
 
             //ds if we found closures
             if( !vecLoopClosures.empty( ) )
@@ -526,16 +559,13 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                 if( m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDProcessedKeyFrameLAST                                                                              ||
                    ( m_uLoopClosingKeyFrameWaitingQueue < m_uLoopClosingKeyFramesInQueue && m_uIDDeltaKeyFrameForOptimization < uIDKeyFrameCurrent-m_uIDLoopClosureOptimizedLAST ) )
                 {
-                    //ds check if we have closures
-                    const bool bLoopClosed = ( 0 < m_uLoopClosingKeyFramesInQueue );
-
                     //ds compute first used landmarks in the keyframe chunk TODO: sometimes invalid ID's returned - FIXIT
                     const std::vector< CLandmark* >::size_type uIDBeginLandmark = std::min( m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST )->vecMeasurements.front( )->uID, m_vecLandmarks->back( )->uID );
 
                     //ds optimize the segment (in global frame)
                     //m_cOptimizer.optimizeTail( m_uIDProcessedKeyFrameLAST );
                     //m_cOptimizer.optimizeTailLoopClosuresOnly( m_uIDProcessedKeyFrameLAST );
-                    m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, uIDBeginLandmark, m_vecTranslationToG2o, bLoopClosed );
+                    m_cGraphOptimizer.optimizeContinuous( m_uFrameCount, m_uIDProcessedKeyFrameLAST, uIDBeginLandmark, m_vecTranslationToG2o, m_uLoopClosingKeyFramesInQueue );
 
                     //ds has to work
                     assert( m_vecKeyFrames->back( )->bIsOptimized );
@@ -548,7 +578,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                     //m_vecLinearAccelerationFilteredLAST += matTransformationLEFTtoLEFTOptimized.translation( )/( 0.5*p_dDeltaTimeSeconds*p_dDeltaTimeSeconds );
 
                     //ds if loop closure triggered
-                    if( bLoopClosed )
+                    if( 0 < m_uLoopClosingKeyFramesInQueue )
                     {
                         m_uIDLoopClosureOptimizedLAST = uIDKeyFrameCurrent;
                     }
@@ -641,7 +671,7 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     if( 0 < m_uCountInstability )
     {
         //ds draw red frame around display
-        cv::rectangle( matDisplayComplete, cv::Point2i( 0, 0 ), cv::Point2i( 2*m_pCameraSTEREO->m_uPixelWidth, m_pCameraSTEREO->m_uPixelHeight ), CColorCodeBGR( 0, 0, 255 ), m_uCountInstability );
+        cv::rectangle( matDisplayComplete, cv::Point2i( 0, 17 ), cv::Point2i( 2*m_pCameraSTEREO->m_uPixelWidth, m_pCameraSTEREO->m_uPixelHeight ), CColorCodeBGR( 0, 0, 255 ), m_uCountInstability );
     }
 
     //ds display
@@ -668,12 +698,14 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
                 {
                     //ds switch to stepwise mode
                     m_uWaitKeyTimeoutMS = 0;
+                    m_eMode = ePlaybackStepwise;
                     std::printf( "[%06lu]<CTrackerStereoMotionModel>(_trackLandmarks) switched to stepwise mode\n", m_uFrameCount );
                 }
                 else
                 {
                     //ds switch to benchmark mode
                     m_uWaitKeyTimeoutMS = 1;
+                    m_eMode = ePlaybackBenchmark;
                     std::printf( "[%06lu]<CTrackerStereoMotionModel>(_trackLandmarks) switched back to benchmark mode\n", m_uFrameCount );
                 }
                 break;
@@ -697,8 +729,8 @@ void CTrackerStereoMotionModel::_trackLandmarks( const cv::Mat& p_matImageLEFT,
     m_dMotionScalingLAST                 = dMotionScaling;
 
     //ds log final status (after potential optimization)
-    CLogger::CLogIMUInput::addEntry( m_uFrameCount, vecLinearAccelerationWORLD, vecLinearAccelerationWORLDFiltered, p_vecAngularVelocity, vecAngularVelocityFiltered );
-    CLogger::CLogTrajectory::addEntry( m_uFrameCount, m_vecPositionCurrent, Eigen::Quaterniond( matTransformationLEFTtoWORLD.linear( ) ) );
+    //CLogger::CLogIMUInput::addEntry( m_uFrameCount, vecLinearAccelerationWORLD, vecLinearAccelerationWORLDFiltered, p_vecAngularVelocity, vecAngularVelocityFiltered );
+    //CLogger::CLogTrajectory::addEntry( m_uFrameCount, m_vecPositionCurrent, Eigen::Quaterniond( matTransformationLEFTtoWORLD.linear( ) ) );
 }
 
 void CTrackerStereoMotionModel::_addNewLandmarks( const cv::Mat& p_matImageLEFT,
@@ -766,7 +798,7 @@ void CTrackerStereoMotionModel::_addNewLandmarks( const cv::Mat& p_matImageLEFT,
                                                      m_uFrameCount ) );
 
                 //ds log creation
-                CLogger::CLogLandmarkCreation::addEntry( m_uFrameCount, pLandmark, dDepthMeters, ptLandmarkLEFT, ptLandmarkRIGHT );
+                //CLogger::CLogLandmarkCreation::addEntry( m_uFrameCount, pLandmark, dDepthMeters, ptLandmarkLEFT, ptLandmarkRIGHT );
 
                 //ds add to newly detected
                 vecNewLandmarks->push_back( pLandmark );
@@ -823,7 +855,8 @@ void CTrackerStereoMotionModel::_addNewLandmarks( const cv::Mat& p_matImageLEFT,
 const std::vector< const CKeyFrame::CMatchICP* > CTrackerStereoMotionModel::_getLoopClosuresForKeyFrame( const UIDKeyFrame& p_uID,
                                                                                                          const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                                                                                                          const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery,
-                                                                                                         const double& p_dSearchRadiusMeters )
+                                                                                                         const double& p_dSearchRadiusMeters,
+                                                                                                         const std::vector< CMatchCloud >::size_type& p_uMinimumNumberOfMatchesLoopClosure )
 {
     //ds count attempts
     //uint32_t uOptimizationAttempts = 0;
@@ -860,7 +893,7 @@ const std::vector< const CKeyFrame::CMatchICP* > CTrackerStereoMotionModel::_get
         std::shared_ptr< const std::vector< CMatchCloud > > vecMatches( pKeyFrameReference->getMatches( p_vecCloudQuery ) );
 
         //ds if we have a suffient amount of matches
-        if( m_uMinimumNumberOfMatchesLoopClosure < vecMatches->size( ) )
+        if( p_uMinimumNumberOfMatchesLoopClosure < vecMatches->size( ) )
         {
             //std::printf( "<CTrackerStereoMotionModel>(_getLoopClosureKeyFrameFCFS) found closure: [%06lu] > [%06lu] matches: %lu\n", p_uID, pKeyFrameReference->uID, vecMatches->size( ) );
 
@@ -954,7 +987,7 @@ const std::vector< const CKeyFrame::CMatchICP* > CTrackerStereoMotionModel::_get
                     const double dErrorAverage = dErrorSquaredTotal/vecMatches->size( );
 
                     //ds if the solution is acceptable
-                    if( dMaximumErrorAverageForClosure > dErrorAverage && m_uMinimumNumberOfMatchesLoopClosure < uInliers )
+                    if( dMaximumErrorAverageForClosure > dErrorAverage && p_uMinimumNumberOfMatchesLoopClosure < uInliers )
                     {
                         //std::printf( "%4.1f %4.1f %4.1f | ", matTransformationToClosure.translation( ).x( ), matTransformationToClosure.translation( ).y( ), matTransformationToClosure.translation( ).z( ) );
                         //std::printf( "system converged in %2u iterations, average error: %5.3f (inliers: %2u) - MATCH\n", uLS, dErrorAverage, uInliers );
@@ -1069,7 +1102,7 @@ void CTrackerStereoMotionModel::_drawInfoBox( cv::Mat& p_matDisplay, const doubl
     {
         case ePlaybackStepwise:
         {
-            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] STEPWISE | X: %5.1f Y: %5.1f Z: %5.1f DELTA: %4.2f MOTION: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
+            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] STEPWISE | X: %5.1f Y: %5.1f Z: %5.1f DELTA L2: %4.2f MOTION: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
                            m_dTimestampLASTSeconds, m_uFrameCount,
                            m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), m_dTranslationDeltaSquaredNormCurrent, p_dMotionScaling,
                            m_uNumberofVisibleLandmarksLAST, m_cMatcher.getNumberOfDetectionsPoseOptimizationDirect( ), m_cMatcher.getNumberOfDetectionsPoseOptimizationDetection( ), m_cMatcher.getNumberOfDetectionsEpipolar( ), m_cMatcher.getNumberOfFailedLandmarkOptimizations( ), m_cMatcher.getNumberOfInvalidLandmarksTotal( ), m_vecLandmarks->size( ),
@@ -1079,7 +1112,7 @@ void CTrackerStereoMotionModel::_drawInfoBox( cv::Mat& p_matDisplay, const doubl
         }
         case ePlaybackBenchmark:
         {
-            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] BENCHMARK FPS: %4.1f | X: %5.1f Y: %5.1f Z: %5.1f DELTA: %4.2f SCALING: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
+            std::snprintf( chBuffer, 1024, "[%13.2f|%05lu] BENCHMARK FPS: %4.1f | X: %5.1f Y: %5.1f Z: %5.1f DELTA L2: %4.2f SCALING: %4.2f | LANDMARKS V: %3lu (%3lu,%3lu,%3lu) F: %4lu I: %4lu TOTAL: %4lu | DETECTIONS: %2lu(%3lu) | KFs: %3lu | OPTs: %02u",
                            m_dTimestampLASTSeconds, m_uFrameCount, m_dPreviousFrameRate,
                            m_vecPositionCurrent.x( ), m_vecPositionCurrent.y( ), m_vecPositionCurrent.z( ), m_dTranslationDeltaSquaredNormCurrent, p_dMotionScaling,
                            m_uNumberofVisibleLandmarksLAST, m_cMatcher.getNumberOfDetectionsPoseOptimizationDirect( ), m_cMatcher.getNumberOfDetectionsPoseOptimizationDetection( ), m_cMatcher.getNumberOfDetectionsEpipolar( ), m_cMatcher.getNumberOfFailedLandmarkOptimizations( ), m_cMatcher.getNumberOfInvalidLandmarksTotal( ), m_vecLandmarks->size( ),

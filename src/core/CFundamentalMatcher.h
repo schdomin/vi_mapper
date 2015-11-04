@@ -120,13 +120,13 @@ private:
 
     //ds posit solving
     const uint8_t m_uSearchBlockSizePoseOptimization                 = 15; //15
-    const uint8_t m_uMinimumPointsForPoseOptimization                = 25; //30
+    const uint8_t m_uMinimumPointsForPoseOptimization                = 20; //25; //30
     const uint8_t m_uMinimumInliersPoseOptimization                  = 10; //10
     const uint8_t m_uCapIterationsPoseOptimization                   = 100;
     const double m_dConvergenceDeltaPoseOptimization                 = 1e-5;
     const double m_dMaximumErrorInlierSquaredPixelsPoseOptimization  = 10.0;
     const double m_dMaximumErrorSquaredAveragePoseOptimization       = 12.5; //ds as optimized points are weighted more
-    const double m_dMaximumRISK                                      = 2.0;
+    const double m_dMaximumRISK                                      = 10.0; //2.0;
 
     //ds if the optimized pose has an combined squared translational change less than this value it gets ignored
     const double m_dTranslationResolutionOptimization = 0.001;

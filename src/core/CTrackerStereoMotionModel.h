@@ -89,7 +89,7 @@ private:
 
     //ds loop closing
     const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20; //20
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25; //25
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 30; //25
     const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
     UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
@@ -103,7 +103,7 @@ private:
     bool m_bAvailable = true;
 
     //ds control
-    const EPlaybackMode m_eMode;
+    EPlaybackMode m_eMode = ePlaybackStepwise;
     bool m_bIsShutdownRequested = false;
 
     //ds info display
@@ -156,7 +156,8 @@ private:
     const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresForKeyFrame( const UIDKeyFrame& p_uID,
                                                                                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                                                                                   const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery,
-                                                                                  const double& p_dSearchRadiusMeters );
+                                                                                  const double& p_dSearchRadiusMeters,
+                                                                                  const std::vector< CMatchCloud >::size_type& p_uMinimumNumberOfMatchesLoopClosure );
 
     //ds reference frame update
     void _updateWORLDFrame( const Eigen::Vector3d& p_vecTranslationWORLD );

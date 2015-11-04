@@ -36,14 +36,14 @@ protected:
 			       const std::string& matchingType="3dPose");
 
   EdgeDoubleMap _bestResult;
-  double        _bestChi2;
-  int           _bestInliers;
+  double        _bestChi2    = 0.0;
+  int           _bestInliers = 0;
 
   EdgeDoubleMap _tempResult;
   //EdgeDoubleMap _tempChi2;
   OptimizableGraph::VertexIDMap _localVertices;
   OptimizableGraph::EdgeSet   _closuresToCheck;
-  double _inlierThreshold;
+  double _inlierThreshold = 0.0;
 };
 
 #endif

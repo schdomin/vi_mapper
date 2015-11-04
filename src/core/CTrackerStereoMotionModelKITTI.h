@@ -36,7 +36,7 @@ private:
     UIDFrame m_uFrameCount = 0;
     Eigen::Isometry3d m_matTransformationWORLDtoLEFTLAST;
     Eigen::Isometry3d m_matTransformationLEFTLASTtoLEFTNOW;
-    double m_dTimestampLASTSeconds                              = 0.0;
+    double m_dTimestampLASTSeconds                      = -0.1;
     CPoint3DWORLD m_vecPositionKeyFrameLAST;
     Eigen::Vector3d m_vecCameraOrientationAccumulated   = {0.0, 0.0, 0.0};
     const double m_dTranslationDeltaForKeyFrameMetersL2 = 1.0;
@@ -59,8 +59,8 @@ private:
     const uint8_t m_uMaximumFailedSubsequentTrackingsPerLandmark = 5;
     const uint8_t m_uVisibleLandmarksMinimum;
     const double m_dMinimumDepthMeters = 0.05;
-    const double m_dMaximumDepthMeters = 100.0;
-    const UIDFrame m_uMaximumNumberOfFramesWithoutDetection = 20;
+    const double m_dMaximumDepthMeters = 1000.0;
+    const UIDFrame m_uMaximumNumberOfFramesWithoutDetection = 5; //20;
     UIDFrame m_uNumberOfFramesWithoutDetection              = 0;
 
     std::shared_ptr< CTriangulator > m_pTriangulator;
@@ -75,19 +75,21 @@ private:
 
     //ds g2o optimization
     std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
-    const UIDLandmark m_uMinimumLandmarksForKeyFrame    = 50;
+    const UIDLandmark m_uMinimumLandmarksForKeyFrame    = 25; //50
     UIDKeyFrame m_uIDProcessedKeyFrameLAST              = 0;
-    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 20; //10
+    const UIDKeyFrame m_uIDDeltaKeyFrameForOptimization = 40; //20
     Cg2oOptimizer m_cGraphOptimizer;
     Eigen::Vector3d m_vecTranslationToG2o;
 
     //ds loop closing
     const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20; //20
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 20; //25
-    const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
-    UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25; //25
+    const std::vector< CKeyFrame* >::size_type m_uLoopClosingKeyFrameWaitingQueue    = 1;
+    std::vector< CKeyFrame* >::size_type m_uLoopClosingKeyFramesInQueue = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
     const double m_dLoopClosingRadiusSquaredMeters          = 1000.0;
+    //uint32_t m_uOptimizationsWithoutLoopClosure             = 0;
+    //double m_dOptimizationsWithoutLoopClosureDistanceMeters = 0.0;
 
     //ds robocentric world frame refreshing
     std::vector< Eigen::Vector3d > m_vecTranslationDeltas;
@@ -148,7 +150,8 @@ private:
     const std::vector< const CKeyFrame::CMatchICP* > _getLoopClosuresForKeyFrame( const UIDKeyFrame& p_uID,
                                                                                   const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD,
                                                                                   const std::shared_ptr< const std::vector< CDescriptorVectorPoint3DWORLD > > p_vecCloudQuery,
-                                                                                  const double& p_dSearchRadiusMeters );
+                                                                                  const double& p_dSearchRadiusMeters,
+                                                                                  const std::vector< CMatchCloud >::size_type& p_uMinimumNumberOfMatchesLoopClosure );
 
     //ds reference frame update
     void _updateWORLDFrame( const Eigen::Vector3d& p_vecTranslationWORLD );

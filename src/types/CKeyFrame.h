@@ -59,8 +59,8 @@ public:
 private:
 
     //ds cloud matching
-    static constexpr double m_dCloudMatchingWeightEuclidian        = 10.0;  //10.0
-    static constexpr double m_dCloudMatchingMatchingDistanceCutoff = 75.0; //75.0
+    static constexpr double m_dCloudMatchingWeightEuclidian        = 10.0;
+    static constexpr double m_dCloudMatchingMatchingDistanceCutoff = 75.0;
 
 public:
 

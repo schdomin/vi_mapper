@@ -7,8 +7,8 @@
 #include "types/CLandmark.h"
 #include "types/CKeyFrame.h"
 
-//#include "closure_buffer.h"
-//#include "closure_checker.h"
+#include "closure_buffer.h"
+#include "closure_checker.h"
 
 class Cg2oOptimizer
 {
@@ -41,7 +41,7 @@ private:
     g2o::SparseOptimizer m_cOptimizerSparse;
     const UIDKeyFrame m_uIDShift       = 1000000; //ds required to navigate between landmarks and poses
     g2o::VertexSE3* m_pVertexPoseLAST  = 0;
-    const uint32_t m_uIterations       = 1000;
+    const uint32_t m_uIterations       = 100; //1000;
     uint32_t m_uOptimizations          = 0;
 
     const double m_dMaximumReliableDepthForPointXYZ    = 2.5;
@@ -68,6 +68,13 @@ private:
     const Eigen::Matrix< double, 6, 6 > m_matInformationLoopClosure;
     const Eigen::Matrix< double, 3, 3 > m_matInformationLandmarkClosure;
 
+//ds loop closure evaluation
+private:
+
+    ClosureBuffer m_cBufferClosures;
+    LoopClosureChecker m_cClosureChecker;
+    const double m_dMaximumThresholdLoopClosing = 500.0;
+
 public:
 
     void optimizeTailLoopClosuresOnly( const UIDKeyFrame& p_uIDBeginKeyFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
@@ -76,7 +83,7 @@ public:
                              const UIDKeyFrame& p_uIDBeginKeyFrame,
                              const std::vector< CLandmark* >::size_type p_uIDBeginLandmark,
                              const Eigen::Vector3d& p_vecTranslationToG2o,
-                             const bool& p_bLoopClosed );
+                             const std::vector< CKeyFrame* >::size_type& p_uLoopClosureKeyFrames );
 
     const uint32_t getNumberOfOptimizations( ) const { return m_uOptimizations; }
 
@@ -87,7 +94,9 @@ public:
     void saveFinalGraph( const UIDFrame& p_uFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
 
     //ds manual loop closing
-    void updateLoopClosuresFrom( const std::vector< CKeyFrame* >::size_type& p_uIDBeginKeyFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
+    void updateLoopClosuresFromKeyFrame( const std::vector< CKeyFrame* >::size_type& p_uIDBeginKeyFrame,
+                                 const std::vector< CKeyFrame* >::size_type& p_uIDEndKeyFrame,
+                                 const Eigen::Vector3d& p_vecTranslationToG2o );
 
     /*ds first pose
     void updateSTART( const Eigen::Vector3d& p_vecTranslationWORLD )
@@ -152,6 +161,7 @@ private:
                                                             const double& p_dFxPixels,
                                                             const double& p_dBaselineMeters,
                                                             const double& p_dInformationFactor ) const;
+    g2o::EdgeSE3* _getEdgeLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const CKeyFrame* pKeyFrameCurrent, const CKeyFrame::CMatchICP* p_pClosure );
 
     void _loadLandmarksToGraph( const std::vector< CLandmark* >::size_type& p_uIDLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
     g2o::VertexSE3* _setAndgetPose( g2o::VertexSE3* p_pVertexPoseFrom, CKeyFrame* pKeyFrameCurrent, const Eigen::Vector3d& p_vecTranslationToG2o );
@@ -163,7 +173,17 @@ private:
                            UIDLandmark& p_uMeasurementsStoredUVDisparity );
 
     void _applyOptimization( const UIDFrame& p_uFrame, const std::vector< CLandmark* >::size_type& p_uIDLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
-    void _applyOptimization( const Eigen::Vector3d& p_vecTranslationToG2o );
+    void _applyOptimization( const UIDFrame& p_uFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
+
+    const Eigen::Matrix< double, 6, 6 > _getInformationWeakZ( const Eigen::Matrix< double, 6, 6 >& p_matInformationIN ) const
+    {
+        Eigen::Matrix< double, 6, 6 > matInformationOUT( p_matInformationIN );
+
+        //ds lower z by a factor
+        matInformationOUT(5,5) /= 1e5;
+
+        return matInformationOUT;
+    }
 
 
 };

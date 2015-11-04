@@ -15,7 +15,7 @@ void setParametersNaive( const int& p_iArgc,
                          std::string& p_strMode,
                          std::string& p_strInfileCameraIMUMessages );
 
-int main( int argc, char **argv )
+int32_t main( int32_t argc, char **argv )
 {
     //assert( false );
 
@@ -84,14 +84,14 @@ int main( int argc, char **argv )
         return 1;
     }
 
-    //ds allocated loggers
+    /*ds allocated loggers
     CLogger::CLogDetectionEpipolar::open( );
     CLogger::CLogLandmarkCreation::open( );
     CLogger::CLogLandmarkFinal::open( );
     CLogger::CLogLandmarkFinalOptimized::open( );
     CLogger::CLogOptimizationOdometry::open( );
     CLogger::CLogTrajectory::open( );
-    CLogger::CLogIMUInput::open( );
+    CLogger::CLogIMUInput::open( );*/
 
     //ds log configuration
     std::printf( "(main) strMode              := '%s'\n", strMode.c_str( ) );
