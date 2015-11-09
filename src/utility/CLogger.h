@@ -289,7 +289,7 @@ public:
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "ID_FRAME | LINEAR ACCELERATION:     X      Y      Z | FILTERED:     X      Y      Z | ANGULAR VELOCITY:     X      Y      Z | FILTERED:     X      Y      Z\n" );
         }
-        static void addEntry( const UIDFrame& p_uFrame, const CLinearAccelerationWORLD& p_vecLinearAcceleration, const CLinearAccelerationWORLD& p_vecLinearAccelerationFiltered, const CAngularVelocityLEFT& p_vecAngularVelocity, const CAngularVelocityLEFT& p_vecAngularVelocityFiltered  )
+        static void addEntry( const UIDFrame& p_uFrame, const CLinearAccelerationWORLD& p_vecLinearAcceleration, const CLinearAccelerationWORLD& p_vecLinearAccelerationFiltered, const CAngularVelocityLEFT& p_vecAngularVelocity, const CAngularVelocityLEFT& p_vecAngularVelocityFiltered )
         {
             assert( 0 != m_pFile );
             std::fprintf( m_pFile, "    %04lu |                     %6.2f %6.2f %6.2f |          %6.2f %6.2f %6.2f |                  %6.2f %6.2f %6.2f |          %6.2f %6.2f %6.2f\n", p_uFrame,
@@ -299,6 +299,46 @@ public:
         static void close( ){ if( 0 != m_pFile ){ std::fclose( m_pFile ); } }
 
     } CLogIMUInput;
+
+    static struct CLogTrajectoryKITTI
+    {
+        static std::ofstream ofOutfile;
+
+        static void open( )
+        {
+            ofOutfile.open( "logs/trajectory_final_KITTI.txt", std::ofstream::out );
+            assert( ofOutfile.good( ) );
+        }
+        static void addEntry( const UIDFrame& p_uFrame, const Eigen::Isometry3d& p_matTransformationLEFTtoWORLD, const Eigen::Vector3d& p_vecTranslationToG2o )
+        {
+            //ds clear translation to original frame
+            Eigen::Isometry3d matTransformationLEFTtoWORLDShifted( p_matTransformationLEFTtoWORLD );
+            matTransformationLEFTtoWORLDShifted.translation( ) += p_vecTranslationToG2o;
+
+            //ds get to matrix representation
+            const Eigen::Matrix4d matTransformationLEFTtoWORLD( matTransformationLEFTtoWORLDShifted.matrix( ) );
+
+            //ds KITTI 3x4 format
+            assert( ofOutfile.good( ) );
+
+            //ds frame number
+            ofOutfile << p_uFrame;
+
+            //ds transformation matrix
+            for( uint8_t u = 0; u < 3; ++u )
+            {
+                for( uint8_t v = 0; v < 4; ++v )
+                {
+                    ofOutfile << " " << matTransformationLEFTtoWORLD(u,v);
+                }
+            }
+
+            //ds done
+            ofOutfile << "\n";
+        }
+        static void close( ){ if( ofOutfile.good( ) ){ ofOutfile.close( ); } }
+
+    } CLogTrajectoryKITTI;
 
 };
 

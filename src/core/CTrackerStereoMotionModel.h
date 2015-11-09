@@ -132,6 +132,7 @@ public:
     void finalize( );
     void sanitizeFiletree( ){ m_cGraphOptimizer.clearFiles( ); }
     const double getDistanceTraveled( ) const { return m_dDistanceTraveledMeters; }
+    const double getTotalDurationOptimizationSeconds( ) const { return m_cGraphOptimizer.getTotalOptimizationDurationSeconds( ); }
 
 //ds helpers
 private:

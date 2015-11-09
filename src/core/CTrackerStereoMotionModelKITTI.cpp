@@ -78,6 +78,9 @@ CTrackerStereoMotionModelKITTI::CTrackerStereoMotionModelKITTI( const EPlaybackM
     std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(CTrackerStereoMotionModelKITTI) minimum matches for loop closure: %lu\n", m_uFrameCount, m_uMinimumNumberOfMatchesLoopClosure );
     std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(CTrackerStereoMotionModelKITTI) instance allocated\n", m_uFrameCount );
     CLogger::closeBox( );
+
+    //ds sanity check
+    assert( m_uMinimumLandmarksForKeyFrame >= m_uMinimumNumberOfMatchesLoopClosure );
 }
 
 CTrackerStereoMotionModelKITTI::~CTrackerStereoMotionModelKITTI( )
@@ -101,7 +104,7 @@ CTrackerStereoMotionModelKITTI::~CTrackerStereoMotionModelKITTI( )
     for( const CKeyFrame* pKeyFrame: *m_vecKeyFrames )
     {
         //ds log trajectory for benchmarking
-        CLogger::CLogTrajectory::addEntry( pKeyFrame->uFrameOfCreation, pKeyFrame->matTransformationLEFTtoWORLD.translation( ), Eigen::Quaterniond( pKeyFrame->matTransformationLEFTtoWORLD.linear( ) ) );
+        CLogger::CLogTrajectoryKITTI::addEntry( pKeyFrame->uFrameOfCreation, pKeyFrame->matTransformationLEFTtoWORLD, m_vecTranslationToG2o );
 
         delete pKeyFrame;
     }
@@ -109,8 +112,9 @@ CTrackerStereoMotionModelKITTI::~CTrackerStereoMotionModelKITTI( )
     /*ds close loggers
     CLogger::CLogLandmarkCreation::close( );
     CLogger::CLogLandmarkFinal::close( );
-    CLogger::CLogLandmarkFinalOptimized::close( );*/
-    CLogger::CLogTrajectory::close( );
+    CLogger::CLogLandmarkFinalOptimized::close( );
+    CLogger::CLogTrajectory::close( );*/
+    CLogger::CLogTrajectoryKITTI::close( );
 
     std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(~CTrackerStereoMotionModelKITTI) instance deallocated\n", m_uFrameCount );
 }
@@ -123,8 +127,8 @@ void CTrackerStereoMotionModelKITTI::receivevDataVI( const std::shared_ptr< txt_
     cv::Mat matPreprocessedRIGHT( p_pImageRIGHT->image( ) );
 
     //ds preprocessing
-    cv::equalizeHist( p_pImageLEFT->image( ), matPreprocessedLEFT );
-    cv::equalizeHist( p_pImageRIGHT->image( ), matPreprocessedRIGHT );
+    //cv::equalizeHist( p_pImageLEFT->image( ), matPreprocessedLEFT );
+    //cv::equalizeHist( p_pImageRIGHT->image( ), matPreprocessedRIGHT );
 
     //ds current timestamp
     const double dTimestampSeconds      = p_pImageLEFT->timestamp( );
@@ -177,7 +181,7 @@ void CTrackerStereoMotionModelKITTI::finalize( )
     if( 1 < m_vecKeyFrames->size( ) )
     {
         //ds landmark start id
-        const std::vector< CLandmark* >::size_type uIDBeginLandmark = m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST-1 )->vecMeasurements.front( )->uID;
+        const std::vector< CLandmark* >::size_type uIDBeginLandmark = m_vecKeyFrames->at( std::max( static_cast< UIDKeyFrame >( 0 ), m_uIDProcessedKeyFrameLAST-1 ) )->vecMeasurements.front( )->uID;
 
         //ds newly closed keyframes
         std::vector< CKeyFrame* > vecClosedKeyFrames( 0 );
@@ -188,39 +192,44 @@ void CTrackerStereoMotionModelKITTI::finalize( )
             //ds try to find loop closures for the last 10 keyframes
             for( std::vector< CKeyFrame* >::const_iterator itKeyFrameForClosure = m_vecKeyFrames->end( )-20; itKeyFrameForClosure < m_vecKeyFrames->end( ); ++itKeyFrameForClosure )
             {
+                //ds buffer key frame
                 const CKeyFrame* pKeyFrameForClosure = *itKeyFrameForClosure;
                 assert( 0 != pKeyFrameForClosure );
 
-                std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) checking closures for keyframe: %06lu\n", m_uFrameCount, pKeyFrameForClosure->uID );
-
-                //ds detect loop closures (practically unlimited radius)
-                const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( pKeyFrameForClosure->uID,
-                                                                                                               pKeyFrameForClosure->matTransformationLEFTtoWORLD,
-                                                                                                               pKeyFrameForClosure->vecCloud,
-                                                                                                               1e12,
-                                                                                                               10 ) );
-
-                std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) found closures: %lu\n", m_uFrameCount, vecLoopClosures.size( ) );
-
-                //ds if we found closures
-                if( !vecLoopClosures.empty( ) )
+                //ds only check if we dont have closures for this key frame already
+                if( pKeyFrameForClosure->vecLoopClosures.empty( ) )
                 {
-                    //ds first allocate
-                    CKeyFrame* pClosedKeyFrame = new CKeyFrame( pKeyFrameForClosure->uID,
-                                                                pKeyFrameForClosure->uFrameOfCreation,
-                                                                pKeyFrameForClosure->matTransformationLEFTtoWORLD,
-                                                                pKeyFrameForClosure->vecLinearAccelerationNormalized,
-                                                                pKeyFrameForClosure->vecMeasurements,
-                                                                pKeyFrameForClosure->vecCloud,
-                                                                vecLoopClosures,
-                                                                pKeyFrameForClosure->dInformationFactor );
+                    std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) checking closures for keyframe: %06lu\n", m_uFrameCount, pKeyFrameForClosure->uID );
 
-                    assert( 0 != pClosedKeyFrame );
+                    //ds detect loop closures (practically unlimited radius)
+                    const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( pKeyFrameForClosure->uID,
+                                                                                                                   pKeyFrameForClosure->matTransformationLEFTtoWORLD,
+                                                                                                                   pKeyFrameForClosure->vecCloud,
+                                                                                                                   1e12,
+                                                                                                                   10 ) );
 
-                    //ds create new frame
-                    vecClosedKeyFrames.push_back( pClosedKeyFrame );
+                    std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) found closures: %lu\n", m_uFrameCount, vecLoopClosures.size( ) );
 
-                    std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) closed keyframe: %06lu\n", m_uFrameCount, pKeyFrameForClosure->uID );
+                    //ds if we found closures
+                    if( !vecLoopClosures.empty( ) )
+                    {
+                        //ds first allocate
+                        CKeyFrame* pClosedKeyFrame = new CKeyFrame( pKeyFrameForClosure->uID,
+                                                                    pKeyFrameForClosure->uFrameOfCreation,
+                                                                    pKeyFrameForClosure->matTransformationLEFTtoWORLD,
+                                                                    pKeyFrameForClosure->vecLinearAccelerationNormalized,
+                                                                    pKeyFrameForClosure->vecMeasurements,
+                                                                    pKeyFrameForClosure->vecCloud,
+                                                                    vecLoopClosures,
+                                                                    pKeyFrameForClosure->dInformationFactor );
+
+                        assert( 0 != pClosedKeyFrame );
+
+                        //ds create new frame
+                        vecClosedKeyFrames.push_back( pClosedKeyFrame );
+
+                        std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) closed keyframe: %06lu\n", m_uFrameCount, pKeyFrameForClosure->uID );
+                    }
                 }
             }
 
@@ -243,13 +252,14 @@ void CTrackerStereoMotionModelKITTI::finalize( )
                 //ds check if we have to update closures in the graph
                 if( m_uIDProcessedKeyFrameLAST > vecClosedKeyFrames.front( )->uID )
                 {
-                    std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) updating already optimized keyframes", m_uFrameCount );
+                    std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) updating already optimized keyframes \n", m_uFrameCount );
 
                     //ds update the already added closures
                     m_cGraphOptimizer.updateLoopClosuresFromKeyFrame( vecClosedKeyFrames.front( )->uID, m_uIDProcessedKeyFrameLAST, m_vecTranslationToG2o );
-
-                    std::printf( "complete\n" );
                 }
+
+                //ds lock initial trajectory
+                //m_cGraphOptimizer.lockTrajectory( 0, 100 );
             }
         }
 

@@ -214,7 +214,7 @@ void CTrackerStereoMotionModel::finalize( )
     if( 1 < m_vecKeyFrames->size( ) )
     {
         //ds landmark start id
-        const std::vector< CLandmark* >::size_type uIDBeginLandmark = m_vecKeyFrames->at( m_uIDProcessedKeyFrameLAST-1 )->vecMeasurements.front( )->uID;
+        const std::vector< CLandmark* >::size_type uIDBeginLandmark = m_vecKeyFrames->at( std::max( static_cast< UIDKeyFrame >( 0 ), m_uIDProcessedKeyFrameLAST-1 ) )->vecMeasurements.front( )->uID;
 
         //ds newly closed keyframes
         std::vector< CKeyFrame* > vecClosedKeyFrames( 0 );

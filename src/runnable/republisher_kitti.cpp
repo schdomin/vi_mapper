@@ -87,9 +87,9 @@ int32_t main( int32_t argc, char **argv )
     }*/
 
     //ds default files
-    std::string strInfileTimestamps = "/media/n551jw/data/n551jw/Downloads/dataset/sequences/15/times.txt";
-    std::string strImageFolderLEFT  = "/media/n551jw/data/n551jw/Downloads/dataset/sequences/15/image_0/";
-    std::string strImageFolderRIGHT = "/media/n551jw/data/n551jw/Downloads/dataset/sequences/15/image_1/";
+    std::string strInfileTimestamps = "/media/n551jw/data/n551jw/Downloads/dataset/sequences/21/times.txt";
+    std::string strImageFolderLEFT  = "/media/n551jw/data/n551jw/Downloads/dataset/sequences/21/image_0/";
+    std::string strImageFolderRIGHT = "/media/n551jw/data/n551jw/Downloads/dataset/sequences/21/image_1/";
     std::string strOutfile          = argv[1];
 
     //ds open outfile

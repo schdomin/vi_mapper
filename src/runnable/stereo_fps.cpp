@@ -245,9 +245,11 @@ int32_t main( int32_t argc, char **argv )
     }
 
     //ds get end time
-    const double dDuration       = CLogger::getTimeSeconds( )-dTimeStartSeconds;
+    const double dDurationTotal  = CLogger::getTimeSeconds( )-dTimeStartSeconds;
+    const double dDurationG2o    = cTracker.getTotalDurationOptimizationSeconds( );
+    const double dDurationPure   = dDurationTotal-dDurationG2o;
     const UIDFrame uFrameCount   = cTracker.getFrameCount( );
-    const double dDurationOnline = uFrameCount/20.0;
+    const double dDurationOnline = uFrameCount/10.0;
     const double dDistance       = cTracker.getDistanceTraveled( );
 
     if( 1 < uFrameCount )
@@ -266,10 +268,11 @@ int32_t main( int32_t argc, char **argv )
     CLogger::openBox( );
     std::printf( "(main) dataset completed\n" );
     std::printf( "(main) distance traveled: %fm\n", dDistance );
-    std::printf( "(main) duration: %fs (online: %fs, x%f)\n", dDuration, dDurationOnline, dDuration/dDurationOnline );
+    std::printf( "(main) duration: %fs (online: %fs, x%f)\n", dDurationTotal, dDurationOnline, dDurationTotal/dDurationOnline );
+    std::printf( "(main) duration pure: %fs (g2o: %fs)\n", dDurationPure, dDurationG2o );
     std::printf( "(main) traveling speed (online): %fm/s\n", dDistance/dDurationOnline );
     std::printf( "(main) total frames: %lu\n", uFrameCount );
-    std::printf( "(main) frame rate (avg): %f FPS\n", uFrameCount/dDuration );
+    std::printf( "(main) frame rate (avg): %f FPS\n", uFrameCount/dDurationPure );
     std::printf( "(main) invalid frames: %li (%4.2f)\n", uInvalidFrames, static_cast< double >( uInvalidFrames )/uFrameCount );
     CLogger::closeBox( );
 

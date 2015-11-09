@@ -21,6 +21,38 @@ class Cg2oOptimizer
         eOFFSET_IMUtoLEFT = 3
     };
 
+    struct CLoopClosureRaw
+    {
+        const std::vector< CKeyFrame* >::size_type uIDReference;
+        const std::vector< CKeyFrame* >::size_type uIDQuery;
+        g2o::EdgeSE3* pEdgeLoopClosureReferenceToQuery;
+
+        CLoopClosureRaw( const std::vector< CKeyFrame* >::size_type& p_uIDReference,
+                         const std::vector< CKeyFrame* >::size_type& p_uIDQuery,
+                         g2o::EdgeSE3* p_pEdgeLoopClosureReferenceToQuery ): uIDReference( p_uIDReference ),
+                                                                             uIDQuery( p_uIDQuery ),
+                                                                             pEdgeLoopClosureReferenceToQuery( p_pEdgeLoopClosureReferenceToQuery )
+        {
+            //ds nothing to do
+        }
+    };
+
+    struct CLoopClosure
+    {
+        const std::vector< CKeyFrame* >::size_type uIDReference;
+        const std::vector< CKeyFrame* >::size_type uIDQuery;
+        const Eigen::Isometry3d matTransformationReferenceToQuery;
+
+        CLoopClosure( const std::vector< CKeyFrame* >::size_type& p_uIDReference,
+                      const std::vector< CKeyFrame* >::size_type& p_uIDQuery,
+                      const Eigen::Isometry3d& p_matTransformationReferenceToQuery ): uIDReference( p_uIDReference ),
+                                                                                      uIDQuery( p_uIDQuery ),
+                                                                                      matTransformationReferenceToQuery( p_matTransformationReferenceToQuery )
+        {
+            //ds nothing to do
+        }
+    };
+
 public:
 
     Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraSTEREO,
@@ -39,10 +71,12 @@ private:
     const std::shared_ptr< std::vector< CKeyFrame* > > m_vecKeyFrames;
 
     g2o::SparseOptimizer m_cOptimizerSparse;
-    const UIDKeyFrame m_uIDShift       = 1000000; //ds required to navigate between landmarks and poses
-    g2o::VertexSE3* m_pVertexPoseLAST  = 0;
+    g2o::SparseOptimizer m_cOptimizerSparseTrajectoryOnly;
+    const int64_t m_uIDShift       = 1000000; //ds required to navigate between landmarks and poses
+    //g2o::VertexSE3* m_pVertexPoseLAST  = 0;
     const uint32_t m_uIterations       = 100; //1000;
     uint32_t m_uOptimizations          = 0;
+    std::vector< CKeyFrame* >::size_type m_uIDKeyFrameFrom = 0;
 
     const double m_dMaximumReliableDepthForPointXYZ    = 2.5;
     const double m_dMaximumReliableDepthForUVDepth     = 7.5;
@@ -50,6 +84,7 @@ private:
     const double m_dMaximumReliableDepthForPointXYZL2    = 10.0;
     const double m_dMaximumReliableDepthForUVDepthL2     = 50.0;
     const double m_dMaximumReliableDepthForUVDisparityL2 = 10000.0;
+    const double m_dSanePositionThresholdL2 = 1e12;
 
     //ds optimized structures
     std::vector< CLandmark* > m_vecLandmarksInGraph;
@@ -60,6 +95,12 @@ private:
 
     //ds stiffness for loop closing
     std::vector< g2o::EdgeSE3* > m_vecPoseEdges;
+
+    //ds hasmap for easy edge id access for connected key frames
+    std::map< std::vector< CKeyFrame* >::size_type, std::pair< g2o::EdgeSE3*, g2o::EdgeSE3* > > m_mapEdgeIDs;
+
+    //ds total time spent in optimization
+    double m_dTotalOptimizationDurationSeconds = 0.0;
 
 //ds information matrices ground structures
 private:
@@ -73,7 +114,7 @@ private:
 
     ClosureBuffer m_cBufferClosures;
     LoopClosureChecker m_cClosureChecker;
-    const double m_dMaximumThresholdLoopClosing = 500.0;
+    const double m_dMaximumThresholdLoopClosing = 0.5;
 
 public:
 
@@ -97,6 +138,12 @@ public:
     void updateLoopClosuresFromKeyFrame( const std::vector< CKeyFrame* >::size_type& p_uIDBeginKeyFrame,
                                  const std::vector< CKeyFrame* >::size_type& p_uIDEndKeyFrame,
                                  const Eigen::Vector3d& p_vecTranslationToG2o );
+
+    const double getTotalOptimizationDurationSeconds( ) const { return m_dTotalOptimizationDurationSeconds; }
+
+    /*ds manual trajectory locking
+    void lockTrajectory( const std::vector< CKeyFrame* >::size_type& p_uIDBeginKeyFrame,
+                         const std::vector< CKeyFrame* >::size_type& p_uIDEndKeyFrame );*/
 
     /*ds first pose
     void updateSTART( const Eigen::Vector3d& p_vecTranslationWORLD )
@@ -164,7 +211,7 @@ private:
     g2o::EdgeSE3* _getEdgeLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const CKeyFrame* pKeyFrameCurrent, const CKeyFrame::CMatchICP* p_pClosure );
 
     void _loadLandmarksToGraph( const std::vector< CLandmark* >::size_type& p_uIDLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
-    g2o::VertexSE3* _setAndgetPose( g2o::VertexSE3* p_pVertexPoseFrom, CKeyFrame* pKeyFrameCurrent, const Eigen::Vector3d& p_vecTranslationToG2o );
+    g2o::VertexSE3* _setAndgetPose( std::vector< CKeyFrame* >::size_type& p_uIDKeyFrameFrom, CKeyFrame* pKeyFrameCurrent, const Eigen::Vector3d& p_vecTranslationToG2o );
     void _setLoopClosure( g2o::VertexSE3* p_pVertexPoseCurrent, const CKeyFrame* pKeyFrameCurrent, const CKeyFrame::CMatchICP* p_pClosure, const Eigen::Vector3d& p_vecTranslationToG2o );
     void _setLandmarkMeasurementsWORLD( g2o::VertexSE3* p_pVertexPoseCurrent,
                            const CKeyFrame* pKeyFrameCurrent,
@@ -175,7 +222,7 @@ private:
     void _applyOptimization( const UIDFrame& p_uFrame, const std::vector< CLandmark* >::size_type& p_uIDLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
     void _applyOptimization( const UIDFrame& p_uFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
 
-    const Eigen::Matrix< double, 6, 6 > _getInformationWeakZ( const Eigen::Matrix< double, 6, 6 >& p_matInformationIN ) const
+    /*const Eigen::Matrix< double, 6, 6 > _getInformationWeakZ( const Eigen::Matrix< double, 6, 6 >& p_matInformationIN ) const
     {
         Eigen::Matrix< double, 6, 6 > matInformationOUT( p_matInformationIN );
 
@@ -183,8 +230,22 @@ private:
         matInformationOUT(5,5) /= 1e5;
 
         return matInformationOUT;
+    }*/
+
+    const Eigen::Matrix< double, 6, 6 > _getInformationNoOrientation( ) const
+    {
+        Eigen::Matrix< double, 6, 6 > matInformationOUT( Eigen::Matrix< double, 6, 6 >::Identity( ) );
+
+        //ds cancel out orientation information
+        matInformationOUT(3,3) = 0.0;
+        matInformationOUT(4,4) = 0.0;
+        matInformationOUT(5,5) = 0.0;
+
+        return matInformationOUT;
     }
 
+    void _backPropagateTrajectoryToFull( const std::vector< CLoopClosureRaw >& p_vecClosures );
+    void _backPropagateTrajectoryToPure( );
 
 };
 

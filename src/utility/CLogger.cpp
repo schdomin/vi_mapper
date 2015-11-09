@@ -9,3 +9,4 @@ std::FILE* CLogger::CLogLandmarkFinalOptimized::m_pFile = 0;
 std::FILE* CLogger::CLogDetectionEpipolar::m_pFile      = 0;
 std::FILE* CLogger::CLogOptimizationOdometry::m_pFile   = 0;
 std::FILE* CLogger::CLogIMUInput::m_pFile               = 0;
+std::ofstream CLogger::CLogTrajectoryKITTI::ofOutfile;

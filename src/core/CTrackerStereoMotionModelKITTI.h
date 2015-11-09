@@ -60,7 +60,7 @@ private:
     const uint8_t m_uVisibleLandmarksMinimum;
     const double m_dMinimumDepthMeters = 0.05;
     const double m_dMaximumDepthMeters = 1000.0;
-    const UIDFrame m_uMaximumNumberOfFramesWithoutDetection = 5; //20;
+    const UIDFrame m_uMaximumNumberOfFramesWithoutDetection = 10; //20;
     UIDFrame m_uNumberOfFramesWithoutDetection              = 0;
 
     std::shared_ptr< CTriangulator > m_pTriangulator;
@@ -82,12 +82,12 @@ private:
     Eigen::Vector3d m_vecTranslationToG2o;
 
     //ds loop closing
-    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20; //20
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25; //25
+    const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 50; //20
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 20; //25
     const std::vector< CKeyFrame* >::size_type m_uLoopClosingKeyFrameWaitingQueue    = 1;
     std::vector< CKeyFrame* >::size_type m_uLoopClosingKeyFramesInQueue = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
-    const double m_dLoopClosingRadiusSquaredMeters          = 1000.0;
+    const double m_dLoopClosingRadiusSquaredMeters          = 10000.0;
     //uint32_t m_uOptimizationsWithoutLoopClosure             = 0;
     //double m_dOptimizationsWithoutLoopClosureDistanceMeters = 0.0;
 
@@ -126,6 +126,7 @@ public:
     void finalize( );
     void sanitizeFiletree( ){ m_cGraphOptimizer.clearFiles( ); }
     const double getDistanceTraveled( ) const { return m_dDistanceTraveledMeters; }
+    const double getTotalDurationOptimizationSeconds( ) const { return m_cGraphOptimizer.getTotalOptimizationDurationSeconds( ); }
 
 //ds helpers
 private:

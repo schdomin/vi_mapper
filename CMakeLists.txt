@@ -137,7 +137,7 @@ add_executable(stereo_fps_kitti src/runnable/stereo_fps_kitti.cpp src/core/CTrac
 add_executable(republisher_node src/runnable/republisher_node.cpp)
 add_executable(republisher_kitti src/runnable/republisher_kitti.cpp)
 add_executable(create_trajectory_kitti src/streaming/create_trajectory_kitti.cpp src/configuration/CConfigurationCameraKITTI.cpp)
-add_executable(evaluate_trajectory src/runnable/evaluate_trajectory.cpp src/utility/CLogger.cpp)
+add_executable(evaluate_trajectory src/runnable/evaluate_trajectory.cpp src/configuration/CConfigurationCameraKITTI.cpp src/utility/CLogger.cpp)
 
 #ds link the binaries against catkin
 target_link_libraries(message_dumper_node ${catkin_LIBRARIES})
