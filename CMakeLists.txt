@@ -39,6 +39,7 @@ catkin_package(CATKIN_DEPENDS roscpp std_msgs genmsg sensor_msgs fps_mapper)
 
 #ds add c++11 support, no optimization, all warnings
 add_definitions(-O3 -march=native -Wall -pedantic -std=c++11 -pthread)
+#add_definitions(-O3 -march=native -Wall -pedantic -std=c++11 -pthread -DNDEBUG)
 
 #ds include dirs
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -138,6 +139,8 @@ add_executable(republisher_node src/runnable/republisher_node.cpp)
 add_executable(republisher_kitti src/runnable/republisher_kitti.cpp)
 add_executable(create_trajectory_kitti src/streaming/create_trajectory_kitti.cpp src/configuration/CConfigurationCameraKITTI.cpp)
 add_executable(evaluate_trajectory src/runnable/evaluate_trajectory.cpp src/configuration/CConfigurationCameraKITTI.cpp src/utility/CLogger.cpp)
+add_executable(interpolate_trajectory src/runnable/interpolate_trajectory.cpp src/utility/CLogger.cpp)
+add_executable(compute_rotation_icp src/runnable/compute_rotation_icp.cpp src/utility/CLogger.cpp)
 
 #ds link the binaries against catkin
 target_link_libraries(message_dumper_node ${catkin_LIBRARIES})

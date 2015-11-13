@@ -84,8 +84,9 @@ private:
     //ds loop closing
     const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 50; //20
     const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 20; //25
-    const std::vector< CKeyFrame* >::size_type m_uLoopClosingKeyFrameWaitingQueue    = 1;
+    const std::vector< CKeyFrame* >::size_type m_uLoopClosingKeyFrameWaitingQueue = 1;
     std::vector< CKeyFrame* >::size_type m_uLoopClosingKeyFramesInQueue = 0;
+    std::vector< CKeyFrame::CMatchICP* >::size_type m_uLoopClosuresAfterburn = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
     const double m_dLoopClosingRadiusSquaredMeters          = 10000.0;
     //uint32_t m_uOptimizationsWithoutLoopClosure             = 0;
@@ -109,6 +110,9 @@ private:
     double m_dPreviousFrameRate    = 0.0;
     double m_dPreviousFrameTime    = 0.0;
     double m_dDistanceTraveledMeters = 0.0;
+    double m_dTotalLoopClosingDurationSeconds = 0.0;
+    double m_dTotalDurationSecondsTrackingOdometry = 0.0;
+    double m_dTotalDurationSecondsTrackingEpipolar = 0.0;
 
 //ds accessors
 public:
@@ -127,6 +131,9 @@ public:
     void sanitizeFiletree( ){ m_cGraphOptimizer.clearFiles( ); }
     const double getDistanceTraveled( ) const { return m_dDistanceTraveledMeters; }
     const double getTotalDurationOptimizationSeconds( ) const { return m_cGraphOptimizer.getTotalOptimizationDurationSeconds( ); }
+    const double getTotalDurationLoopClosingSeconds( ) const { return m_dTotalLoopClosingDurationSeconds; }
+    const double getTotalDurationSecondsTrackingOdometry( ) const { return m_dTotalDurationSecondsTrackingOdometry; }
+    const double getTotalDurationSecondsTrackingEpipolar( ) const { return m_dTotalDurationSecondsTrackingEpipolar; }
 
 //ds helpers
 private:

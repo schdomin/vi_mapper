@@ -59,8 +59,8 @@ Cg2oOptimizer::Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraST
                                                                                        m_vecLandmarks( p_vecLandmarks ),
                                                                                        m_vecKeyFrames( p_vecKeyFrames ),
                                                                                        m_matInformationPose( 100000*Eigen::Matrix< double, 6, 6 >::Identity( ) ),
-                                                                                       m_matInformationLoopClosure( 10*m_matInformationPose ),
-                                                                                       m_matInformationLandmarkClosure( Eigen::Matrix< double, 3, 3 >::Identity( ) )
+                                                                                       m_matInformationLoopClosure( _getInformationNoZ( static_cast< Eigen::Matrix< double, 6, 6 > >( 10*m_matInformationPose ) ) ),
+                                                                                       m_matInformationLandmarkClosure( 1000*Eigen::Matrix< double, 3, 3 >::Identity( ) )
 {
     m_vecLandmarksInGraph.clear( );
     m_vecKeyFramesInGraph.clear( );
@@ -78,8 +78,8 @@ Cg2oOptimizer::Cg2oOptimizer( const std::shared_ptr< CStereoCamera > p_pCameraST
     //ds trajectory only
     g2o::BlockSolver_6_3::LinearSolverType* pLinearSolverTrajectoryOnly( new g2o::LinearSolverCholmod< g2o::BlockSolver_6_3::PoseMatrixType >( ) );
     g2o::BlockSolver_6_3* pSolverTrajectoryOnly( new g2o::BlockSolver_6_3( pLinearSolverTrajectoryOnly ) );
-    //g2o::OptimizationAlgorithmGaussNewton* pAlgorithmTrajectoryOnly( new g2o::OptimizationAlgorithmGaussNewton( pSolverTrajectoryOnly ) );
-    g2o::OptimizationAlgorithmLevenberg* pAlgorithmTrajectoryOnly( new g2o::OptimizationAlgorithmLevenberg( pSolverTrajectoryOnly ) );
+    g2o::OptimizationAlgorithmGaussNewton* pAlgorithmTrajectoryOnly( new g2o::OptimizationAlgorithmGaussNewton( pSolverTrajectoryOnly ) );
+    //g2o::OptimizationAlgorithmLevenberg* pAlgorithmTrajectoryOnly( new g2o::OptimizationAlgorithmLevenberg( pSolverTrajectoryOnly ) );
     m_cOptimizerSparseTrajectoryOnly.setAlgorithm( pAlgorithmTrajectoryOnly );
 
     //ds set world
@@ -388,14 +388,14 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
         {
             std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimizing loop closures: %lu/%u\n", p_uFrame, vecLoopClosures.size( ), uLoopClosuresTotal );
 
-            /*ds lock selected closures
+            //ds lock selected closures
             for( CLoopClosureRaw cEdgeLoopClosureRaw: vecLoopClosures )
             {
                 const g2o::HyperGraph::VertexIDMap::iterator itReference( m_cOptimizerSparseTrajectoryOnly.vertices( ).find( cEdgeLoopClosureRaw.uIDReference+1 ) );
                 assert( itReference != m_cOptimizerSparseTrajectoryOnly.vertices( ).end( ) );
                 g2o::VertexSE3* pVertexReference = dynamic_cast< g2o::VertexSE3* >( itReference->second );
                 pVertexReference->setFixed( true );
-            }*/
+            }
 
             //ds save closure situation
             char chBufferLC[256];
@@ -403,32 +403,15 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
             std::string strPrefixLC( chBufferLC );
             m_cOptimizerSparseTrajectoryOnly.save( ( strPrefixLC + "_closed.g2o" ).c_str( ) );
 
-            //ds initialize optimization
-            m_cOptimizerSparseTrajectoryOnly.initializeOptimization( );
-
             //ds timing
             const double dTimeStartSecondsLC = CLogger::getTimeSeconds( );
+            const uint64_t uIterationsLC     = 1000;
 
-            //ds start cascading iteration steps
-            m_cOptimizerSparseTrajectoryOnly.optimize( 1 );
-            uint32_t uIterationsDoneLC = 1;
-            if( 10.0 > ( CLogger::getTimeSeconds( )-dTimeStartSecondsLC ) )
-            {
-                m_cOptimizerSparseTrajectoryOnly.optimize( 10 );
-                uIterationsDoneLC += 10;
-                if( 20.0 > ( CLogger::getTimeSeconds( )-dTimeStartSecondsLC ) )
-                {
-                    m_cOptimizerSparseTrajectoryOnly.optimize( 100 );
-                    uIterationsDoneLC += 100;
-                    if( 30.0 > ( CLogger::getTimeSeconds( )-dTimeStartSecondsLC ) )
-                    {
-                        m_cOptimizerSparseTrajectoryOnly.optimize( 1000 );
-                        uIterationsDoneLC += 1000;
-                    }
-                }
-            }
+            //ds always 1000 steps for loop closing!
+            m_cOptimizerSparseTrajectoryOnly.initializeOptimization( );
+            m_cOptimizerSparseTrajectoryOnly.optimize( uIterationsLC );
 
-            /*ds unlock added closures
+            //ds unlock added closures
             for( CLoopClosureRaw cEdgeLoopClosureRaw: vecLoopClosures )
             {
                 //ds relax locked reference vertices again
@@ -436,18 +419,18 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
                 assert( itReference != m_cOptimizerSparseTrajectoryOnly.vertices( ).end( ) );
                 g2o::VertexSE3* pVertexReference = dynamic_cast< g2o::VertexSE3* >( itReference->second );
                 pVertexReference->setFixed( false );
-            }*/
+            }
 
             //ds back propagate the trajectory only graph into the full one
             _backPropagateTrajectoryToFull( vecLoopClosures );
 
             m_cOptimizerSparseTrajectoryOnly.save( ( strPrefixLC + "_closed_optimized.g2o" ).c_str( ) );
-            std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimization complete (total duration: %.2fs | iterations: %u)\n",
-                         p_uFrame, ( CLogger::getTimeSeconds( )-dTimeStartSecondsLC ), uIterationsDoneLC );
+            std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimization complete (total duration: %.2fs | iterations: %lu)\n",
+                         p_uFrame, ( CLogger::getTimeSeconds( )-dTimeStartSecondsLC ), uIterationsLC );
         }
         else
         {
-            std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) dropped loop closures: %u\n", p_uFrame, uLoopClosuresTotal );
+            std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) DROPPED loop closures: %u\n", p_uFrame, uLoopClosuresTotal );
         }
     }
 
@@ -480,7 +463,7 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
             //ds set landmark measurements
             _setLandmarkMeasurementsWORLD( pVertexPoseCurrent, pKeyFrame, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity );
 
-            //ds if the key frame was closed
+            /*ds if the key frame was closed
             if( !pKeyFrame->vecLoopClosures.empty( ) )
             {
                 //ds for each closure
@@ -509,7 +492,7 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
                                 pVertexLandmarkReference = dynamic_cast< g2o::VertexPointXYZ* >( itLandmarkReference->second );
 
                                 //ds fix reference landmark
-                                //pVertexLandmarkReference->setFixed( true );
+                                pVertexLandmarkReference->setFixed( true );
 
                                 //ds set up the edge
                                 g2o::EdgePointXYZ* pEdgeLandmarkClosure( new g2o::EdgePointXYZ( ) );
@@ -527,7 +510,7 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
                         }
                     }
                 }
-            }
+            }*/
         }
     }
     else
@@ -576,13 +559,11 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
     std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimizing [keyframes: %06lu-%06lu (%3lu) landmarks: %06lu-%06lu][measurements xyz: %3lu depth: %3lu disparity: %3lu] \n",
                  p_uFrame, vecChunkKeyFrames.front( )->uID, vecChunkKeyFrames.back( )->uID, ( vecChunkKeyFrames.back( )->uID-vecChunkKeyFrames.front( )->uID ), p_uIDBeginLandmark, m_vecLandmarksInGraph.back( )->uID, uMeasurementsStoredPointXYZ, uMeasurementsStoredUVDepth, uMeasurementsStoredUVDisparity );
 
-    //ds initialize optimization
-    m_cOptimizerSparse.initializeOptimization( );
-
     //ds timing
     const double dTimeStartSeconds = CLogger::getTimeSeconds( );
+    const uint64_t uIterations     = _optimizeLimited( m_cOptimizerSparse );
 
-    //ds start cascading iteration steps
+    /*ds start cascading iteration steps
     m_cOptimizerSparse.optimize( 1 );
     uint32_t uIterationsDone = 1;
     if( 10.0 > ( CLogger::getTimeSeconds( )-dTimeStartSeconds ) )
@@ -599,7 +580,7 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
                 uIterationsDone += 1000;
             }
         }
-    }
+    }*/
 
     //std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) applying optimization (total duration: %.2fs)\n", p_uFrame, CLogger::getTimeSeconds( )-dTimeStartSeconds );
 
@@ -653,7 +634,7 @@ void Cg2oOptimizer::optimizeContinuous( const UIDFrame& p_uFrame,
 
         //ds save optimized situation
         m_cOptimizerSparse.save( ( strPrefix + "_optimized.g2o" ).c_str( ) );
-        std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimization complete (total duration: %.2fs | iterations: %u)\n", p_uFrame, ( CLogger::getTimeSeconds( )-dTimeStartSeconds ), uIterationsDone );
+        std::printf( "[%06lu]<Cg2oOptimizer>(optimizeContinuous) optimization complete (total duration: %.2fs | iterations: %lu)\n", p_uFrame, ( CLogger::getTimeSeconds( )-dTimeStartSeconds ), uIterations );
     //}
 
     //ds done
@@ -893,6 +874,37 @@ void Cg2oOptimizer::updateLoopClosuresFromKeyFrame( const std::vector< CKeyFrame
     }
 }*/
 
+uint64_t Cg2oOptimizer::_optimizeLimited( g2o::SparseOptimizer& p_cOptimizer )
+{
+    //ds initialize optimization
+    p_cOptimizer.initializeOptimization( );
+
+    //ds initial optimization
+    p_cOptimizer.optimize( 1 );
+
+    //ds iterations count
+    uint64_t uIterations = 1;
+
+    //ds initial timestamp
+    const double dTimeStartSeconds = CLogger::getTimeSeconds( );
+
+    //ds start optimization
+    double dPreviousChi2 = p_cOptimizer.chi2( )+2.0;
+
+    //ds start cycle (maximum 100s)
+    while( ( 0.1 < dPreviousChi2-p_cOptimizer.chi2( ) ) && ( 100.0 > CLogger::getTimeSeconds( )-dTimeStartSeconds ) )
+    {
+        //ds update chi2
+        dPreviousChi2 = p_cOptimizer.chi2( );
+
+        //ds do ten iterations
+        p_cOptimizer.optimize( 10 );
+        uIterations += 10;
+    }
+
+    return uIterations;
+}
+
 g2o::EdgeSE3LinearAcceleration* Cg2oOptimizer::_getEdgeLinearAcceleration( g2o::VertexSE3* p_pVertexPose,
                                                                            const CLinearAccelerationIMU& p_vecLinearAccelerationNormalized ) const
 {
@@ -1014,15 +1026,34 @@ g2o::EdgeSE3* Cg2oOptimizer::_getEdgeLoopClosure( g2o::VertexSE3* p_pVertexPoseC
     assert( itCurrent != m_cOptimizerSparseTrajectoryOnly.vertices( ).end( ) );
     assert( itClosure != m_cOptimizerSparseTrajectoryOnly.vertices( ).end( ) );
 
+    //ds buffer poses
+    g2o::VertexSE3* pVertexPoseClosure = dynamic_cast< g2o::VertexSE3* >( itClosure->second );
+    g2o::VertexSE3* pVertexPoseCurrent = dynamic_cast< g2o::VertexSE3* >( itCurrent->second );
+
     //ds set up the edge
     g2o::EdgeSE3* pEdgeLoopClosure( new g2o::EdgeSE3( ) );
 
     //ds set viewpoints and measurement
-    pEdgeLoopClosure->setVertex( 0, dynamic_cast< g2o::VertexSE3* >( itClosure->second ) );
-    pEdgeLoopClosure->setVertex( 1, dynamic_cast< g2o::VertexSE3* >( itCurrent->second ) );
+    pEdgeLoopClosure->setVertex( 0, pVertexPoseClosure );
+    pEdgeLoopClosure->setVertex( 1, pVertexPoseCurrent );
     pEdgeLoopClosure->setMeasurement( p_pClosure->matTransformationToClosure );
-    pEdgeLoopClosure->setInformation( static_cast< Eigen::Matrix< double, 6, 6 > >( 10*pEdgeLoopClosure->information( ) ) );
     pEdgeLoopClosure->setRobustKernel( new g2o::RobustKernelCauchy( ) );
+
+    //ds compute error
+    //const Eigen::Vector3d verTranslationDifference( ( pVertexPoseClosure->estimate( ).inverse( )*pVertexPoseCurrent->estimate( ) ).translation( )-p_pClosure->matTransformationToClosure.translation( ) );
+
+    /*ds check information matrix - check if loop closure is effective or not
+    if( 5.0 < std::fabs( verTranslationDifference.z( ) ) )
+    {
+        //ds full information
+        pEdgeLoopClosure->setInformation( static_cast< Eigen::Matrix< double, 6, 6 > >( 10*pEdgeLoopClosure->information( ) ) );
+    }
+    else
+    {*/
+        //ds damp z information
+        pEdgeLoopClosure->setInformation( _getInformationNoZ( static_cast< Eigen::Matrix< double, 6, 6 > >( 10*pEdgeLoopClosure->information( ) ) ) );
+        //pEdgeLoopClosure->setInformation( Eigen::Matrix< double, 6, 6 >::Zero( ) );
+    //}
 
     return pEdgeLoopClosure;
 }
@@ -1130,8 +1161,8 @@ g2o::VertexSE3* Cg2oOptimizer::_setAndgetPose( std::vector< CKeyFrame* >::size_t
     const double dInformationFactor = 1.0/(1.0+pEdgePoseFromTo->measurement( ).translation( ).squaredNorm( ) );
 
     //ds new information matrix
-    Eigen::Matrix< double, 6, 6 > matInformation( dInformationFactor*m_matInformationPose );
-    //matInformation.block< 3,3 >(3,3) *= dInformationFactor;
+    Eigen::Matrix< double, 6, 6 > matInformation( m_matInformationPose );
+    matInformation.block< 3,3 >(0,0) *= dInformationFactor;
 
     //ds set specific information matrix (far connections between keyframes are less rigid)
     pEdgePoseFromTo->setInformation( matInformation );
@@ -1148,7 +1179,9 @@ g2o::VertexSE3* Cg2oOptimizer::_setAndgetPose( std::vector< CKeyFrame* >::size_t
     pEdgePoseFromToTrajectoryOnly->setVertex( 0, dynamic_cast< g2o::VertexSE3* >( itPoseFromTrajectoryOnly->second ) );
     pEdgePoseFromToTrajectoryOnly->setVertex( 1, pVertexPoseCurrentTrajectoryOnly );
     pEdgePoseFromToTrajectoryOnly->setMeasurement( pEdgePoseFromTo->measurement( ) );
-    pEdgePoseFromToTrajectoryOnly->setInformation( static_cast< Eigen::Matrix< double, 6, 6 > >( dInformationFactor*pEdgePoseFromToTrajectoryOnly->information( ) ) );
+    Eigen::Matrix< double, 6, 6 > matInformationTrajectoryOnly( pEdgePoseFromToTrajectoryOnly->information( ) );
+    matInformationTrajectoryOnly.block< 3,3 >(0,0) *= dInformationFactor;
+    pEdgePoseFromToTrajectoryOnly->setInformation( matInformationTrajectoryOnly );
     m_cOptimizerSparseTrajectoryOnly.addEdge( pEdgePoseFromToTrajectoryOnly );
 
     //ds add to control structure
@@ -1408,6 +1441,16 @@ void Cg2oOptimizer::_applyOptimization( const UIDFrame& p_uFrame, const Eigen::V
     }
 }
 
+const Eigen::Matrix< double, 6, 6 > Cg2oOptimizer::_getInformationNoZ( const Eigen::Matrix< double, 6, 6 >& p_matInformationIN ) const
+{
+    Eigen::Matrix< double, 6, 6 > matInformationOUT( p_matInformationIN );
+
+    //ds lower z by a factor
+    matInformationOUT(2,2) /= 100.0;
+
+    return matInformationOUT;
+}
+
 void Cg2oOptimizer::_backPropagateTrajectoryToFull( const std::vector< CLoopClosureRaw >& p_vecClosures )
 {
     //ds back propagate the trajectory only graph into the full one
@@ -1470,9 +1513,14 @@ void Cg2oOptimizer::_backPropagateTrajectoryToPure( )
         const g2o::HyperGraph::VertexIDMap::iterator itPose( m_cOptimizerSparse.vertices( ).find( pKeyFrame->uID+m_uIDShift ) );
         const g2o::HyperGraph::VertexIDMap::iterator itPoseTrajectoryOnly( m_cOptimizerSparseTrajectoryOnly.vertices( ).find( pKeyFrame->uID+1 ) );
 
-        //ds must exist
-        assert( m_cOptimizerSparse.vertices( ).end( )               != itPose );
-        assert( m_cOptimizerSparseTrajectoryOnly.vertices( ).end( ) != itPoseTrajectoryOnly );
+        //ds must exist (except for final optimization) - check if not
+        if( ( m_cOptimizerSparse.vertices( ).end( )               == itPose               ) ||
+            ( m_cOptimizerSparseTrajectoryOnly.vertices( ).end( ) == itPoseTrajectoryOnly ) )
+        {
+            //ds back propagation failed
+            std::printf( "<Cg2oOptimizer>(_backPropagateTrajectoryToPure) back propagation to trajectory only failed for frame ID: %lu\n", pKeyFrame->uID );
+            return;
+        }
 
         //ds //ds update estimate
         g2o::VertexSE3* pVertexPose               = dynamic_cast< g2o::VertexSE3* >( itPose->second );

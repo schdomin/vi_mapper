@@ -1,7 +1,7 @@
 #include "CConfigurationCameraKITTI.h"
 
 /* CONFIGURATION for 00,13,14,15 */
-//ds camera_1 (left)
+/*ds camera_1 (left)
 const uint32_t CConfigurationCameraKITTI::LEFT::uWidth  = 1241;
 const uint32_t CConfigurationCameraKITTI::LEFT::uHeight = 376;
 
@@ -35,10 +35,10 @@ const double CConfigurationCameraKITTI::RIGHT::matProjection[]           = {7.18
                                                                             0.000000000000e+00,
                                                                             0.000000000000e+00,
                                                                             1.000000000000e+00,
-                                                                            0.000000000000e+00};
+                                                                            0.000000000000e+00};*/
 
 /* CONFIGURATION for 11,12 */
-/*ds camera_1 (left)
+//ds camera_1 (left)
 const uint32_t CConfigurationCameraKITTI::LEFT::uWidth  = 1226;
 const uint32_t CConfigurationCameraKITTI::LEFT::uHeight = 370;
 
@@ -72,7 +72,7 @@ const double CConfigurationCameraKITTI::RIGHT::matProjection[]           = {7.07
                                                                             0.000000000000e+00,
                                                                             0.000000000000e+00,
                                                                             1.000000000000e+00,
-                                                                            0.000000000000e+00};*/
+                                                                            0.000000000000e+00};
 
 const CPinholeCamera CConfigurationCameraKITTI::LEFT::cPinholeCamera = CPinholeCamera( "LEFT", matProjection, uWidth, uHeight );
 const CPinholeCamera CConfigurationCameraKITTI::RIGHT::cPinholeCamera = CPinholeCamera( "RIGHT", matProjection, uWidth, uHeight );

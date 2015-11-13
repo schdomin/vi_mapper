@@ -200,7 +200,8 @@ int32_t main( int32_t argc, char **argv )
     //ds get end time
     const double dDurationTotal  = CLogger::getTimeSeconds( )-dTimeStartSeconds;
     const double dDurationG2o    = cTracker.getTotalDurationOptimizationSeconds( );
-    const double dDurationPure   = dDurationTotal-dDurationG2o;
+    const double dDurationLC     = cTracker.getTotalDurationLoopClosingSeconds( );
+    const double dDurationPure   = dDurationTotal-dDurationG2o-dDurationLC;
     const UIDFrame uFrameCount   = cTracker.getFrameCount( );
     const double dDurationOnline = uFrameCount/10.0;
     const double dDistance       = cTracker.getDistanceTraveled( );
@@ -222,7 +223,9 @@ int32_t main( int32_t argc, char **argv )
     std::printf( "(main) dataset completed\n" );
     std::printf( "(main) distance traveled: %fm\n", dDistance );
     std::printf( "(main) duration: %fs (online: %fs, x%f)\n", dDurationTotal, dDurationOnline, dDurationTotal/dDurationOnline );
-    std::printf( "(main) duration pure: %fs (g2o: %fs)\n", dDurationPure, dDurationG2o );
+    std::printf( "(main) duration pure: %fs (g2o: %fs, loop closing: %fs)\n", dDurationPure, dDurationG2o, dDurationLC );
+    std::printf( "(main) duration tracking odometry: %fs\n", cTracker.getTotalDurationSecondsTrackingOdometry( ) );
+    std::printf( "(main) duration tracking epipolar: %fs\n", cTracker.getTotalDurationSecondsTrackingEpipolar( ) );
     std::printf( "(main) traveling speed (online): %fm/s\n", dDistance/dDurationOnline );
     std::printf( "(main) total frames: %lu\n", uFrameCount );
     std::printf( "(main) frame rate (avg): %f FPS\n", uFrameCount/dDurationPure );

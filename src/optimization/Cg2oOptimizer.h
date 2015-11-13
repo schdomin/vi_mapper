@@ -114,7 +114,7 @@ private:
 
     ClosureBuffer m_cBufferClosures;
     LoopClosureChecker m_cClosureChecker;
-    const double m_dMaximumThresholdLoopClosing = 0.5;
+    const double m_dMaximumThresholdLoopClosing = 0.25;
 
 public:
 
@@ -191,6 +191,8 @@ public:
 
 private:
 
+    uint64_t _optimizeLimited( g2o::SparseOptimizer& p_cOptimizer );
+
     g2o::EdgeSE3LinearAcceleration* _getEdgeLinearAcceleration( g2o::VertexSE3* p_pVertexPose,
                                                                 const CLinearAccelerationIMU& p_vecLinearAccelerationNormalized ) const;
     g2o::EdgeSE3PointXYZ* _getEdgePointXYZ( g2o::VertexSE3* p_pVertexPose,
@@ -222,27 +224,8 @@ private:
     void _applyOptimization( const UIDFrame& p_uFrame, const std::vector< CLandmark* >::size_type& p_uIDLandmark, const Eigen::Vector3d& p_vecTranslationToG2o );
     void _applyOptimization( const UIDFrame& p_uFrame, const Eigen::Vector3d& p_vecTranslationToG2o );
 
-    /*const Eigen::Matrix< double, 6, 6 > _getInformationWeakZ( const Eigen::Matrix< double, 6, 6 >& p_matInformationIN ) const
-    {
-        Eigen::Matrix< double, 6, 6 > matInformationOUT( p_matInformationIN );
-
-        //ds lower z by a factor
-        matInformationOUT(5,5) /= 1e5;
-
-        return matInformationOUT;
-    }*/
-
-    const Eigen::Matrix< double, 6, 6 > _getInformationNoOrientation( ) const
-    {
-        Eigen::Matrix< double, 6, 6 > matInformationOUT( Eigen::Matrix< double, 6, 6 >::Identity( ) );
-
-        //ds cancel out orientation information
-        matInformationOUT(3,3) = 0.0;
-        matInformationOUT(4,4) = 0.0;
-        matInformationOUT(5,5) = 0.0;
-
-        return matInformationOUT;
-    }
+    //ds used for loop closure edges
+    const Eigen::Matrix< double, 6, 6 > _getInformationNoZ( const Eigen::Matrix< double, 6, 6 >& p_matInformationIN ) const;
 
     void _backPropagateTrajectoryToFull( const std::vector< CLoopClosureRaw >& p_vecClosures );
     void _backPropagateTrajectoryToPure( );

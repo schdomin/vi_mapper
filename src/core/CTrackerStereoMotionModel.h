@@ -89,7 +89,7 @@ private:
 
     //ds loop closing
     const UIDKeyFrame m_uMinimumLoopClosingKeyFrameDistance = 20; //20
-    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 30; //25
+    const UIDLandmark m_uMinimumNumberOfMatchesLoopClosure  = 25; //25
     const UIDKeyFrame m_uLoopClosingKeyFrameWaitingQueue    = 1;
     UIDKeyFrame m_uLoopClosingKeyFramesInQueue              = 0;
     UIDKeyFrame m_uIDLoopClosureOptimizedLAST               = 0;
@@ -114,6 +114,7 @@ private:
     double m_dPreviousFrameRate    = 0.0;
     double m_dPreviousFrameTime    = 0.0;
     double m_dDistanceTraveledMeters = 0.0;
+    double m_dTotalLoopClosingDurationSeconds = 0.0;
 
 //ds accessors
 public:
@@ -133,6 +134,7 @@ public:
     void sanitizeFiletree( ){ m_cGraphOptimizer.clearFiles( ); }
     const double getDistanceTraveled( ) const { return m_dDistanceTraveledMeters; }
     const double getTotalDurationOptimizationSeconds( ) const { return m_cGraphOptimizer.getTotalOptimizationDurationSeconds( ); }
+    const double getTotalDurationLoopClosingSeconds( ) const { return m_dTotalLoopClosingDurationSeconds; }
 
 //ds helpers
 private:

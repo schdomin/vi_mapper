@@ -24,7 +24,7 @@ void CViewerScene::draw()
 
     //ds draw WORLD coordinate frame
     glColor3f( 1.0, 1.0, 1.0 );
-    glLineWidth( 1.0 );
+    glLineWidth( 3.0 );
     drawAxis( 0.5 );
 
     //ds first keyframe to draw
@@ -34,7 +34,7 @@ void CViewerScene::draw()
     CPoint3DWORLD vecPositionXYZPrevious( 0.0, 0.0, 0.0 );
 
     //ds draw a green dot to mark the start of the optimization
-    glLineWidth( 2.5 );
+    glLineWidth( 3.0 );
     glPushMatrix( );
     glColor3f( 0.0, 1.0, 0.0 );
     glTranslatef( vecPositionXYZPrevious.x( ), vecPositionXYZPrevious.y( ), vecPositionXYZPrevious.z( ) );
@@ -76,7 +76,7 @@ void CViewerScene::draw()
     }
 
     //ds always draw loop closure lines
-    glLineWidth( 1.75 );
+    glLineWidth( 3.0 );
     glColor3f( 0.0, 1.0, 1.0 );
     glBegin( GL_LINES );
     for( CKeyFrame* pKeyFrame: *m_vecKeyFrames )
@@ -104,7 +104,7 @@ void CViewerScene::draw()
     //ds dodging if case for drawing the head coordinate frame
     qglviewer::Frame cFrameCurrent;
 
-    glLineWidth( 2.5 );
+    glLineWidth( 3.0 );
 
     //ds draw all frames
     for( std::vector< std::pair< bool, qglviewer::Frame > >::size_type u = uStart+1; u < m_vecFrames.size( ); ++u )
@@ -137,10 +137,10 @@ void CViewerScene::draw()
 
     //ds orientation for head only
     glColor3f( 1.0, 1.0, 1.0 );
-    glLineWidth( 1.5 );
+    glLineWidth( 3.0 );
     glPushMatrix( );
     glMultMatrixd( cFrameCurrent.matrix( ) );
-    drawAxis( 0.25 );
+    drawAxis( 0.5 );
 
     /*ds draw loop closing sphere around head
     glBlendFunc( GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA );
@@ -152,8 +152,8 @@ void CViewerScene::draw()
     glPopMatrix( );
 
     //ds set line width and point size for landmarks
-    glLineWidth( 1.0 );
-    glPointSize( 2.0 );
+    glLineWidth( 2.0 );
+    glPointSize( 5 );
 
     assert( 0 != m_vecLandmarks );
 
@@ -178,7 +178,7 @@ void CViewerScene::draw()
 
             //ds draw optimized position
             glPushMatrix( );
-            glColor3f( 0.0, 1.0, 0.0 );
+            glColor3f( 0.0, 0.5, 0.0 );
             glTranslatef( vecPositionOptimized.x, vecPositionOptimized.y, vecPositionOptimized.z );
             glBegin( GL_POINTS );
             glVertex3f( 0, 0, 0 );
@@ -228,20 +228,12 @@ void CViewerScene::init( )
     //m_mapLandmarks.clear( );
     //restoreStateFromFile( );
     setSceneRadius( 25.0 );
+    setBackgroundColor( QColor( 255, 255, 255 ) );
 }
 
 QString CViewerScene::helpString( ) const
 {
   QString text("<h2>HUBBA BABA</h2>");
-  text += "A <i>KeyFrameInterpolator</i> holds an interpolated path defined by key frames. ";
-  text += "It can then smoothly make its associed frame follow that path. Key frames can interactively be manipulated, even ";
-  text += "during interpolation.<br><br>";
-  text += "Note that the camera holds 12 such keyFrameInterpolators, binded to F1-F12. Press <b>Alt+Fx</b> to define new key ";
-  text += "frames, and then press <b>Fx</b> to make the camera follow the path. Press <b>C</b> to visualize these paths.<br><br>";
-  text += "<b>+/-</b> changes the interpolation speed. Negative values are allowed.<br><br>";
-  text += "<b>Return</b> starts-stops the interpolation.<br><br>";
-  text += "Use the left and right arrows to change the manipulated KeyFrame. ";
-  text += "Press <b>Control</b> to move it or simply hover over it.";
   return text;
 }
 

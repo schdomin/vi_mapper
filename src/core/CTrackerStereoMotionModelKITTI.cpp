@@ -78,9 +78,6 @@ CTrackerStereoMotionModelKITTI::CTrackerStereoMotionModelKITTI( const EPlaybackM
     std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(CTrackerStereoMotionModelKITTI) minimum matches for loop closure: %lu\n", m_uFrameCount, m_uMinimumNumberOfMatchesLoopClosure );
     std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(CTrackerStereoMotionModelKITTI) instance allocated\n", m_uFrameCount );
     CLogger::closeBox( );
-
-    //ds sanity check
-    assert( m_uMinimumLandmarksForKeyFrame >= m_uMinimumNumberOfMatchesLoopClosure );
 }
 
 CTrackerStereoMotionModelKITTI::~CTrackerStereoMotionModelKITTI( )
@@ -103,10 +100,13 @@ CTrackerStereoMotionModelKITTI::~CTrackerStereoMotionModelKITTI( )
     //ds free keyframes
     for( const CKeyFrame* pKeyFrame: *m_vecKeyFrames )
     {
-        //ds log trajectory for benchmarking
-        CLogger::CLogTrajectoryKITTI::addEntry( pKeyFrame->uFrameOfCreation, pKeyFrame->matTransformationLEFTtoWORLD, m_vecTranslationToG2o );
+        if( 0 != pKeyFrame )
+        {
+            //ds log trajectory for benchmarking
+            CLogger::CLogTrajectoryKITTI::addEntry( pKeyFrame->uFrameOfCreation, pKeyFrame->matTransformationLEFTtoWORLD, m_vecTranslationToG2o );
 
-        delete pKeyFrame;
+            delete pKeyFrame;
+        }
     }
 
     /*ds close loggers
@@ -181,7 +181,14 @@ void CTrackerStereoMotionModelKITTI::finalize( )
     if( 1 < m_vecKeyFrames->size( ) )
     {
         //ds landmark start id
-        const std::vector< CLandmark* >::size_type uIDBeginLandmark = m_vecKeyFrames->at( std::max( static_cast< UIDKeyFrame >( 0 ), m_uIDProcessedKeyFrameLAST-1 ) )->vecMeasurements.front( )->uID;
+        std::vector< CLandmark* >::size_type uIDBeginLandmark = m_vecKeyFrames->at( std::max( static_cast< UIDKeyFrame >( 0 ), m_uIDProcessedKeyFrameLAST-1 ) )->vecMeasurements.front( )->uID;
+
+        //ds check for bad id
+        if( m_vecLandmarks->size( ) <= uIDBeginLandmark )
+        {
+            std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) fixed landmark id: [%06lu] to [%06lu]\n", m_uFrameCount, uIDBeginLandmark, m_vecLandmarks->size( )/2 );
+            uIDBeginLandmark = m_vecLandmarks->size( )/2;
+        }
 
         //ds newly closed keyframes
         std::vector< CKeyFrame* > vecClosedKeyFrames( 0 );
@@ -201,12 +208,18 @@ void CTrackerStereoMotionModelKITTI::finalize( )
                 {
                     std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) checking closures for keyframe: %06lu\n", m_uFrameCount, pKeyFrameForClosure->uID );
 
+                    //ds stop time for loop closure checking
+                    const double dStartTimeLoopClosingSeconds = CLogger::getTimeSeconds( );
+
                     //ds detect loop closures (practically unlimited radius)
                     const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( pKeyFrameForClosure->uID,
                                                                                                                    pKeyFrameForClosure->matTransformationLEFTtoWORLD,
                                                                                                                    pKeyFrameForClosure->vecCloud,
                                                                                                                    1e12,
-                                                                                                                   10 ) );
+                                                                                                                   15 ) );
+
+                    //ds update time
+                    m_dTotalLoopClosingDurationSeconds += ( CLogger::getTimeSeconds( )-dStartTimeLoopClosingSeconds );
 
                     std::printf( "[%06lu]<CTrackerStereoMotionModelKITTI>(finalize) found closures: %lu\n", m_uFrameCount, vecLoopClosures.size( ) );
 
@@ -242,7 +255,8 @@ void CTrackerStereoMotionModelKITTI::finalize( )
                     //ds free reference
                     if( 0 != m_vecKeyFrames->at( pKeyFrameSubstitute->uID ) )
                     {
-                        delete m_vecKeyFrames->at( pKeyFrameSubstitute->uID );
+                        //ds TODO memory leak - shared pointer sync
+                        //delete m_vecKeyFrames->at( pKeyFrameSubstitute->uID );
 
                         //ds substitute
                         m_vecKeyFrames->at( pKeyFrameSubstitute->uID ) = pKeyFrameSubstitute;
@@ -308,6 +322,8 @@ void CTrackerStereoMotionModelKITTI::_trackLandmarks( const cv::Mat& p_matImageL
 
     //ds initial transformation
     Eigen::Isometry3d matTransformationWORLDtoLEFT( p_matTransformationEstimateWORLDtoLEFT );
+
+    const double dTimeStartTrackingSecondsOdometry = CLogger::getTimeSeconds( );
 
     try
     {
@@ -385,8 +401,15 @@ void CTrackerStereoMotionModelKITTI::_trackLandmarks( const cv::Mat& p_matImageL
         }
     }
 
+    //ds update odometry timing
+    m_dTotalDurationSecondsTrackingOdometry += CLogger::getTimeSeconds( )-dTimeStartTrackingSecondsOdometry;
+    const double dTimeStartTrackingSecondsEpipolar = CLogger::getTimeSeconds( );
+
     //ds get current measurements (including landmarks already detected in the pose optimization)
     const std::shared_ptr< const std::vector< const CMeasurementLandmark* > > vecMeasurements = m_cMatcher.getMeasurementsEpipolar( m_uFrameCount, p_matImageLEFT, p_matImageRIGHT, matTransformationWORLDtoLEFT, matTransformationWORLDtoLEFT.inverse( ), dMotionScaling, matDisplayLEFT, matDisplayRIGHT );
+
+    //ds update epipolar timing
+    m_dTotalDurationSecondsTrackingEpipolar += CLogger::getTimeSeconds( )-dTimeStartTrackingSecondsEpipolar;
 
     //ds refine pose AGAIN on all measurements
     //matTransformationWORLDtoLEFT = m_cMatcher.getPoseRefinedOnVisibleLandmarks( matTransformationWORLDtoLEFT );
@@ -478,13 +501,20 @@ void CTrackerStereoMotionModelKITTI::_trackLandmarks( const cv::Mat& p_matImageL
             //ds compute current required matches
             //const std::vector< CMatchCloud >::size_type uMinimumNumberOfMatchesLoopClosure = std::max( static_cast< int >( m_uMinimumNumberOfMatchesLoopClosure-std::floor( m_dOptimizationsWithoutLoopClosureDistanceMeters/20.0 ) ), 15 );
 
+            //ds stop time for loop closure checking
+            const double dStartTimeLoopClosingSeconds = CLogger::getTimeSeconds( );
+
             //ds detect loop closures
-            const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, vecCloud, m_dLoopClosingRadiusSquaredMeters, m_uMinimumNumberOfMatchesLoopClosure ) );
+            const std::vector< const CKeyFrame::CMatchICP* > vecLoopClosures( _getLoopClosuresForKeyFrame( uIDKeyFrameCurrent, matTransformationLEFTtoWORLD, vecCloud, m_dLoopClosingRadiusSquaredMeters, m_uMinimumNumberOfMatchesLoopClosure+m_uLoopClosuresAfterburn ) );
+
+            //ds update time
+            m_dTotalLoopClosingDurationSeconds += ( CLogger::getTimeSeconds( )-dStartTimeLoopClosingSeconds );
 
             //ds if we found closures
             if( !vecLoopClosures.empty( ) )
             {
                 ++m_uLoopClosingKeyFramesInQueue;
+                m_uLoopClosuresAfterburn += vecLoopClosures.size( );
             }
 
             //ds create new frame
@@ -543,6 +573,16 @@ void CTrackerStereoMotionModelKITTI::_trackLandmarks( const cv::Mat& p_matImageL
                     m_vecPositionCurrent               = matTransformationLEFTtoWORLD.translation( );
                     matTransformationWORLDtoLEFT       = matTransformationLEFTtoWORLD.inverse( );
                     m_matTransformationWORLDtoLEFTLAST = matTransformationWORLDtoLEFT;
+
+                    //ds decrease loop closure requirement
+                    if( 4 < m_uLoopClosuresAfterburn )
+                    {
+                        m_uLoopClosuresAfterburn = m_uLoopClosuresAfterburn-5;
+                    }
+                    else
+                    {
+                        m_uLoopClosuresAfterburn = 0;
+                    }
 
                     //ds if we are in a continuous situation and not too recent
                     if( 125.0 < m_vecGradientXYZ.squaredNorm( ) )

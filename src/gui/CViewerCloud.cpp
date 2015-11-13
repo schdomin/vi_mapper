@@ -27,11 +27,11 @@ void CViewerCloud::draw( )
     //ds draw WORLD coordinate frame
     glColor3f( 1.0, 1.0, 1.0 );
     glLineWidth( 1.0 );
-    drawAxis( 0.5 );
+    drawAxis( 1.0 );
 
     //ds set line width and point size for landmarks
     glLineWidth( 1.0 );
-    glPointSize( 2.5 );
+    glPointSize( 5.0 );
 
     //ds draw reference cloud in blue
     if( 0 != m_vecMatches )
@@ -68,7 +68,7 @@ void CViewerCloud::draw( )
                 glEnd( );
 
                 glBegin( GL_POINTS );
-                glColor3f( 0.0, 1.0, 0.0 );
+                glColor3f( 0.0, 0.5, 0.0 );
                 glVertex3f( vecQUERYFinal.x( ), vecQUERYFinal.y( ), vecQUERYFinal.z( ) );
                 glEnd( );
             }
@@ -82,6 +82,7 @@ void CViewerCloud::draw( )
 void CViewerCloud::init( )
 {
     setSceneRadius( 25.0 );
+    setBackgroundColor( QColor( 255, 255, 255 ) );
 }
 
 void CViewerCloud::keyPressEvent( QKeyEvent* p_pEvent )
